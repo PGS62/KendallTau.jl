@@ -1,16 +1,4 @@
-#= This file is not included in the package, but contains the function speedtest
-Example usage:
-speedtest([StatsBase.corkendall,KendallTau.corkendall,KendallTau.corkendallthreads_v2],2000,10)
 
-For previously generated results from speedtest see file speedtestresults.txt
-
-=#
-
-using Pkg
-
-Pkg.activate(normpath(joinpath(@__DIR__, "..")))
-
-using KendallTau
 using BenchmarkTools
 using Dates
 
@@ -21,6 +9,15 @@ Prints comparisons of execution speed.
 functions =  an array of functions, each an implementation of KendallTau.
 nr = number of rows in test matrices
 nc = number of columns in test matrices
+
+Example usage, from the REPL:
+
+using KendallTau
+using StatsBase
+KendallTau.speedtest([StatsBase.corkendall,KendallTau.corkendall,KendallTau.corkendallthreads_v2],2000,10)
+
+
+See speedtestsresults for example output.
 """
 function speedtest(functions, nr::Int, nc::Int)
 
@@ -79,6 +76,7 @@ function speedtest(functions, nr::Int, nc::Int)
     end
     @show all(myapprox.(results[2:end], results[1:(end - 1)],1e-14))
 
+    #Remember that threaded versions don't actually use threads in vector vs vector case.
     i = 0
     println("-"^50)
     @show(size(vector1))
@@ -125,11 +123,4 @@ function myapprox(x::Float64, y::Float64, abstol::Float64)
         return(abs(x - y) <= abstol)
     end
 end
-
-
-
-
-
-
-
 
