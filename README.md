@@ -14,7 +14,7 @@ The package also contains a function `speedtest` that prints a comparison of the
 <p>
 
 ```
-julia> KendallTau.speedtest([StatsBase.corkendall,KendallTau.corkendall,KendallTau.corkendallthreads_v2],2000,10)
+julia> speedtest([StatsBase.corkendall,KendallTau.corkendall,KendallTau.corkendallthreads_v2],2000,10)
 ###################################################################
 Executing speedtest 2021-01-18T15:13:17.189
 size(matrix1) = (2000, 10)
