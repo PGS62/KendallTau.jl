@@ -210,7 +210,7 @@ end
 """
     corkendallnaive(x::RealVector, y::RealVector)
 
-Naive implementation of Kendall Tau. Slow O(n²) but simple, so good for testing against corkendall.
+Naive implementation of Kendall Tau. Slow O(n²) but simple, so good for testing against` corkendall`.
 """
 function corkendallnaive(x::RealVector, y::RealVector)
     if any(isnan, x) || any(isnan, y) return NaN end

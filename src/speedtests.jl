@@ -5,18 +5,29 @@ using Dates
 """
     speedtest(functions, nr::Int, nc::Int)
 
-Prints comparisons of execution speed.\n
-`functions` =  an array of functions, each an implementation of KendallTau.\n
-`nr` = number of rows in test matrices\n
-`nc` = number of columns in test matrices\n
+Prints comparisons of execution speed.
+# Arguments
+- `functions`:  an array of functions, each an implementation of KendallTau.
+- `nr`: number of rows in test matrices.
+- `nc`: number of columns in test matrices.
 
-Example usage, from the REPL:
+# Example
+```
+julia>using KendallTau, StatsBase
+julia>speedtest([StatsBase.corkendall,KendallTau.corkendall,KendallTau.corkendallthreads_v2],2000,10)
 
-using KendallTau, StatsBase\n
-KendallTau.speedtest([StatsBase.corkendall,KendallTau.corkendall,KendallTau.corkendallthreads_v2],2000,10)
-
-
-See speedtestsresults.txt (located at `joinpath(pathof(KendallTau),"speedtestresults.txt")` ) for example output.
+###################################################################
+Executing speedtest 2021-01-18T16:28:33.986
+size(matrix1) = (2000, 10)
+StatsBase.corkendall(matrix1)
+  35.893 ms (451 allocations: 5.54 MiB)
+KendallTau.corkendall(matrix1)
+  6.903 ms (3448 allocations: 10.52 MiB)
+KendallTau.corkendallthreads_v2(matrix1)
+  2.112 ms (3764 allocations: 10.56 MiB)
+all(myapprox.(results[2:end], results[1:end - 1], 1.0e-14)) = true
+--------------------------------------------------
+```
 """
 function speedtest(functions, nr::Int, nc::Int)
 
