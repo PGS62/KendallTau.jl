@@ -1,6 +1,5 @@
 
 module KendallTau
-#import StatsBase# so can compare against StatsBase.corkendall
 using Random
 using BenchmarkTools
 
