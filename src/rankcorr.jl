@@ -28,7 +28,7 @@ function corkendall!(x::RealVector, y::RealVector, permx=sortperm(x))
         elseif k > 0
             # Sort the corresponding chunk of y, so the rows of hcat(x,y) are 
             # sorted first on x, then (where x values are tied) on y. Hence 
-            # double ties can be counted via countties.
+            # double ties can be counted by calling countties.
             mergesort!(y,  i - k - 1, i - 1)
             ntiesx += k * (k + 1) / 2
             ndoubleties += countties(y,  i - k - 1, i - 1)
@@ -173,7 +173,6 @@ function merge!(x::RealVector, left::Int64, mid::Int64, right::Int64)
     nswaps
 
 end
-
 
 """
     countties(x::RealVector,from::Int64,to::Int64)
