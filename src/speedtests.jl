@@ -5,19 +5,18 @@ using Dates
 """
     speedtest(functions, nr::Int, nc::Int)
 
-Prints comparisons of execution speed.
-functions =  an array of functions, each an implementation of KendallTau.
-nr = number of rows in test matrices
-nc = number of columns in test matrices
+Prints comparisons of execution speed.\n
+`functions` =  an array of functions, each an implementation of KendallTau.\n
+`nr` = number of rows in test matrices\n
+`nc` = number of columns in test matrices\n
 
 Example usage, from the REPL:
 
-using KendallTau
-using StatsBase
+using KendallTau, StatsBase\n
 KendallTau.speedtest([StatsBase.corkendall,KendallTau.corkendall,KendallTau.corkendallthreads_v2],2000,10)
 
 
-See speedtestsresults for example output.
+See speedtestsresults.txt (located at `joinpath(pathof(KendallTau),"speedtestresults.txt")` ) for example output.
 """
 function speedtest(functions, nr::Int, nc::Int)
 
