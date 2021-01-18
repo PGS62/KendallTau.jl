@@ -1,0 +1,239 @@
+SPEEDTEST RESULTS
+
+These results show that corkendallthreads_v1 is faster for (1000,10) and (1000,100) sized input, but SLOWER for (1000,2000) sized input - see below
+Data generated 16 Jan 2021
+
+###################################################################
+size(matrix1) = (1000, 10)
+KendallTau.corkendallnaive(matrix1)
+  74.523 ms (91 allocations: 715.25 KiB)
+StatsBase.corkendall(matrix1)
+  16.401 ms (451 allocations: 2.79 MiB)
+KendallTau.corkendall(matrix1)
+  3.322 ms (2998 allocations: 5.27 MiB)
+KendallTau.corkendallthreads_v1(matrix1)
+  998.800 μs (3314 allocations: 5.31 MiB)
+all(myapprox.(results[2:end], results[1:end - 1], 1.0e-14)) = true
+--------------------------------------------------
+size(matrix1) = (1000, 10)
+size(matrix2) = (1000, 10)
+KendallTau.corkendallnaive(matrix1,matrix2)
+  163.644 ms (201 allocations: 1.55 MiB)
+StatsBase.corkendall(matrix1,matrix2)
+  37.048 ms (1001 allocations: 6.21 MiB)
+KendallTau.corkendall(matrix1,matrix2)
+  7.183 ms (6631 allocations: 11.55 MiB)
+KendallTau.corkendallthreads_v1(matrix1,matrix2)
+  1.808 ms (7332 allocations: 11.63 MiB)
+all(myapprox.(results[2:end], results[1:end - 1], 1.0e-14)) = true
+--------------------------------------------------
+size(vector1) = (1000,)
+size(matrix1) = (1000, 10)
+KendallTau.corkendallnaive(vector1,matrix1)
+  15.903 ms (13 allocations: 79.63 KiB)
+StatsBase.corkendall(vector1,matrix1)
+  3.353 ms (103 allocations: 635.56 KiB)
+KendallTau.corkendall(vector1,matrix1)
+  672.300 μs (665 allocations: 1.15 MiB)
+KendallTau.corkendallthreads_v1(vector1,matrix1)
+ Activating environment at `c:\Projects\KendallTau\Project.toml`
+###################################################################
+
+###################################################################
+size(matrix1) = (1000, 100)
+size(matrix2) = (1000, 100)
+size(vector1) = (1000,)
+size(vector2) = (1000,)
+StatsBase.corkendall(matrix1)
+  2.053 s (49502 allocations: 307.19 MiB)
+KendallTau.corkendall(matrix1)
+  419.717 ms (326999 allocations: 565.38 MiB)
+KendallTau.corkendallthreads_v1(matrix1)
+  175.219 ms (361652 allocations: 569.76 MiB)
+all(myapprox.(results[2:end], results[1:end - 1], 1.0e-14)) = true
+--------------------------------------------------
+size(matrix1) = (1000, 100)
+size(matrix2) = (1000, 100)
+StatsBase.corkendall(matrix1,matrix2)
+  4.194 s (100002 allocations: 620.50 MiB)
+KendallTau.corkendall(matrix1,matrix2)
+  865.366 ms (660302 allocations: 1.11 GiB)
+KendallTau.corkendallthreads_v1(matrix1,matrix2)
+  421.155 ms (730304 allocations: 1.12 GiB)
+all(myapprox.(results[2:end], results[1:end - 1], 1.0e-14)) = true
+--------------------------------------------------
+size(vector1) = (1000,)
+size(matrix1) = (1000, 100)
+StatsBase.corkendall(vector1,matrix1)
+  37.217 ms (1003 allocations: 6.21 MiB)
+KendallTau.corkendall(vector1,matrix1)
+  6.790 ms (6605 allocations: 11.40 MiB)
+KendallTau.corkendallthreads_v1(vector1,matrix1)
+  1.781 ms (7304 allocations: 11.49 MiB)
+all(myapprox.(results[2:end], results[1:end - 1], 1.0e-14)) = true
+--------------------------------------------------
+size(matrix1) = (1000, 100)
+size(vector1) = (1000,)
+StatsBase.corkendall(matrix1,vector1)
+  36.791 ms (1001 allocations: 6.21 MiB)
+KendallTau.corkendall(matrix1,vector1)
+  6.842 ms (6603 allocations: 11.40 MiB)
+KendallTau.corkendallthreads_v1(matrix1,vector1)
+  1.781 ms (7303 allocations: 11.49 MiB)
+all(myapprox.(results[2:end], results[1:end - 1], 1.0e-14)) = true
+--------------------------------------------------
+size(vector1) = (1000,)
+size(vector2) = (1000,)
+StatsBase.corkendall(vector1,vector2)
+  325.099 μs (10 allocations: 63.53 KiB)
+KendallTau.corkendall(vector1,vector2)
+  90.800 μs (68 allocations: 124.58 KiB)
+KendallTau.corkendallthreads_v1(vector1,vector2)
+  92.199 μs (70 allocations: 140.45 KiB)
+all(myapprox.(results[2:end], results[1:end - 1], 1.0e-14)) = true
+###################################################################
+
+###################################################################
+size(matrix1) = (1000, 2000)
+StatsBase.corkendall(matrix1)
+  709.637 s (19990002 allocations: 121.15 GiB)
+KendallTau.corkendall(matrix1)
+  135.623 s (131939999 allocations: 222.39 GiB)
+KendallTau.corkendallthreads_v1(matrix1)
+  2174.540 s (145020457 allocations: 224.09 GiB)
+all(myapprox.(results[2:end], results[1:end - 1], 1.0e-14)) = true
+--------------------------------------------------
+size(matrix1) = (1000, 2000)
+size(matrix2) = (1000, 2000)
+StatsBase.corkendall(matrix1,matrix2)
+  1429.533 s (40000002 allocations: 242.38 GiB)
+KendallTau.corkendall(matrix1,matrix2)
+  272.387 s (264006002 allocations: 444.95 GiB)
+KendallTau.corkendallthreads_v1(matrix1,matrix2)  
+  2655.678 s (289104933 allocations: 448.29 GiB)
+all(myapprox.(results[2:end], results[1:end - 1], 1.0e-14)) = true
+--------------------------------------------------
+size(vector1) = (1000,)
+size(matrix1) = (1000, 2000)
+StatsBase.corkendall(vector1,matrix1)
+  702.349 ms (20003 allocations: 124.10 MiB)
+KendallTau.corkendall(vector1,matrix1)
+  134.568 ms (132005 allocations: 227.81 MiB)
+KendallTau.corkendallthreads_v1(vector1,matrix1)
+  39.819 ms (146004 allocations: 229.56 MiB)
+all(myapprox.(results[2:end], results[1:end - 1], 1.0e-14)) = true
+--------------------------------------------------
+size(matrix1) = (1000, 2000)
+size(vector1) = (1000,)
+StatsBase.corkendall(matrix1,vector1)
+  703.380 ms (20001 allocations: 124.10 MiB)
+KendallTau.corkendall(matrix1,vector1)
+  133.123 ms (132003 allocations: 227.81 MiB)
+KendallTau.corkendallthreads_v1(matrix1,vector1)
+  43.281 ms (147493 allocations: 229.58 MiB)
+all(myapprox.(results[2:end], results[1:end - 1], 1.0e-14)) = true
+--------------------------------------------------
+size(vector1) = (1000,)
+size(vector2) = (1000,)
+StatsBase.corkendall(vector1,vector2)
+  328.400 μs (10 allocations: 63.53 KiB)
+KendallTau.corkendall(vector1,vector2)
+  88.200 μs (68 allocations: 124.58 KiB)
+KendallTau.corkendallthreads_v1(vector1,vector2)
+  89.599 μs (70 allocations: 140.45 KiB)
+all(myapprox.(results[2:end], results[1:end - 1], 1.0e-14)) = true
+###################################################################
+
+
+###################################################################
+Executing speedtest 2021-01-17T10:44:51.955
+--------------------------------------------------
+size(matrix1) = (1000, 500)
+size(matrix2) = (1000, 500)
+StatsBase.corkendall(matrix1,matrix2)
+  92.180 s (2500002 allocations: 15.15 GiB)
+KendallTau.corkendall(matrix1,matrix2)
+  17.871 s (16501502 allocations: 27.82 GiB)
+KendallTau.corkendallthreads_v1(matrix1,matrix2)
+  23.516 s (18251504 allocations: 28.03 GiB)
+KendallTau.corkendallthreads_v2(matrix1,matrix2)
+  11.923 s (16505504 allocations: 27.82 GiB)
+all(myapprox.(results[2:end], results[1:end - 1], 1.0e-14)) = true
+###################################################################
+
+###################################################################
+Executing speedtest 2021-01-17T10:58:50.781
+--------------------------------------------------
+size(matrix1) = (1000, 2000)
+size(matrix2) = (1000, 2000)
+StatsBase.corkendall(matrix1,matrix2)
+  1420.799 s (40000002 allocations: 242.38 GiB)
+KendallTau.corkendall(matrix1,matrix2)
+  264.332 s (264006002 allocations: 444.95 GiB)
+KendallTau.corkendallthreads_v2(matrix1,matrix2)
+  199.490 s (264023496 allocations: 444.98 GiB)
+all(myapprox.(results[2:end], results[1:end - 1], 1.0e-14)) = true
+###################################################################
+
+
+###################################################################
+Executing speedtest 2021-01-18T09:28:05.553
+size(matrix1) = (2000, 10)
+StatsBase.corkendall(matrix1)
+  34.374 ms (451 allocations: 5.54 MiB)
+KendallTau.corkendall(matrix1)
+  7.097 ms (5878 allocations: 11.90 MiB)
+KendallTau.corkendallthreads_v2(matrix1)
+  2.063 ms (6194 allocations: 11.94 MiB)
+all(myapprox.(results[2:end], results[1:end - 1], 1.0e-14)) = true
+--------------------------------------------------
+size(matrix1) = (2000, 10)
+size(matrix2) = (2000, 10)
+StatsBase.corkendall(matrix1,matrix2)
+  77.549 ms (1001 allocations: 12.31 MiB)
+KendallTau.corkendall(matrix1,matrix2)
+  15.433 ms (13031 allocations: 26.13 MiB)
+KendallTau.corkendallthreads_v2(matrix1,matrix2)
+  5.364 ms (13112 allocations: 26.14 MiB)
+all(myapprox.(results[2:end], results[1:end - 1], 1.0e-14)) = true
+--------------------------------------------------
+size(vector1) = (2000,)
+size(matrix1) = (2000, 10)
+StatsBase.corkendall(vector1,matrix1)
+  7.393 ms (103 allocations: 1.23 MiB)
+KendallTau.corkendall(vector1,matrix1)
+  1.437 ms (1305 allocations: 2.60 MiB)
+KendallTau.corkendallthreads_v2(vector1,matrix1)
+  586.401 μs (1373 allocations: 2.61 MiB)
+all(myapprox.(results[2:end], results[1:end - 1], 1.0e-14)) = true
+--------------------------------------------------
+size(matrix1) = (2000, 10)
+size(vector1) = (2000,)
+StatsBase.corkendall(matrix1,vector1)
+  7.418 ms (101 allocations: 1.23 MiB)
+KendallTau.corkendall(matrix1,vector1)
+  1.410 ms (1303 allocations: 2.60 MiB)
+KendallTau.corkendallthreads_v2(matrix1,vector1)
+  567.801 μs (1373 allocations: 2.61 MiB)
+all(myapprox.(results[2:end], results[1:end - 1], 1.0e-14)) = true
+--------------------------------------------------
+size(vector1) = (2000,)
+size(vector2) = (2000,)
+StatsBase.corkendall(vector1,vector2)
+  727.800 μs (10 allocations: 126.03 KiB)
+KendallTau.corkendall(vector1,vector2)
+  212.100 μs (132 allocations: 280.14 KiB)
+KendallTau.corkendallthreads_v2(vector1,vector2)
+  216.100 μs (134 allocations: 311.64 KiB)
+all(myapprox.(results[2:end], results[1:end - 1], 1.0e-14)) = true
+--------------------------------------------------
+size(manyrepeats1) = (2000,)
+size(manyrepeats2) = (2000,)
+StatsBase.corkendall(manyrepeats1,manyrepeats2)
+  452.500 μs (12 allocations: 157.53 KiB)
+KendallTau.corkendall(manyrepeats1,manyrepeats2)
+  196.099 μs (258 allocations: 481.80 KiB)
+KendallTau.corkendallthreads_v2(manyrepeats1,manyrepeats2)
+  199.200 μs (260 allocations: 513.30 KiB)
+all(myapprox.(results[2:end], results[1:end - 1], 1.0e-14)) = true
+###################################################################
