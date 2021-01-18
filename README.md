@@ -10,7 +10,7 @@ This (unregistered) Julia package exposes a function `corkendall` that is a cand
 
 The package also contains a function `speedtest` that prints a comparison of the execution speed of two (or more) implementations of Kendall Tau. `speedtest` demonstrates that the new version of `corkendall` is about five times faster than the existing StatsBase version.
 
-<details><summary>Example output from speedtest:</summary>
+<details><summary><ins>Example output</ins></summary>
 <p>
 
 ```
