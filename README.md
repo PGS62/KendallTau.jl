@@ -87,7 +87,7 @@ A function `corkendallnaive` that implements the obvious order N^2 algorithm. Th
 
 Functions `corkendallthreads_v1`, `corkendallthreads_v2` and `corkendallthreads_v3` which are experimental for the time being.
 
-Philip Swannell
+Philip Swannell  
 18 Jan 2021
 
 
