@@ -188,7 +188,7 @@ Functions `corkendallthreads_v1`, `corkendallthreads_v2` and `corkendallthreads_
 
 
 ## To do
-In the event that either `x` or `y` contain `nan` values the function currently returns `nan`. The Kendall Tau calculators in both Python and R allow alternative (and often useful) handling of `nan` values, and I would like to implement something similar. See argument `nan_policy` to the Python function `scipy.stats.kendalltau` [here](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.kendalltau.html) and argument `na.rm` to the R function `cor` [here](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/cor).
+In the event that either `x` or `y` contain `nan` values the function currently returns `nan`. The Kendall Tau calculators in both Python and R allow alternative (and often useful) handling of `nan` values, and I would like to implement something similar. See argument `nan_policy` to the Python function `scipy.stats.kendalltau` [here](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.kendalltau.html) and argument `use` to the R function `cor` [here](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/cor).
 
 
 
