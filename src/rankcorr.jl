@@ -112,21 +112,21 @@ function insertionsort!(x::RealVector, from::Int64, to::Int64)
 end
 
 """
-    mergesort!(x::RealVector, from::Int64, to::Int64)
+    mergesort!(x::RealVector, left::Int64, right::Int64)
 
-Mutates `x` by sorting elements `x[from:to]`. Returns the number of swaps required.
+Mutates `x` by sorting elements `x[left:right]`. Returns the number of swaps required.
 """
-function mergesort!(x::RealVector, from::Int64, to::Int64, cutoff=64)
-    len = to - from + 1
+function mergesort!(x::RealVector, left::Int64, right::Int64, cutoff=64, buffer=Array{eltype(x)}(undef, right - left + 1))
+    len = right - left + 1
 
     if len < cutoff # See method speedtestmergesort. 64 seems best. Julia's sorting algos use 20...
-        return insertionsort!(x, from, to)
+        return insertionsort!(x, left, right)
     end
 
     mid = div(len, 2)
-    nswaps = mergesort!(x, from, from + mid, cutoff)
-    nswaps += mergesort!(x, from + mid + 1, to, cutoff)
-    nswaps += merge!(x, from, from + mid, to)
+    nswaps = mergesort!(x, left, left + mid, cutoff, buffer)
+    nswaps += mergesort!(x, left + mid + 1, right, cutoff, buffer)
+    nswaps += merge!(x, left, left + mid, right, buffer)
     nswaps
 end
 
@@ -137,9 +137,11 @@ Merge (sorting while doing so) two chunks of x: x[left:mid] and x[(mid+1):right]
 Assumes chunks x[left:mid-1] and x[mid:right] are already sorted. Afterwards x[left:right] is sorted.
 Returns the number of swaps required.
 """
-function merge!(x::RealVector, left::Int64, mid::Int64, right::Int64)
+function merge!(x::RealVector, left::Int64, mid::Int64, right::Int64, buffer=Array{eltype(x)}(undef, right - left + 1))
     nswaps = 0
-    buffer = Array{eltype(x)}(undef, right - left + 1)
+    if length(buffer) < right - left + 1
+        resize!(buffer, right - left + 1)
+    end
 
     leftindex = left
     rightindex = mid + 1
@@ -168,7 +170,7 @@ function merge!(x::RealVector, left::Int64, mid::Int64, right::Int64)
             writeindex += 1
         end
     end
-    x[left:right] = buffer[:]
+    x[left:right] = buffer[1:(right - left + 1)]
 
     nswaps
 

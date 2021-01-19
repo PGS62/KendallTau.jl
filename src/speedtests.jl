@@ -31,13 +31,14 @@ all(myapprox.(results[2:end], results[1:end - 1], 1.0e-14)) = true
 """
 function speedtest(functions, nr::Int, nc::Int)
 
+    rng = MersenneTwister(1)#make the contents of matrix1 etc. deterministic so successive calls with fixed nc & nr are fully comparable
     results = Array{Any}(undef, length(functions))
-    matrix1 = randn(Float64, nr, nc)
-    matrix2 = randn(Float64, nr, nc)
-    vector1 = randn(nr)
-    vector2 = randn(nr)
-    manyrepeats1 = rand(1:2,nr)
-    manyrepeats2 = rand(1:2,nr)
+    matrix1 = randn(rng,Float64, nr, nc)
+    matrix2 = randn(rng,Float64, nr, nc)
+    vector1 = randn(rng,nr)
+    vector2 = randn(rng,nr)
+    manyrepeats1 = rand(rng,1:2,nr)
+    manyrepeats2 = rand(rng,1:2,nr)
 
     fname = f -> string(Base.parentmodule(f)) * "." * string(f)
 
