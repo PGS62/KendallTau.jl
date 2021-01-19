@@ -43,17 +43,20 @@ Prints comparisons of execution speed.
 ```
 julia>using KendallTau, StatsBase
 julia>speedtest([StatsBase.corkendall,KendallTau.corkendall,KendallTau.corkendallthreads_v2],2000,10)
-
 ###################################################################
-Executing speedtest 2021-01-18T16:28:33.986
+Executing speedtest 2021-01-19T16:26:29.883
 size(matrix1) = (2000, 10)
 StatsBase.corkendall(matrix1)
-  35.893 ms (451 allocations: 5.54 MiB)
+  33.503 ms (451 allocations: 5.54 MiB)
 KendallTau.corkendall(matrix1)
-  6.903 ms (3448 allocations: 10.52 MiB)
+  6.172 ms (1918 allocations: 7.82 MiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 5.428169574078446
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 1.4125820189187552
 KendallTau.corkendallthreads_v2(matrix1)
-  2.112 ms (3764 allocations: 10.56 MiB)
-all(myapprox.(results[2:end], results[1:end - 1], 1.0e-14)) = true
+  1.878 ms (2234 allocations: 7.86 MiB)
+Speed ratio KendallTau.corkendallthreads_v2 vs StatsBase.corkendall: 17.83603066439523
+Ratio of memory allocated KendallTau.corkendallthreads_v2 vs StatsBase.corkendall: 1.4198018874681153
+Results from all 3 functions identical? true
 --------------------------------------------------
 ```
 """

@@ -140,7 +140,7 @@ end
 
 Merge (sorting while doing so) two chunks of x: x[lo:m] and x[(m+1):hi] to form x[lo:hi].
 Assumes chunks x[lo:m-1] and x[m:hi] are already sorted. Afterwards x[lo:hi] is sorted.
-Returns the number of swaps required.
+Returns the number of swaps that the bubblesort algorithm would require.
 """
 function merge!(x::RealVector, lo::Int64, m::Int64, hi::Int64, buffer::RealVector)
     nswaps = 0
@@ -182,13 +182,13 @@ function merge!(x::RealVector, lo::Int64, m::Int64, hi::Int64, buffer::RealVecto
 end
 
 """
-    countties(x::RealVector,from::Int64,to::Int64)
+    countties(x::RealVector,lo::Int64,hi::Int64)
 
-Assumes `x` is sorted. Returns the number of ties within `x[from:to]`.
+Assumes `x` is sorted. Returns the number of ties within `x[lo:hi]`.
 """
-function countties(x::RealVector, from::Int64, to::Int64)
+function countties(x::RealVector, lo::Int64, hi::Int64)
     thistiecount, result = 0, 0
-    for i ∈ (from + 1):to
+    for i ∈ (lo + 1):hi
         if x[i] == x[i - 1]
             thistiecount += 1
         elseif thistiecount > 0
@@ -204,7 +204,7 @@ function countties(x::RealVector, from::Int64, to::Int64)
 end
 
 """
-    speedtestmergesort(N=2000)
+    speedtestmergesort(n=2000)
 
 Method to determine the best (i.e. fastest) value of `small_threshold` to method `mergesort!`.  
 Of the powers of 2 tested, 64 seems to maximise speed:
@@ -230,15 +230,17 @@ julia> KendallTau.speedtestmergesort()
   432.499 μs (12 allocations: 74.72 KiB)
 ```
 """
-function speedtestmergesort(N=2000)
+function speedtestmergesort(n=2000)
     for i = 2:10
-        println((N, (2^i)))
-        @btime KendallTau.mergesort!(randn(MersenneTwister(1), $N), 1, $N, (2^$i))
+        println((n, (2^i)))
+        @btime KendallTau.mergesort!(randn(MersenneTwister(1), $n), 1, $n, (2^$i))
     end   
 end
 
+using LoopVectorization
 # corkendallnaive, a naive implementation, is faster than corkendall for very small number
 # of elements (< 25 approx) but probably not worth having corkendall call corkendallnaive in that case.
+# It does not seem to be possible to use LoopVectorization to speed up this method: "LoadError: Don't know how to handle expression"
 """
     corkendallnaive(x::RealVector, y::RealVector)
 
@@ -251,7 +253,7 @@ function corkendallnaive(x::RealVector, y::RealVector)
     if length(y) ≠ n error("Vectors must have same length") end
 
     numerator, tiesx, tiesy = 0, 0, 0
-    for i ∈ 2:n,j ∈ 1:(i - 1)
+     for i ∈ 2:n, j ∈ 1:(i - 1)
         k = sign(x[i] - x[j]) * sign(y[i] - y[j])
         if k == 0
             if x[i] == x[j]
