@@ -81,7 +81,7 @@ all(myapprox.(results[2:end], results[1:end - 1], 1.0e-14)) = true
 </p>
 </details>
 
-<details><summary><ins>Speedtest output for v1.1 (note reduced total allocations)</ins></summary>
+<details><summary><ins>Speedtest output for v1.2 (note reduced total allocations)</ins></summary>
 <p>
 
 ```
