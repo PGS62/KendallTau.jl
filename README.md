@@ -186,6 +186,13 @@ A function `corkendallnaive` that implements the obvious order N^2 algorithm. Th
 
 Functions `corkendallthreads_v1`, `corkendallthreads_v2` and `corkendallthreads_v3` which are experimental for the time being.
 
+
+## To do
+In the event that either `x` or `y` contain `nan` values the function currently returns `nan`. The Kendall Tau calculators in both Python and R allow alternative (and often useful) alternative handling of nan values, and I would like to implement something similar. See argument `nan_policy` to the Python function `scipy.stats.kendalltau` [here](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.kendalltau.html) and argument `na.rm` to the R function cor [here](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/cor).
+
+
+
+
 Philip Swannell  
 18 Jan 2021
 
