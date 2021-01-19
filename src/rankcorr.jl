@@ -89,19 +89,20 @@ end
 # Auxilliary functions for Kendall's rank correlation
 
 """
-    insertionsort!(x::RealVector, from::Int64, to::Int64)
+    insertionsort!(x::RealVector, lo::Integer, hi::Integer)
 
-Mutates `x` by sorting elements `x[from:to]`. Returns the number of swaps required.
-Quadratic performance in the number of elements to be sorted: it is well-suited to
-small collections but should not be used for large ones.
+Mutates `x` by sorting elements `x[lo:hi]`. Returns the number of swaps that would 
+be required by bubblesort. Quadratic performance in the number of elements to be
+sorted: it is well-suited to small collections but should not be used for large ones.
 """
-function insertionsort!(x::RealVector, from::Int64, to::Int64)
-    if from == to return 0 end
+function insertionsort!(x::RealVector, lo::Integer, hi::Integer)
+    if lo == hi return 0 end
+    if lo < 1 || hi > length(x) || hi < lo error("Bounds error") end
     nswaps = 0
-    for i ∈ (to - 1):-1:from
+    @inbounds for i ∈ (hi - 1):-1:lo
         tmp = x[i]
         j = i + 1
-        while j <= to && tmp > x[j]
+        while j <= hi && tmp > x[j]
             x[j - 1] = x[j]
             j += 1
         end
@@ -112,65 +113,69 @@ function insertionsort!(x::RealVector, from::Int64, to::Int64)
 end
 
 """
-    mergesort!(x::RealVector, left::Int64, right::Int64)
+    mergesort!(x::RealVector, lo::Integer, hi::Integer)
 
-Mutates `x` by sorting elements `x[left:right]`. Returns the number of swaps required.
+Mutates `x` by sorting elements `x[lo:hi]` using the mergesort algorithm. Returns the 
+number of swaps that would be required by the bubblesort algorithm.
 """
-function mergesort!(x::RealVector, left::Int64, right::Int64, cutoff=64, buffer=Array{eltype(x)}(undef, right - left + 1))
-    len = right - left + 1
+function mergesort!(x::RealVector, lo::Integer, hi::Integer, small_threshold=64, buffer=Array{eltype(x)}(undef, div(length(x), 2) + 1))
+    if lo < 1 || hi > length(x) || hi < lo error("Bounds error") end
+    len = hi - lo + 1
 
-    if len < cutoff # See method speedtestmergesort. 64 seems best. Julia's sorting algos use 20...
-        return insertionsort!(x, left, right)
+    if len < small_threshold # See method speedtestmergesort. 64 seems best. Julia's mergesort in base/sort.jl uses const SMALL_THRESHOLD  = 20.
+        return insertionsort!(x, lo, hi)
     end
 
-    mid = div(len, 2)
-    nswaps = mergesort!(x, left, left + mid, cutoff, buffer)
-    nswaps += mergesort!(x, left + mid + 1, right, cutoff, buffer)
-    nswaps += merge!(x, left, left + mid, right, buffer)
+    m = div(len, 2)
+    @inbounds begin
+    nswaps = mergesort!(x, lo, lo + m, small_threshold, buffer)
+    nswaps += mergesort!(x, lo + m + 1, hi, small_threshold, buffer)
+    nswaps += merge!(x, lo, lo + m, hi, buffer)
+    end
     nswaps
 end
 
 """
-    merge!(x::RealVector, left::Int64, mid::Int64, right::Int64)
+    merge!(x::RealVector, lo::Int64, m::Int64, hi::Int64)
 
-Merge (sorting while doing so) two chunks of x: x[left:mid] and x[(mid+1):right] to form x[left:right].
-Assumes chunks x[left:mid-1] and x[mid:right] are already sorted. Afterwards x[left:right] is sorted.
+Merge (sorting while doing so) two chunks of x: x[lo:m] and x[(m+1):hi] to form x[lo:hi].
+Assumes chunks x[lo:m-1] and x[m:hi] are already sorted. Afterwards x[lo:hi] is sorted.
 Returns the number of swaps required.
 """
-function merge!(x::RealVector, left::Int64, mid::Int64, right::Int64, buffer=Array{eltype(x)}(undef, right - left + 1))
+function merge!(x::RealVector, lo::Int64, m::Int64, hi::Int64, buffer::RealVector)
     nswaps = 0
-    if length(buffer) < right - left + 1
-        resize!(buffer, right - left + 1)
+    if length(buffer) < hi - lo + 1
+        resize!(buffer, hi - lo + 1)
     end
 
-    leftindex = left
-    rightindex = mid + 1
+    loindex = lo
+    hiindex = m + 1
     writeindex = 1
 
-    while leftindex <= mid  && rightindex <= right
-        if x[leftindex] <= x[rightindex]
-            buffer[writeindex] = x[leftindex]
-            leftindex += 1
+    while loindex <= m  && hiindex <= hi
+        if x[loindex] <= x[hiindex]
+            buffer[writeindex] = x[loindex]
+            loindex += 1
         else
-            buffer[writeindex] = x[rightindex]
-            rightindex += 1
-            nswaps += (mid - leftindex + 1)
+            buffer[writeindex] = x[hiindex]
+            hiindex += 1
+            nswaps += (m - loindex + 1)
         end
         writeindex += 1
     end
 
-    if leftindex <= mid
-        for i ∈ leftindex:mid
+    if loindex <= m
+        for i ∈ loindex:m
             buffer[writeindex] = x[i]
             writeindex += 1
         end
-    elseif rightindex <= right
-        for i ∈ rightindex:right
+    elseif hiindex <= hi
+        for i ∈ hiindex:hi
             buffer[writeindex] = x[i]
             writeindex += 1
         end
     end
-    x[left:right] = buffer[1:(right - left + 1)]
+    x[lo:hi] = buffer[1:(hi - lo + 1)]
 
     nswaps
 
@@ -198,10 +203,35 @@ function countties(x::RealVector, from::Int64, to::Int64)
     result
 end
 
-# For testing the impact of "cutoff" on speed of mergesort. Of the powers of 2 tested, 
-# 64 seems to maximise speed (tested at N = 1000, 2000, 10000, 50000)
+"""
+    speedtestmergesort(N=2000)
+
+Method to determine the best (i.e. fastest) value of `small_threshold` to method `mergesort!`.  
+Of the powers of 2 tested, 64 seems to maximise speed:
+```
+julia> KendallTau.speedtestmergesort()
+(2000, 4)
+  180.199 μs (847 allocations: 281.78 KiB)
+(2000, 8)
+  150.399 μs (421 allocations: 229.86 KiB)
+(2000, 16)
+  129.599 μs (207 allocations: 195.25 KiB)
+(2000, 32)
+  118.100 μs (101 allocations: 168.67 KiB)
+(2000, 64)
+  114.899 μs (47 allocations: 143.95 KiB)
+(2000, 128)
+  127.299 μs (26 allocations: 123.91 KiB)
+(2000, 256)
+  164.799 μs (18 allocations: 106.91 KiB)
+(2000, 512)
+  249.300 μs (14 allocations: 90.66 KiB)
+(2000, 1024)
+  432.499 μs (12 allocations: 74.72 KiB)
+```
+"""
 function speedtestmergesort(N=2000)
-    for i = 2:12
+    for i = 2:10
         println((N, (2^i)))
         @btime KendallTau.mergesort!(randn(MersenneTwister(1), $N), 1, $N, (2^$i))
     end   

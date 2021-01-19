@@ -3,6 +3,34 @@ using BenchmarkTools
 using Dates
 
 """
+    @btimed expression [other parameters...]
+
+An amended version of  BenchmarkTools.@btime. Identical except the return is a tuple of the result of the `expression` evaluation, the trialmin (of type BenchmarkTools.TrialEstimate) and the memory allocated (a number of bytes).
+
+"""
+macro btimed(args...)
+    _, params = BenchmarkTools.prunekwargs(args...)
+    bench, trial, result = gensym(), gensym(), gensym()
+    trialmin, trialallocs = gensym(), gensym()
+    tune_phase = BenchmarkTools.hasevals(params) ? :() : :($BenchmarkTools.tune!($bench))
+    return esc(quote
+        local $bench = $BenchmarkTools.@benchmarkable $(args...)
+        $BenchmarkTools.warmup($bench)
+        $tune_phase
+        local $trial, $result = $BenchmarkTools.run_result($bench)
+        local $trialmin = $BenchmarkTools.minimum($trial)
+        local $trialallocs = $BenchmarkTools.allocs($trialmin)
+        println("  ",
+                $BenchmarkTools.prettytime($BenchmarkTools.time($trialmin)),
+                " (", $trialallocs , " allocation",
+                $trialallocs == 1 ? "" : "s", ": ",
+                $BenchmarkTools.prettymemory($BenchmarkTools.memory($trialmin)), ")")
+        $result, $trialmin, $BenchmarkTools.memory($trialmin)
+    end)
+end
+
+
+"""
     speedtest(functions, nr::Int, nc::Int)
 
 Prints comparisons of execution speed.
@@ -31,14 +59,16 @@ all(myapprox.(results[2:end], results[1:end - 1], 1.0e-14)) = true
 """
 function speedtest(functions, nr::Int, nc::Int)
 
-    rng = MersenneTwister(1)#make the contents of matrix1 etc. deterministic so successive calls with fixed nc & nr are fully comparable
+    rng = MersenneTwister(1)# make the contents of matrix1 etc. deterministic so successive calls with fixed nc & nr are fully comparable
     results = Array{Any}(undef, length(functions))
-    matrix1 = randn(rng,Float64, nr, nc)
-    matrix2 = randn(rng,Float64, nr, nc)
-    vector1 = randn(rng,nr)
-    vector2 = randn(rng,nr)
-    manyrepeats1 = rand(rng,1:2,nr)
-    manyrepeats2 = rand(rng,1:2,nr)
+    times = Array{Float64}(undef, length(functions))
+    allocations = Array{Float64}(undef, length(functions))
+    matrix1 = randn(rng, Float64, nr, nc)
+    matrix2 = randn(rng, Float64, nr, nc)
+    vector1 = randn(rng, nr)
+    vector2 = randn(rng, nr)
+    manyrepeats1 = rand(rng, 1:2, nr)
+    manyrepeats2 = rand(rng, 1:2, nr)
 
     fname = f -> string(Base.parentmodule(f)) * "." * string(f)
 
@@ -50,10 +80,16 @@ function speedtest(functions, nr::Int, nc::Int)
     for fn in functions
         i += 1
         println("$(fname(fn))(matrix1)")
-        results[i] = @btime $fn($matrix1)
+        tmp =  @btimed $fn($matrix1)
+        results[i], times[i],allocations[i] = tmp[1],tmp[2].time,tmp[3]
+        if i > 1
+            println("Speed ratio $(fname(functions[i])) vs $(fname(functions[1])): $(times[1] / times[i])")
+            println("Ratio of memory allocated $(fname(functions[i])) vs $(fname(functions[1])): $(allocations[i] / allocations[1])")
+        end
     end
-    @show all(myapprox.(results[2:end], results[1:(end - 1)],1e-14))
-    
+    resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
+    println("Results from all $(length(functions)) functions identical? $resultsidentical")
+
     i = 0
     println("-"^50)
     @show(size(matrix1))
@@ -61,9 +97,15 @@ function speedtest(functions, nr::Int, nc::Int)
     for fn in functions
         i += 1
         println("$(fname(fn))(matrix1,matrix2)")
-        results[i] = @btime $fn($matrix1, $matrix2)
+        tmp =  @btimed $fn($matrix1, $matrix2)
+        results[i], times[i],allocations[i] = tmp[1],tmp[2].time,tmp[3]
+        if i > 1
+            println("Speed ratio $(fname(functions[i])) vs $(fname(functions[1])): $(times[1] / times[i])")
+            println("Ratio of memory allocated $(fname(functions[i])) vs $(fname(functions[1])): $(allocations[i] / allocations[1])")
+        end
     end
-    @show all(myapprox.(results[2:end], results[1:(end - 1)],1e-14))
+    resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
+    println("Results from all $(length(functions)) functions identical? $resultsidentical")
 
     i = 0
     println("-"^50)
@@ -72,9 +114,15 @@ function speedtest(functions, nr::Int, nc::Int)
     for fn in functions
         i += 1
         println("$(fname(fn))(vector1,matrix1)")
-        results[i] = @btime $fn($vector1, $matrix1)
+        tmp =  @btimed $fn($vector1, $matrix1)
+        results[i], times[i],allocations[i] = tmp[1],tmp[2].time,tmp[3]
+        if i > 1
+            println("Speed ratio $(fname(functions[i])) vs $(fname(functions[1])): $(times[1] / times[i])")
+            println("Ratio of memory allocated $(fname(functions[i])) vs $(fname(functions[1])): $(allocations[i] / allocations[1])")
+        end
     end
-    @show all(myapprox.(results[2:end], results[1:(end - 1)],1e-14))
+    resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
+    println("Results from all $(length(functions)) functions identical? $resultsidentical")
 
     i = 0
     println("-"^50)
@@ -83,11 +131,17 @@ function speedtest(functions, nr::Int, nc::Int)
     for fn in functions
         i += 1
         println("$(fname(fn))(matrix1,vector1)")
-        results[i] = @btime $fn($matrix1, $vector1)
+        tmp =  @btimed $fn($matrix1, $vector1)
+        results[i], times[i],allocations[i] = tmp[1],tmp[2].time,tmp[3]
+        if i > 1
+            println("Speed ratio $(fname(functions[i])) vs $(fname(functions[1])): $(times[1] / times[i])")
+            println("Ratio of memory allocated $(fname(functions[i])) vs $(fname(functions[1])): $(allocations[i] / allocations[1])")
+        end
     end
-    @show all(myapprox.(results[2:end], results[1:(end - 1)],1e-14))
+    resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
+    println("Results from all $(length(functions)) functions identical? $resultsidentical")
 
-    #Remember that threaded versions don't actually use threads in vector vs vector case.
+    # Remember that threaded versions don't actually use threads in vector vs vector case.
     i = 0
     println("-"^50)
     @show(size(vector1))
@@ -95,9 +149,15 @@ function speedtest(functions, nr::Int, nc::Int)
     for fn in functions
         i += 1
         println("$(fname(fn))(vector1,vector2)")
-        results[i] = @btime $fn($vector1, $vector2)
+        tmp =  @btimed $fn($vector1, $vector2)
+        results[i], times[i],allocations[i] = tmp[1],tmp[2].time,tmp[3]
+        if i > 1
+            println("Speed ratio $(fname(functions[i])) vs $(fname(functions[1])): $(times[1] / times[i])")
+            println("Ratio of memory allocated $(fname(functions[i])) vs $(fname(functions[1])): $(allocations[i] / allocations[1])")
+        end
     end
-    @show all(myapprox.(results[2:end], results[1:(end - 1)],1e-14))
+    resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
+    println("Results from all $(length(functions)) functions identical? $resultsidentical")
 
     i = 0
     println("-"^50)
@@ -106,9 +166,15 @@ function speedtest(functions, nr::Int, nc::Int)
     for fn in functions
         i += 1
         println("$(fname(fn))(manyrepeats1,manyrepeats2)")
-        results[i] = @btime $fn($manyrepeats1, $manyrepeats2)
+        tmp =  @btimed $fn($manyrepeats1, $manyrepeats2)
+        results[i], times[i],allocations[i] = tmp[1],tmp[2].time,tmp[3]
+        if i > 1
+            println("Speed ratio $(fname(functions[i])) vs $(fname(functions[1])): $(times[1] / times[i])")
+            println("Ratio of memory allocated $(fname(functions[i])) vs $(fname(functions[1])): $(allocations[i] / allocations[1])")
+        end
     end
-    @show all(myapprox.(results[2:end], results[1:(end - 1)],1e-14))
+    resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
+    println("Results from all $(length(functions)) functions identical? $resultsidentical")
 
     println("#"^67)
 
@@ -134,4 +200,64 @@ function myapprox(x::Float64, y::Float64, abstol::Float64)
         return(abs(x - y) <= abstol)
     end
 end
+
+
+"""
+    speedtest_repeatdensity(functions,nr)
+
+Prints comparisons of execution speed between the functions in `functions`, whilst varying the the "density of repeated elements in the pair of vectors for which Kendall Tau is calculated.
+In successive tests, the input vectors are random drawings (of size `nr`) from the set 1:maxelements with maxelements being successively 4, 16, 64, 256, 1024 etc.
+
+# Arguments
+- `functions`:  an array of functions, each an implementation of KendallTau.
+- `nr`: number of rows in test vectors
+
+# Example
+```
+julia>using KendallTau, StatsBase
+julia>KendallTau.speedtest_repeatdensity([StatsBase.corkendall,KendallTau.corkendall],2000)
+```
+"""
+function speedtest_repeatdensity(functions, nr)
+
+    rng = MersenneTwister(1)# make the contents of vectorwithrepeats1 and vectorwithrepeats2 deterministic so successive calls with given nr are fully comparable
+    results = Array{Any}(undef, length(functions))
+    times = Array{Float64}(undef, length(functions))
+    fname = f -> string(Base.parentmodule(f)) * "." * string(f)
+
+    println("#"^67)
+    println("Executing speedtest_repeatdensity $(now())")
+
+    for j = 1:8
+        maxelement = 4^j
+        vectorwithrepeats1 = rand(rng, 1:maxelement, nr)
+        vectorwithrepeats2 = rand(rng, 1:maxelement, nr)
+
+        i = 0
+        println("-"^50)
+        @show maxelement
+        @show(length(vectorwithrepeats1))
+        @show length(unique(vectorwithrepeats1))
+        @show length(unique(vectorwithrepeats2))
+
+        for fn in functions
+            i += 1
+            println("$(fname(fn))(vectorwithrepeats1,vectorwithrepeats2)")
+            tmp = @btimed $fn($vectorwithrepeats1, $vectorwithrepeats2)
+            results[i] = tmp[1]
+            times[i] = tmp[2].time
+        end
+        if length(functions) == 2
+            timeratio = times[1] / times[2]
+            @show timeratio
+        end
+        resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
+        @show resultsidentical
+    end
+
+    println("#"^67)
+
+end
+
+
 
