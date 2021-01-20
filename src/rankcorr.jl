@@ -203,41 +203,8 @@ function countties(x::RealVector, lo::Int64, hi::Int64)
     result
 end
 
-"""
-    speedtestmergesort(n=2000)
+# End of Ancilliary functions
 
-Method to determine the best (i.e. fastest) value of `small_threshold` to method `mergesort!`.  
-Of the powers of 2 tested, 64 seems to maximise speed:
-```
-julia> KendallTau.speedtestmergesort()
-(2000, 4)
-  180.199 μs (847 allocations: 281.78 KiB)
-(2000, 8)
-  150.399 μs (421 allocations: 229.86 KiB)
-(2000, 16)
-  129.599 μs (207 allocations: 195.25 KiB)
-(2000, 32)
-  118.100 μs (101 allocations: 168.67 KiB)
-(2000, 64)
-  114.899 μs (47 allocations: 143.95 KiB)
-(2000, 128)
-  127.299 μs (26 allocations: 123.91 KiB)
-(2000, 256)
-  164.799 μs (18 allocations: 106.91 KiB)
-(2000, 512)
-  249.300 μs (14 allocations: 90.66 KiB)
-(2000, 1024)
-  432.499 μs (12 allocations: 74.72 KiB)
-```
-"""
-function speedtestmergesort(n=2000)
-    for i = 2:10
-        println((n, (2^i)))
-        @btime KendallTau.mergesort!(randn(MersenneTwister(1), $n), 1, $n, (2^$i))
-    end   
-end
-
-using LoopVectorization
 # corkendallnaive, a naive implementation, is faster than corkendall for very small number
 # of elements (< 25 approx) but probably not worth having corkendall call corkendallnaive in that case.
 # It does not seem to be possible to use LoopVectorization to speed up this method: "LoadError: Don't know how to handle expression"
