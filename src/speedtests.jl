@@ -42,7 +42,7 @@ Prints comparisons of execution speed.
 # Example
 ```
 julia>using KendallTau, StatsBase
-julia>speedtest([StatsBase.corkendall,KendallTau.corkendall,KendallTau.corkendallthreads_v2],2000,10)
+julia>KendallTau.speedtest([StatsBase.corkendall,KendallTau.corkendall,KendallTau.corkendallthreads_v2],2000,10)
 ###################################################################
 Executing speedtest 2021-01-19T16:26:29.883
 size(matrix1) = (2000, 10)
@@ -287,7 +287,7 @@ julia> KendallTau.speedtestmergesort()
   249.300 μs (14 allocations: 90.66 KiB)
 (2000, 1024)
   432.499 μs (12 allocations: 74.72 KiB)
-```
+``
 """
 function speedtestmergesort(n=2000)
     for i = 2:10

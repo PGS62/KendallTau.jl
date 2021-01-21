@@ -12,7 +12,7 @@ include("threads_v1.jl")
 include("threads_v2.jl")
 include("threads_v3.jl")
 
-export corkendall, speedtest
+export corkendall
 
 
 end # module

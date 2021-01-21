@@ -89,97 +89,78 @@ end
 # Auxilliary functions for Kendall's rank correlation
 
 """
-    insertionsort!(x::RealVector, lo::Integer, hi::Integer)
+    insertionsort!(v::AbstractVector, lo::Integer, hi::Integer)
 
-Mutates `x` by sorting elements `x[lo:hi]`. Returns the number of swaps that would 
-be required by bubblesort. Quadratic performance in the number of elements to be
-sorted: it is well-suited to small collections but should not be used for large ones.
+Mutates `v` by sorting elements `x[lo:hi]` using the insertionsort algorithm. 
+Returns the number of swaps that would be required by bubblesort.
+This method is a copy-paste-edit of sort! in base/sort.jl (the method specialised on InsertionSortAlg).
 """
-function insertionsort!(x::RealVector, lo::Integer, hi::Integer)
+function insertionsort!(v::AbstractVector, lo::Integer, hi::Integer)
     if lo == hi return 0 end
-    if lo < 1 || hi > length(x) || hi < lo error("Bounds error") end
     nswaps = 0
-    @inbounds for i ∈ (hi - 1):-1:lo
-        tmp = x[i]
-        j = i + 1
-        while j <= hi && tmp > x[j]
-            x[j - 1] = x[j]
+    @inbounds for i = lo + 1:hi
+        j = i
+        x = v[i]
+        while j > lo
+            if x < v[j - 1]
+                nswaps += 1
+                v[j] = v[j - 1]
+                j -= 1
+                continue
+            end
+            break
+        end
+        v[j] = x
+    end
+    return nswaps
+end
+
+"""
+    mergesort!(v::AbstractVector, lo::Integer, hi::Integer, small_threshold=64, t=similar(v, 0))    
+
+Mutates `v` by sorting elements `x[lo:hi]` using the mergesort algorithm. 
+Returns the number of swaps that would be required by bubblesort.
+This method is a copy-paste-edit of sort! in base/sort.jl (the method specialised on MergeSortAlg).
+"""
+function mergesort!(v::AbstractVector, lo::Integer, hi::Integer, small_threshold=64, t=similar(v, 0))
+    nswaps = 0
+    @inbounds if lo < hi
+        hi - lo <= small_threshold && return insertionsort!(v, lo, hi)
+
+        m = midpoint(lo, hi)
+        (length(t) < m - lo + 1) && resize!(t, m - lo + 1)
+
+        nswaps = mergesort!(v, lo,  m,  small_threshold, t)
+        nswaps += mergesort!(v, m + 1, hi, small_threshold, t)
+
+        i, j = 1, lo
+        while j <= m
+            t[i] = v[j]
+            i += 1
             j += 1
         end
-        x[j - 1] = tmp
-        nswaps += j - i - 1
-    end
-    nswaps
-end
 
-"""
-    mergesort!(x::RealVector, lo::Integer, hi::Integer)
-
-Mutates `x` by sorting elements `x[lo:hi]` using the mergesort algorithm. Returns the 
-number of swaps that would be required by the bubblesort algorithm.
-"""
-function mergesort!(x::RealVector, lo::Integer, hi::Integer, small_threshold=64, buffer=Array{eltype(x)}(undef, div(length(x), 2) + 1))
-    if lo < 1 || hi > length(x) || hi < lo error("Bounds error") end
-    len = hi - lo + 1
-
-    if len < small_threshold # See method speedtestmergesort. 64 seems best. Julia's mergesort in base/sort.jl uses const SMALL_THRESHOLD  = 20.
-        return insertionsort!(x, lo, hi)
-    end
-
-    m = div(len, 2)
-    @inbounds begin
-    nswaps = mergesort!(x, lo, lo + m, small_threshold, buffer)
-    nswaps += mergesort!(x, lo + m + 1, hi, small_threshold, buffer)
-    nswaps += merge!(x, lo, lo + m, hi, buffer)
-    end
-    nswaps
-end
-
-"""
-    merge!(x::RealVector, lo::Int64, m::Int64, hi::Int64)
-
-Merge (sorting while doing so) two chunks of x: x[lo:m] and x[(m+1):hi] to form x[lo:hi].
-Assumes chunks x[lo:m-1] and x[m:hi] are already sorted. Afterwards x[lo:hi] is sorted.
-Returns the number of swaps that the bubblesort algorithm would require.
-"""
-function merge!(x::RealVector, lo::Int64, m::Int64, hi::Int64, buffer::RealVector)
-    nswaps = 0
-    if length(buffer) < hi - lo + 1
-        resize!(buffer, hi - lo + 1)
-    end
-
-    loindex = lo
-    hiindex = m + 1
-    writeindex = 1
-
-    while loindex <= m  && hiindex <= hi
-        if x[loindex] <= x[hiindex]
-            buffer[writeindex] = x[loindex]
-            loindex += 1
-        else
-            buffer[writeindex] = x[hiindex]
-            hiindex += 1
-            nswaps += (m - loindex + 1)
+        i, k = 1, lo
+        while k < j <= hi
+            if v[j] < t[i]
+                v[k] = v[j]
+                j += 1
+                nswaps += m - lo + 1 - (i - 1)
+            else
+                v[k] = t[i]
+                i += 1
+            end
+            k += 1
         end
-        writeindex += 1
-    end
-
-    if loindex <= m
-        for i ∈ loindex:m
-            buffer[writeindex] = x[i]
-            writeindex += 1
-        end
-    elseif hiindex <= hi
-        for i ∈ hiindex:hi
-            buffer[writeindex] = x[i]
-            writeindex += 1
+        while k < j
+            v[k] = t[i]
+            k += 1
+            i += 1
         end
     end
-    x[lo:hi] = buffer[1:(hi - lo + 1)]
-
-    nswaps
-
+    return nswaps
 end
+
 
 """
     countties(x::RealVector,lo::Int64,hi::Int64)
@@ -203,55 +184,8 @@ function countties(x::RealVector, lo::Int64, hi::Int64)
     result
 end
 
-# End of Ancilliary functions
-
-# corkendallnaive, a naive implementation, is faster than corkendall for very small number
-# of elements (< 25 approx) but probably not worth having corkendall call corkendallnaive in that case.
-# It does not seem to be possible to use LoopVectorization to speed up this method: "LoadError: Don't know how to handle expression"
-"""
-    corkendallnaive(x::RealVector, y::RealVector)
-
-Naive implementation of Kendall Tau. Slow O(n²) but simple, so good for testing against` corkendall`.
-"""
-function corkendallnaive(x::RealVector, y::RealVector)
-    if any(isnan, x) || any(isnan, y) return NaN end
-    n = length(x)
-    npairs = div(n * (n - 1), 2)
-    if length(y) ≠ n error("Vectors must have same length") end
-
-    numerator, tiesx, tiesy = 0, 0, 0
-     for i ∈ 2:n, j ∈ 1:(i - 1)
-        k = sign(x[i] - x[j]) * sign(y[i] - y[j])
-        if k == 0
-            if x[i] == x[j]
-                tiesx += 1
-            end
-            if y[i] == y[j]
-                tiesy += 1
-            end
-        else
-            numerator += k
-        end
-    end
-    
-    denominator = sqrt((npairs - tiesx) * (npairs - tiesy))
-    numerator / denominator
-end
-
-corkendallnaive(X::RealMatrix, y::RealVector) = Float64[corkendallnaive(float(X[:,i]), float(y)) for i ∈ 1:size(X, 2)]
-
-corkendallnaive(x::RealVector, Y::RealMatrix) = (n = size(Y, 2); reshape(Float64[corkendallnaive(float(x), float(Y[:,i])) for i ∈ 1:n], 1, n))
-
-corkendallnaive(X::RealMatrix, Y::RealMatrix) = Float64[corkendallnaive(float(X[:,i]), float(Y[:,j])) for i ∈ 1:size(X, 2), j ∈ 1:size(Y, 2)]
-
-function corkendallnaive(X::RealMatrix)
-    n = size(X, 2)
-    C = ones(float(eltype(X)), n, n)# avoids dependency on LinearAlgebra
-    for j ∈ 2:n
-        for i ∈ 1:j - 1
-            C[i,j] = corkendallnaive(X[:,i], X[:,j])
-            C[j,i] = C[i,j]
-        end
-    end
-    return C
-end
+# This implementation of `midpoint` is performance-optimized but safe
+# only if `lo <= hi`.
+# This function is copied from base/sort.jl
+midpoint(lo::T, hi::T) where T <: Integer = lo + ((hi - lo) >>> 0x01)
+midpoint(lo::Integer, hi::Integer) = midpoint(promote(lo, hi)...)
