@@ -83,7 +83,6 @@ all(myapprox.(results[2:end], results[1:end - 1], 1.0e-14)) = true
 
 <details><summary><ins>Speedtest output for v1.2 (note reduced total allocations)</ins></summary>
 <p>
-
 ```
 julia> speedtest([StatsBase.corkendall,KendallTau.corkendall,KendallTau.corkendallthreads_v2],2000,10)
 ###################################################################
@@ -171,8 +170,8 @@ Speed ratio KendallTau.corkendallthreads_v2 vs StatsBase.corkendall: 2.461948941
 Ratio of memory allocated KendallTau.corkendallthreads_v2 vs StatsBase.corkendall: 2.275738940686372
 Results from all 3 functions identical? true
 ###################################################################
-
 ```
+
 </p>
 </details>
 
@@ -182,7 +181,7 @@ Results from all 3 functions identical? true
 
 <details><summary><ins>Speedtest output for v1.3 (further speedups, now uses ~30% less memory than `StatsBase.corkendall`)</ins></summary>
 <p>
-```
+```  
 julia> KendallTau.speedtest([StatsBase.corkendall,KendallTau.corkendall,KendallTau.corkendallthreads_v2],2000,10)
 ###################################################################
 Executing speedtest 2021-01-21T14:56:19.489
