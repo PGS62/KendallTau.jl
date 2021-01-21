@@ -14,9 +14,4 @@ include("threads_v3.jl")
 
 export corkendall
 
-
 end # module
-
-
-
-

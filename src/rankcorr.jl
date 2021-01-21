@@ -161,13 +161,12 @@ function mergesort!(v::AbstractVector, lo::Integer, hi::Integer, small_threshold
     return nswaps
 end
 
-
 """
     countties(x::RealVector,lo::Int64,hi::Int64)
 
 Assumes `x` is sorted. Returns the number of ties within `x[lo:hi]`.
 """
-function countties(x::RealVector, lo::Int64, hi::Int64)
+function countties(x::AbstractVector, lo::Integer, hi::Integer)
     thistiecount, result = 0, 0
     for i ∈ (lo + 1):hi
         if x[i] == x[i - 1]

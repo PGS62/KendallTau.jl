@@ -3,8 +3,6 @@ Recent changes:
 mergesort more memory efficient via correct use of buffer and resize! function.
 mergesort! & merge! refactored to be a bit more similar to functions in base/sort.jl
 
-
-
 julia> speedtest([StatsBase.corkendall,KendallTau.corkendall,KendallTau.corkendallthreads_v2],2000,10)
 ###################################################################
 Executing speedtest 2021-01-19T15:48:47.282
@@ -91,5 +89,3 @@ Speed ratio KendallTau.corkendallthreads_v2 vs StatsBase.corkendall: 2.461948941
 Ratio of memory allocated KendallTau.corkendallthreads_v2 vs StatsBase.corkendall: 2.275738940686372
 Results from all 3 functions identical? true
 ###################################################################
-
-

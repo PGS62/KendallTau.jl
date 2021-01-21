@@ -94,7 +94,6 @@ function corkendallnaive(X::RealMatrix)
     return C
 end
 
-
 """
     compare_implementations(fn1, fn2, abstol::Float64=1e-14, maxcols=10, maxrows=500, numtests=100)
 

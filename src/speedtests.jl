@@ -5,8 +5,9 @@ using Dates
 """
     @btimed expression [other parameters...]
 
-An amended version of  BenchmarkTools.@btime. Identical except the return is a tuple of the result of the `expression` evaluation, the trialmin (of type BenchmarkTools.TrialEstimate) and the memory allocated (a number of bytes).
-
+An amended version of  BenchmarkTools.@btime. Identical except the return is a tuple of
+the result of the `expression` evaluation, the trialmin (of type BenchmarkTools.TrialEstimate)
+and the memory allocated (a number of bytes).
 """
 macro btimed(args...)
     _, params = BenchmarkTools.prunekwargs(args...)
@@ -28,7 +29,6 @@ macro btimed(args...)
         $result, $trialmin, $BenchmarkTools.memory($trialmin)
     end)
 end
-
 
 """
     speedtest(functions, nr::Int, nc::Int)
@@ -203,7 +203,6 @@ function myapprox(x::Float64, y::Float64, abstol::Float64)
         return(abs(x - y) <= abstol)
     end
 end
-
 
 """
     speedtest_repeatdensity(functions,nr)

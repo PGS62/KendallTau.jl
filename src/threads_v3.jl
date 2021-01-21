@@ -25,7 +25,6 @@ function corkendallthreads_v3(X::RealMatrix, Y::RealMatrix)
     return C
 end
 
-
 #thinking here is that corkendall is more efficient if y argument has more columns than X (but that's only a hunch, haven't actually tested it.)
 function corkendallthreads_v4(X::RealMatrix, Y::RealMatrix)
     nr = size(X, 2)
