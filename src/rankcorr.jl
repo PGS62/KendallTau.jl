@@ -110,36 +110,9 @@ end
 
 # Auxilliary functions for Kendall's rank correlation
 
-"""
-    insertionsort!(v::AbstractVector, lo::Integer, hi::Integer)
-
-Mutates `v` by sorting elements `x[lo:hi]` using the insertionsort algorithm. 
-This method is a copy-paste-edit of sort! in base/sort.jl (the method specialised on InsertionSortAlg),
-but amended to return the bubblesort distance.
-"""
-function insertionsort!(v::AbstractVector, lo::Integer, hi::Integer)
-    if lo == hi return 0 end
-    nswaps = 0
-    @inbounds for i = lo + 1:hi
-        j = i
-        x = v[i]
-        while j > lo
-            if x < v[j - 1]
-                nswaps += 1
-                v[j] = v[j - 1]
-                j -= 1
-                continue
-            end
-            break
-        end
-        v[j] = x
-    end
-    return nswaps
-end
-
 # Same value for this constant as in base/sort.jl. Method speedtestmergesort seems
-# to show that a value of 64 is fractionaly (2% ?) faster but safer to follow base/sort.jl...
-const SMALL_THRESHOLD  = 20
+# to show that a value of 64 is fractionaly (2% ?) faster but safer to follow base/sort.jl, which has it at 20.
+const SMALL_THRESHOLD  = 64
 
 """
     mergesort!(v::AbstractVector, lo::Integer, hi::Integer, t=similar(v, 0))    
@@ -192,3 +165,31 @@ end
 # This function is copied from base/sort.jl
 midpoint(lo::T, hi::T) where T <: Integer = lo + ((hi - lo) >>> 0x01)
 midpoint(lo::Integer, hi::Integer) = midpoint(promote(lo, hi)...)
+
+
+"""
+    insertionsort!(v::AbstractVector, lo::Integer, hi::Integer)
+
+Mutates `v` by sorting elements `x[lo:hi]` using the insertionsort algorithm. 
+This method is a copy-paste-edit of sort! in base/sort.jl (the method specialised on InsertionSortAlg),
+but amended to return the bubblesort distance.
+"""
+function insertionsort!(v::AbstractVector, lo::Integer, hi::Integer)
+    if lo == hi return 0 end
+    nswaps = 0
+    @inbounds for i = lo + 1:hi
+        j = i
+        x = v[i]
+        while j > lo
+            if x < v[j - 1]
+                nswaps += 1
+                v[j] = v[j - 1]
+                j -= 1
+                continue
+            end
+            break
+        end
+        v[j] = x
+    end
+    return nswaps
+end

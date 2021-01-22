@@ -41,7 +41,7 @@ Prints comparisons of execution speed.
 
 # Example
 ```
-julia>using StatsBase;KendallTau.speedtest([StatsBase.corkendall,KendallTau.corkendall,KendallTau.corkendallthreads_v2],2000,10)
+julia>using StatsBase;KendallTau.speedtest([StatsBase.corkendall,KendallTau.corkendall],2000,10)
 ###################################################################
 Executing speedtest 2021-01-19T16:26:29.883
 size(matrix1) = (2000, 10)
@@ -127,7 +127,11 @@ function speedtest(functions, nr::Int, nc::Int)
         end
         if length(functions) > 1
             resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
-            println("Results from all $(length(functions)) functions identical? $resultsidentical")
+            if !resultsidentical
+                @warn "Results from all $(length(functions)) functions identical? $resultsidentical"
+            else
+                println("Results from all $(length(functions)) functions identical? $resultsidentical")
+            end
         end
     end
     println("#"^67)
@@ -307,15 +311,3 @@ function mergesort2!(v::AbstractVector, lo::Integer, hi::Integer, small_threshol
     end
     return nswaps
 end
-
-#avoids copy-paste-edit BUT kills perfomance :-(
-function insertionsort_EXPERIMENTAL!(v::AbstractVector, lo::Integer, hi::Integer)
-    nswaps = 0
-    function myisless(x, y)
-        x = isless(x, y)
-        nswaps += x
-        return x
-    end
-    sort!(view(v, lo:hi), alg=Base.Sort.InsertionSort, lt=myisless)
-    return nswaps
-end    

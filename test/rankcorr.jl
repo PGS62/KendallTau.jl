@@ -22,9 +22,7 @@ c22 = corspearman(x2, x2)
 @test c11 ≈ 1.0
 @test c22 ≈ 1.0
 @test corspearman(X, X) ≈ [c11 c12; c12 c22]
-@test corspearman(X)    ≈ [c11 c12; c12 c22]
-
-=#
+@test corspearman(X)    ≈ [c11 c12; c12 c22] =#
 
 # corkendall
 @test corkendall(x1, y) ≈ -0.105409255338946
@@ -85,11 +83,9 @@ corkendallnaive(X::RealMatrix, Y::RealMatrix) = Float64[corkendallnaive(float(X[
 function corkendallnaive(X::RealMatrix)
     n = size(X, 2)
     C = ones(float(eltype(X)), n, n)# avoids dependency on LinearAlgebra
-    for j ∈ 2:n
-        for i ∈ 1:j - 1
-            C[i,j] = corkendallnaive(X[:,i], X[:,j])
-            C[j,i] = C[i,j]
-        end
+    for j ∈ 2:n, i ∈ 1:j - 1
+        C[i,j] = corkendallnaive(X[:,i], X[:,j])
+        C[j,i] = C[i,j]
     end
     return C
 end
@@ -107,7 +103,7 @@ outputs.
 The function also checks that `fn1` and `fn2` never mutate their arguments.
 
 `fn1` First implementation of Kendall Tau.\n
-`fn2` Second implementation of Kendall Tau.\n
+`fn2` Second implementation of Kendall Tau.\n 
 `abstol` the absolute tolerance for difference in returns from the two functions.\n
 `maxcols` the maximum number of columns in the randomly-generated input matrices.\n
 `maxrows` the maximum number of rows in the randomly-generated input matrices, or elements in the input vectors\n
@@ -127,11 +123,9 @@ function compare_implementations(fn1, fn2; abstol::Float64=1e-14, maxcols=10, ma
     
     function myapprox(x::Float64, y::Float64, abstol::Float64)
         if isnan(x) && isnan(y)
-            return(true)
-        elseif isnan(x)
-            return(false)
-        elseif isnan(y)
-            return(false)
+                return(true)
+            elseif isnan(x) || isnan(y)
+                return(false)
         else
             return(abs(x - y) <= abstol)
         end
@@ -231,4 +225,5 @@ function compare_implementations(fn1, fn2; abstol::Float64=1e-14, maxcols=10, ma
     return(true)
 end
 
-@test compare_implementations(KendallTau.corkendall, corkendallnaive) == true
+#Notice strict test with absolute tolerance of differences set to zero.
+@test compare_implementations(KendallTau.corkendall, corkendallnaive;abstol = 0.0) == true
