@@ -41,8 +41,7 @@ Prints comparisons of execution speed.
 
 # Example
 ```
-julia>using KendallTau, StatsBase
-julia>KendallTau.speedtest([StatsBase.corkendall,KendallTau.corkendall,KendallTau.corkendallthreads_v2],2000,10)
+julia>using StatsBase;KendallTau.speedtest([StatsBase.corkendall,KendallTau.corkendall,KendallTau.corkendallthreads_v2],2000,10)
 ###################################################################
 Executing speedtest 2021-01-19T16:26:29.883
 size(matrix1) = (2000, 10)
@@ -212,7 +211,7 @@ function speedtest_repeatdensity(functions, nr)
 
 end
 
-using Plots
+#using Plots
 
 """
     speedtestmergesort(n=2000)
@@ -262,7 +261,8 @@ function speedtestmergesort(n=2000)
         i+=1
         times[i] = res[2].time
     end   
-    display(plot(testpoints,times,title = "Speed of mergesort! vs small_threshold (vector length = $n)", xlabel = "small_threshold",ylabel = "time (ns)"))
+ #   display(plot(testpoints,times,title = "Speed of mergesort! vs small_threshold (vector length = $n)", xlabel = "small_threshold",ylabel = "time (ns)"))
+ testpoints,times
 end
 
 
