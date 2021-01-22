@@ -137,18 +137,6 @@ function insertionsort!(v::AbstractVector, lo::Integer, hi::Integer)
     return nswaps
 end
 
-#avoids copy-paste-edit BUT kills perfomance :-(
-function insertionsort_EXPERIMENTAL!(v::AbstractVector, lo::Integer, hi::Integer)
-    nswaps = 0
-    function myisless(x, y)
-        x = isless(x, y)
-        nswaps += x
-        return x
-    end
-    sort!(view(v, lo:hi), alg=Base.Sort.InsertionSort, lt=myisless)
-    return nswaps
-end
-
 # Same value for this constant as in base/sort.jl. Method speedtestmergesort seems
 # to show that a value of 64 is fractionaly (2% ?) faster but safer to follow base/sort.jl...
 const SMALL_THRESHOLD  = 20

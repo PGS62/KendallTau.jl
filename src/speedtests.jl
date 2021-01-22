@@ -265,7 +265,6 @@ function speedtestmergesort(n=2000)
  testpoints,times
 end
 
-
 """
     mergesort2!(v::AbstractVector, lo::Integer, hi::Integer, t=similar(v, 0),small_threshold::Integer=64,)
 Like `mergesort!` but allows expermintation to determine best value of small_threshold as opposed to using the constant SMALL_THRESHOLD
@@ -308,3 +307,15 @@ function mergesort2!(v::AbstractVector, lo::Integer, hi::Integer, small_threshol
     end
     return nswaps
 end
+
+#avoids copy-paste-edit BUT kills perfomance :-(
+function insertionsort_EXPERIMENTAL!(v::AbstractVector, lo::Integer, hi::Integer)
+    nswaps = 0
+    function myisless(x, y)
+        x = isless(x, y)
+        nswaps += x
+        return x
+    end
+    sort!(view(v, lo:hi), alg=Base.Sort.InsertionSort, lt=myisless)
+    return nswaps
+end    
