@@ -8,7 +8,7 @@
 
 This (unregistered) Julia package exposes a function `corkendall` that is a candidate to replace the function of the same name in the StatsBase package. 
 
-The package also contains a function `speedtest` that prints a comparison of the execution speed of two (or more) implementations of Kendall Tau. `speedtest` demonstrates that the new version of `corkendall` is about five times faster than the existing StatsBase version. See [# 634](https://github.com/JuliaStats/StatsBase.jl/issues/634).
+The package also contains a function `speedtest` that prints a comparison of the execution speed of two (or more) implementations of Kendall Tau. `speedtest` demonstrates that the new version of `corkendall` is about ~~five~~ six times faster than the existing StatsBase version. See [# 634](https://github.com/JuliaStats/StatsBase.jl/issues/634).
 
 <details><summary><ins>Speedtest output for v1.0</ins></summary>
 <p>
@@ -83,6 +83,7 @@ all(myapprox.(results[2:end], results[1:end - 1], 1.0e-14)) = true
 
 <details><summary><ins>Speedtest output for v1.2 (note reduced total allocations)</ins></summary>
 <p>
+  
 ```
 julia> speedtest([StatsBase.corkendall,KendallTau.corkendall,KendallTau.corkendallthreads_v2],2000,10)
 ###################################################################
@@ -181,6 +182,7 @@ Results from all 3 functions identical? true
 
 <details><summary><ins>Speedtest output for v1.3 (further speedups, now uses ~30% less memory than `StatsBase.corkendall`)</ins></summary>
 <p>
+  
 ```  
 julia> KendallTau.speedtest([StatsBase.corkendall,KendallTau.corkendall,KendallTau.corkendallthreads_v2],2000,10)
 ###################################################################
@@ -269,6 +271,7 @@ Ratio of memory allocated Main.KendallTau.corkendallthreads_v2 vs StatsBase.cork
 Results from all 3 functions identical? true
 ###################################################################
 ```
+
 </p>
 </details>
 
