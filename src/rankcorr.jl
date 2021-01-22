@@ -49,6 +49,28 @@ function corkendall!(x::RealVector, y::RealVector, permx=sortperm(x))
 end
 
 """
+    countties(x::RealVector,lo::Int64,hi::Int64)
+
+Assumes `x` is sorted. Returns the number of ties within `x[lo:hi]`.
+"""
+function countties(x::AbstractVector, lo::Integer, hi::Integer)
+    thistiecount, result = 0, 0
+    for i ∈ (lo + 1):hi
+        if x[i] == x[i - 1]
+            thistiecount += 1
+        elseif thistiecount > 0
+            result += (thistiecount * (thistiecount + 1)) / 2
+            thistiecount = 0
+        end
+    end
+
+    if thistiecount > 0
+        result += (thistiecount * (thistiecount + 1)) / 2
+    end
+    result
+end
+
+"""
     corkendall(x, y=x)
 
 Compute Kendall's rank correlation coefficient, τ. `x` and `y` must both be either
@@ -92,8 +114,8 @@ end
     insertionsort!(v::AbstractVector, lo::Integer, hi::Integer)
 
 Mutates `v` by sorting elements `x[lo:hi]` using the insertionsort algorithm. 
-Returns the number of swaps that would be required by bubblesort.
-This method is a copy-paste-edit of sort! in base/sort.jl (the method specialised on InsertionSortAlg).
+This method is a copy-paste-edit of sort! in base/sort.jl (the method specialised on InsertionSortAlg),
+but amended to return the bubblesort distance.
 """
 function insertionsort!(v::AbstractVector, lo::Integer, hi::Integer)
     if lo == hi return 0 end
@@ -115,23 +137,27 @@ function insertionsort!(v::AbstractVector, lo::Integer, hi::Integer)
     return nswaps
 end
 
+#Same value for this constant as in base/sort.jl. Method speedtestmergesort seems
+#to show that a value of 64 is fractionaly (2% ?) faster but safer to follow base/sort.jl...
+const SMALL_THRESHOLD  = 20
+
 """
-    mergesort!(v::AbstractVector, lo::Integer, hi::Integer, small_threshold=64, t=similar(v, 0))    
+    mergesort!(v::AbstractVector, lo::Integer, hi::Integer, t=similar(v, 0))    
 
 Mutates `v` by sorting elements `x[lo:hi]` using the mergesort algorithm. 
-Returns the number of swaps that would be required by bubblesort.
-This method is a copy-paste-edit of sort! in base/sort.jl (the method specialised on MergeSortAlg).
+This method is a copy-paste-edit of sort! in base/sort.jl (the method specialised on MergeSortAlg),
+but amended to return the bubblesort distance.
 """
-function mergesort!(v::AbstractVector, lo::Integer, hi::Integer, small_threshold=64, t=similar(v, 0))
+function mergesort!(v::AbstractVector, lo::Integer, hi::Integer, t=similar(v, 0))
     nswaps = 0
     @inbounds if lo < hi
-        hi - lo <= small_threshold && return insertionsort!(v, lo, hi)
+        hi - lo <= SMALL_THRESHOLD && return insertionsort!(v, lo, hi)
 
         m = midpoint(lo, hi)
         (length(t) < m - lo + 1) && resize!(t, m - lo + 1)
 
-        nswaps = mergesort!(v, lo,  m,  small_threshold, t)
-        nswaps += mergesort!(v, m + 1, hi, small_threshold, t)
+        nswaps = mergesort!(v, lo,  m, t)
+        nswaps += mergesort!(v, m + 1, hi, t)
 
         i, j = 1, lo
         while j <= m
@@ -159,28 +185,6 @@ function mergesort!(v::AbstractVector, lo::Integer, hi::Integer, small_threshold
         end
     end
     return nswaps
-end
-
-"""
-    countties(x::RealVector,lo::Int64,hi::Int64)
-
-Assumes `x` is sorted. Returns the number of ties within `x[lo:hi]`.
-"""
-function countties(x::AbstractVector, lo::Integer, hi::Integer)
-    thistiecount, result = 0, 0
-    for i ∈ (lo + 1):hi
-        if x[i] == x[i - 1]
-            thistiecount += 1
-        elseif thistiecount > 0
-            result += (thistiecount * (thistiecount + 1)) / 2
-            thistiecount = 0
-        end
-    end
-
-    if thistiecount > 0
-        result += (thistiecount * (thistiecount + 1)) / 2
-    end
-    result
 end
 
 # This implementation of `midpoint` is performance-optimized but safe

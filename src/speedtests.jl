@@ -76,123 +76,62 @@ function speedtest(functions, nr::Int, nc::Int)
     fname = f -> string(Base.parentmodule(f)) * "." * string(f)
 
     println("#"^67)
-
     println("Executing speedtest $(now())")
-    @show(size(matrix1))
-    i = 0
-    for fn in functions
-        i += 1
-        println("$(fname(fn))(matrix1)")
-        tmp =  @btimed $fn($matrix1)
-        results[i], times[i], allocations[i] = tmp[1], tmp[2].time, tmp[3]
-        if i > 1
-            println("Speed ratio $(fname(functions[i])) vs $(fname(functions[1])): $(times[1] / times[i])")
-            println("Ratio of memory allocated $(fname(functions[i])) vs $(fname(functions[1])): $(allocations[i] / allocations[1])")
+
+    for k = 1:6
+        println("-"^50)
+        if k == 1
+            @show(size(matrix1))
+        elseif k == 2
+            @show(size(matrix1))
+            @show(size(matrix2))
+        elseif k == 3
+            @show(size(vector1))
+            @show(size(matrix1))
+        elseif k == 4
+            @show(size(matrix1))
+            @show(size(vector1))
+        elseif k == 5
+            @show(size(vector1))
+            @show(size(vector2))
+        elseif k == 6
+            @show(size(manyrepeats1))
+            @show(size(manyrepeats2))
+        end
+        i = 0
+        for fn in functions
+            i += 1
+            if k == 1
+                println("$(fname(fn))(matrix1)")
+                tmp =  @btimed $fn($matrix1)
+            elseif k == 2
+                println("$(fname(fn))(matrix1,matrix2)")
+                tmp =  @btimed $fn($matrix1, $matrix2)
+            elseif k == 3
+                println("$(fname(fn))(vector1,matrix1)")
+                tmp =  @btimed $fn($vector1, $matrix1)
+            elseif k == 4
+                println("$(fname(fn))(matrix1,vector1)")
+                tmp =  @btimed $fn($matrix1, $vector1)
+            elseif k == 5
+                println("$(fname(fn))(vector1,vector2)")
+                tmp =  @btimed $fn($vector1, $vector2)
+            elseif k == 6
+                println("$(fname(fn))(manyrepeats1,manyrepeats2)")
+                tmp =  @btimed $fn($manyrepeats1, $manyrepeats2)
+            end
+            results[i], times[i], allocations[i] = tmp[1], tmp[2].time, tmp[3]
+            if i > 1
+                println("Speed ratio $(fname(functions[i])) vs $(fname(functions[1])): $(times[1] / times[i])")
+                println("Ratio of memory allocated $(fname(functions[i])) vs $(fname(functions[1])): $(allocations[i] / allocations[1])")
+            end
+        end
+        if length(functions) > 1
+            resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
+            println("Results from all $(length(functions)) functions identical? $resultsidentical")
         end
     end
-    if length(functions) > 1
-        resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
-        println("Results from all $(length(functions)) functions identical? $resultsidentical")
-    end
-
-    i = 0
-    println("-"^50)
-    @show(size(matrix1))
-    @show(size(matrix2))
-    for fn in functions
-        i += 1
-        println("$(fname(fn))(matrix1,matrix2)")
-        tmp =  @btimed $fn($matrix1, $matrix2)
-        results[i], times[i], allocations[i] = tmp[1], tmp[2].time, tmp[3]
-        if i > 1
-            println("Speed ratio $(fname(functions[i])) vs $(fname(functions[1])): $(times[1] / times[i])")
-            println("Ratio of memory allocated $(fname(functions[i])) vs $(fname(functions[1])): $(allocations[i] / allocations[1])")
-        end
-    end
-    if length(functions) > 1
-        resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
-        println("Results from all $(length(functions)) functions identical? $resultsidentical")
-    end
-
-    i = 0
-    println("-"^50)
-    @show(size(vector1))
-    @show(size(matrix1))
-    for fn in functions
-        i += 1
-        println("$(fname(fn))(vector1,matrix1)")
-        tmp =  @btimed $fn($vector1, $matrix1)
-        results[i], times[i], allocations[i] = tmp[1], tmp[2].time, tmp[3]
-        if i > 1
-            println("Speed ratio $(fname(functions[i])) vs $(fname(functions[1])): $(times[1] / times[i])")
-            println("Ratio of memory allocated $(fname(functions[i])) vs $(fname(functions[1])): $(allocations[i] / allocations[1])")
-        end
-    end
-    if length(functions) > 1
-        resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
-        println("Results from all $(length(functions)) functions identical? $resultsidentical")
-    end
-
-    i = 0
-    println("-"^50)
-    @show(size(matrix1))
-    @show(size(vector1))
-    for fn in functions
-        i += 1
-        println("$(fname(fn))(matrix1,vector1)")
-        tmp =  @btimed $fn($matrix1, $vector1)
-        results[i], times[i], allocations[i] = tmp[1], tmp[2].time, tmp[3]
-        if i > 1
-            println("Speed ratio $(fname(functions[i])) vs $(fname(functions[1])): $(times[1] / times[i])")
-            println("Ratio of memory allocated $(fname(functions[i])) vs $(fname(functions[1])): $(allocations[i] / allocations[1])")
-        end
-    end
-    if length(functions) > 1
-        resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
-        println("Results from all $(length(functions)) functions identical? $resultsidentical")
-    end
-
-    # Remember that threaded versions don't actually use threads in vector vs vector case.
-    i = 0
-    println("-"^50)
-    @show(size(vector1))
-    @show(size(vector2))
-    for fn in functions
-        i += 1
-        println("$(fname(fn))(vector1,vector2)")
-        tmp =  @btimed $fn($vector1, $vector2)
-        results[i], times[i], allocations[i] = tmp[1], tmp[2].time, tmp[3]
-        if i > 1
-            println("Speed ratio $(fname(functions[i])) vs $(fname(functions[1])): $(times[1] / times[i])")
-            println("Ratio of memory allocated $(fname(functions[i])) vs $(fname(functions[1])): $(allocations[i] / allocations[1])")
-        end
-    end
-    if length(functions) > 1
-        resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
-        println("Results from all $(length(functions)) functions identical? $resultsidentical")
-    end
-
-    i = 0
-    println("-"^50)
-    @show(size(manyrepeats1))
-    @show(size(manyrepeats2))
-    for fn in functions
-        i += 1
-        println("$(fname(fn))(manyrepeats1,manyrepeats2)")
-        tmp =  @btimed $fn($manyrepeats1, $manyrepeats2)
-        results[i], times[i], allocations[i] = tmp[1], tmp[2].time, tmp[3]
-        if i > 1
-            println("Speed ratio $(fname(functions[i])) vs $(fname(functions[1])): $(times[1] / times[i])")
-            println("Ratio of memory allocated $(fname(functions[i])) vs $(fname(functions[1])): $(allocations[i] / allocations[1])")
-        end
-    end
-    if length(functions) > 1
-        resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
-        println("Results from all $(length(functions)) functions identical? $resultsidentical")
-    end
-
     println("#"^67)
-
 end
 
 # Test for equality with absolute tolerance of `abstol` and NaN being equal to NaN (different to Julia's isapprox)
@@ -273,37 +212,99 @@ function speedtest_repeatdensity(functions, nr)
 
 end
 
+using Plots
+
 """
     speedtestmergesort(n=2000)
 
 Method to determine the best (i.e. fastest) value of `small_threshold` to method `mergesort!`.  
 Of the powers of 2 tested, 64 seems to maximise speed:
 ```
-julia> KendallTau.speedtestmergesort()
-(2000, 4)
-  180.199 μs (847 allocations: 281.78 KiB)
-(2000, 8)
-  150.399 μs (421 allocations: 229.86 KiB)
-(2000, 16)
-  129.599 μs (207 allocations: 195.25 KiB)
-(2000, 32)
-  118.100 μs (101 allocations: 168.67 KiB)
-(2000, 64)
-  114.899 μs (47 allocations: 143.95 KiB)
-(2000, 128)
-  127.299 μs (26 allocations: 123.91 KiB)
-(2000, 256)
-  164.799 μs (18 allocations: 106.91 KiB)
-(2000, 512)
-  249.300 μs (14 allocations: 90.66 KiB)
-(2000, 1024)
-  432.499 μs (12 allocations: 74.72 KiB)
-``
+julia> KendallTau.speedtestmergesort(20000)
+Executing speedtestmergesort 2021-01-22T14:07:55.415
+(20000, 10)
+  1.240 ms (12 allocations: 254.06 KiB)
+(20000, 20)
+  1.170 ms (12 allocations: 254.06 KiB)
+(20000, 30)
+  1.168 ms (12 allocations: 254.06 KiB)
+(20000, 40)
+  1.127 ms (12 allocations: 254.06 KiB)
+(20000, 50)
+  1.128 ms (12 allocations: 254.06 KiB)
+(20000, 60)
+  1.128 ms (12 allocations: 254.06 KiB)
+(20000, 70)
+  1.127 ms (12 allocations: 254.06 KiB)
+(20000, 80)
+  1.135 ms (12 allocations: 254.06 KiB)
+(20000, 90)
+  1.136 ms (12 allocations: 254.06 KiB)
+(20000, 100)
+  1.135 ms (12 allocations: 254.06 KiB)
+(20000, 110)
+  1.131 ms (12 allocations: 254.06 KiB)
+(20000, 120)
+  1.136 ms (12 allocations: 254.06 KiB)
+(20000, 130)
+  1.136 ms (12 allocations: 254.06 KiB)
 """
 function speedtestmergesort(n=2000)
-    for i = 2:10
-        println((n, (2^i)))
-        @btime KendallTau.mergesort!(randn(MersenneTwister(1), $n), 1, $n, (2^$i))
+    println("Executing speedtestmergesort $(now())")
+    i = 0
+    testpoints = 2 .^ (2:10)
+    testpoints = 10 .* (2:10)
+    testpoints = 10 .* (1:13)
+    times = zeros(length(testpoints))
+    for testpoint ∈ testpoints
+        println((n, testpoint))
+        res = @btimed KendallTau.mergesort2!(randn(MersenneTwister(1), $n), 1, $n, $testpoint)
+        i+=1
+        times[i] = res[2].time
     end   
+    display(plot(testpoints,times,title = "Speed of mergesort! vs small_threshold (vector length = $n)", xlabel = "small_threshold",ylabel = "time (ns)"))
 end
 
+
+"""
+    mergesort2!(v::AbstractVector, lo::Integer, hi::Integer, t=similar(v, 0),small_threshold::Integer=64,)
+Like `mergesort!` but allows expermintation to determine best value of small_threshold as opposed to using the constant SMALL_THRESHOLD
+"""
+function mergesort2!(v::AbstractVector, lo::Integer, hi::Integer, small_threshold::Integer=64,t=similar(v, 0))
+    nswaps = 0
+    @inbounds if lo < hi
+        hi - lo <= small_threshold && return insertionsort!(v, lo, hi)
+
+        m = midpoint(lo, hi)
+        (length(t) < m - lo + 1) && resize!(t, m - lo + 1)
+
+        nswaps = mergesort2!(v, lo,  m,  small_threshold, t)
+        nswaps += mergesort2!(v, m + 1, hi, small_threshold, t)
+
+        i, j = 1, lo
+        while j <= m
+            t[i] = v[j]
+            i += 1
+            j += 1
+        end
+
+        i, k = 1, lo
+        while k < j <= hi
+            if v[j] < t[i]
+                v[k] = v[j]
+                j += 1
+                nswaps += m - lo + 1 - (i - 1)
+            else
+                v[k] = t[i]
+                i += 1
+            end
+            k += 1
+        end
+        while k < j
+            v[k] = t[i]
+            k += 1
+            i += 1
+        end
+    end
+    return nswaps
+end

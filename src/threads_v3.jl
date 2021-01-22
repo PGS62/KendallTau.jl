@@ -5,7 +5,7 @@ function corkendallthreads_v3(X::RealMatrix, Y::RealMatrix)
     nc = size(Y, 2)
     C = zeros(float(eltype(X)), nr, nc)
 
-    numtasks = min(nc, 5 * Threads.nthreads())
+    numtasks = min(nc, 10 * Threads.nthreads())
     chunksize = Int(max(1, round(nc / numtasks)))
     numtasks = Int(round(nc / chunksize, RoundUp))
 
