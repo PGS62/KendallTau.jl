@@ -84,14 +84,16 @@ function speedtest(functions, nr::Int, nc::Int)
         i += 1
         println("$(fname(fn))(matrix1)")
         tmp =  @btimed $fn($matrix1)
-        results[i], times[i],allocations[i] = tmp[1],tmp[2].time,tmp[3]
+        results[i], times[i], allocations[i] = tmp[1], tmp[2].time, tmp[3]
         if i > 1
             println("Speed ratio $(fname(functions[i])) vs $(fname(functions[1])): $(times[1] / times[i])")
             println("Ratio of memory allocated $(fname(functions[i])) vs $(fname(functions[1])): $(allocations[i] / allocations[1])")
         end
     end
-    resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
-    println("Results from all $(length(functions)) functions identical? $resultsidentical")
+    if length(functions) > 1
+        resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
+        println("Results from all $(length(functions)) functions identical? $resultsidentical")
+    end
 
     i = 0
     println("-"^50)
@@ -101,14 +103,16 @@ function speedtest(functions, nr::Int, nc::Int)
         i += 1
         println("$(fname(fn))(matrix1,matrix2)")
         tmp =  @btimed $fn($matrix1, $matrix2)
-        results[i], times[i],allocations[i] = tmp[1],tmp[2].time,tmp[3]
+        results[i], times[i], allocations[i] = tmp[1], tmp[2].time, tmp[3]
         if i > 1
             println("Speed ratio $(fname(functions[i])) vs $(fname(functions[1])): $(times[1] / times[i])")
             println("Ratio of memory allocated $(fname(functions[i])) vs $(fname(functions[1])): $(allocations[i] / allocations[1])")
         end
     end
-    resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
-    println("Results from all $(length(functions)) functions identical? $resultsidentical")
+    if length(functions) > 1
+        resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
+        println("Results from all $(length(functions)) functions identical? $resultsidentical")
+    end
 
     i = 0
     println("-"^50)
@@ -118,14 +122,16 @@ function speedtest(functions, nr::Int, nc::Int)
         i += 1
         println("$(fname(fn))(vector1,matrix1)")
         tmp =  @btimed $fn($vector1, $matrix1)
-        results[i], times[i],allocations[i] = tmp[1],tmp[2].time,tmp[3]
+        results[i], times[i], allocations[i] = tmp[1], tmp[2].time, tmp[3]
         if i > 1
             println("Speed ratio $(fname(functions[i])) vs $(fname(functions[1])): $(times[1] / times[i])")
             println("Ratio of memory allocated $(fname(functions[i])) vs $(fname(functions[1])): $(allocations[i] / allocations[1])")
         end
     end
-    resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
-    println("Results from all $(length(functions)) functions identical? $resultsidentical")
+    if length(functions) > 1
+        resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
+        println("Results from all $(length(functions)) functions identical? $resultsidentical")
+    end
 
     i = 0
     println("-"^50)
@@ -135,14 +141,16 @@ function speedtest(functions, nr::Int, nc::Int)
         i += 1
         println("$(fname(fn))(matrix1,vector1)")
         tmp =  @btimed $fn($matrix1, $vector1)
-        results[i], times[i],allocations[i] = tmp[1],tmp[2].time,tmp[3]
+        results[i], times[i], allocations[i] = tmp[1], tmp[2].time, tmp[3]
         if i > 1
             println("Speed ratio $(fname(functions[i])) vs $(fname(functions[1])): $(times[1] / times[i])")
             println("Ratio of memory allocated $(fname(functions[i])) vs $(fname(functions[1])): $(allocations[i] / allocations[1])")
         end
     end
-    resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
-    println("Results from all $(length(functions)) functions identical? $resultsidentical")
+    if length(functions) > 1
+        resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
+        println("Results from all $(length(functions)) functions identical? $resultsidentical")
+    end
 
     # Remember that threaded versions don't actually use threads in vector vs vector case.
     i = 0
@@ -153,14 +161,16 @@ function speedtest(functions, nr::Int, nc::Int)
         i += 1
         println("$(fname(fn))(vector1,vector2)")
         tmp =  @btimed $fn($vector1, $vector2)
-        results[i], times[i],allocations[i] = tmp[1],tmp[2].time,tmp[3]
+        results[i], times[i], allocations[i] = tmp[1], tmp[2].time, tmp[3]
         if i > 1
             println("Speed ratio $(fname(functions[i])) vs $(fname(functions[1])): $(times[1] / times[i])")
             println("Ratio of memory allocated $(fname(functions[i])) vs $(fname(functions[1])): $(allocations[i] / allocations[1])")
         end
     end
-    resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
-    println("Results from all $(length(functions)) functions identical? $resultsidentical")
+    if length(functions) > 1
+        resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
+        println("Results from all $(length(functions)) functions identical? $resultsidentical")
+    end
 
     i = 0
     println("-"^50)
@@ -170,14 +180,16 @@ function speedtest(functions, nr::Int, nc::Int)
         i += 1
         println("$(fname(fn))(manyrepeats1,manyrepeats2)")
         tmp =  @btimed $fn($manyrepeats1, $manyrepeats2)
-        results[i], times[i],allocations[i] = tmp[1],tmp[2].time,tmp[3]
+        results[i], times[i], allocations[i] = tmp[1], tmp[2].time, tmp[3]
         if i > 1
             println("Speed ratio $(fname(functions[i])) vs $(fname(functions[1])): $(times[1] / times[i])")
             println("Ratio of memory allocated $(fname(functions[i])) vs $(fname(functions[1])): $(allocations[i] / allocations[1])")
         end
     end
-    resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
-    println("Results from all $(length(functions)) functions identical? $resultsidentical")
+    if length(functions) > 1
+        resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
+        println("Results from all $(length(functions)) functions identical? $resultsidentical")
+    end
 
     println("#"^67)
 
