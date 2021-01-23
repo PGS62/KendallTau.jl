@@ -218,7 +218,7 @@ end
 #using Plots
 
 """
-    speedtestmergesort(n=2000)
+    speedtest_mergesort(n=2000)
 
 Method to determine the best (i.e. fastest) value of `small_threshold` to method `mergesort!`.  
 Of the powers of 2 tested, 64 seems to maximise speed:
@@ -252,7 +252,7 @@ Executing speedtestmergesort 2021-01-22T14:07:55.415
 (20000, 130)
   1.136 ms (12 allocations: 254.06 KiB)
 """
-function speedtestmergesort(n=2000)
+function speedtest_mergesort(n=2000)
     println("Executing speedtestmergesort $(now())")
     i = 0
     testpoints = 2 .^ (2:10)
@@ -310,4 +310,168 @@ function mergesort2!(v::AbstractVector, lo::Integer, hi::Integer, small_threshol
         end
     end
     return nswaps
+end
+
+"""
+    speedtest_correlation(functions, nr::Int)
+ 
+Function to test whether the correlation between vector1 and vector2 influences the speed of functions to calculate Kendall tau.
+Answer: No. I think because speed of mergesort algorithm is independent of order of elements of input vector (unlike, say, bubblesort)
+
+# Example
+
+```
+julia> using StatsBase;KendallTau.speedtest_correlation([StatsBase.corkendall,KendallTau.corkendall],2000)
+###################################################################
+Executing speedtest_correlation 2021-01-23T12:31:45.362
+--------------------------------------------------     
+size(vector1) = (2000,)
+size(vector2) = (2000,)
+Target correlation vector1 vs vector2 = -0.9
+Actual (Spearman) correlation = -0.8881969410492353
+StatsBase.corkendall(vector1,vector2)
+  691.900 μs (10 allocations: 126.03 KiB)
+KendallTau.corkendall(vector1,vector2)
+  162.100 μs (8 allocations: 86.72 KiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 4.26835286859963
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.6880733944954128
+Results from all 2 functions identical? true       
+-------------------------------------------------- 
+size(vector1) = (2000,)
+size(vector2) = (2000,)
+Target correlation vector1 vs vector2 = -0.6       
+Actual (Spearman) correlation = -0.5834808213702053
+StatsBase.corkendall(vector1,vector2)
+  719.000 μs (10 allocations: 126.03 KiB)
+KendallTau.corkendall(vector1,vector2)   
+  168.400 μs (8 allocations: 86.72 KiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 4.2695961995249405
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.6880733944954128
+Results from all 2 functions identical? true
+--------------------------------------------------
+size(vector1) = (2000,)
+size(vector2) = (2000,)
+Target correlation vector1 vs vector2 = -0.3
+Actual (Spearman) correlation = -0.2923521955880489
+StatsBase.corkendall(vector1,vector2)
+  725.701 μs (10 allocations: 126.03 KiB)
+KendallTau.corkendall(vector1,vector2)   
+  169.500 μs (8 allocations: 86.72 KiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 4.281421828908554
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.6880733944954128
+Results from all 2 functions identical? true
+--------------------------------------------------
+size(vector1) = (2000,)
+size(vector2) = (2000,)
+Target correlation vector1 vs vector2 = 0.0
+Actual (Spearman) correlation = -0.033160233790058447
+StatsBase.corkendall(vector1,vector2)
+  732.399 μs (10 allocations: 126.03 KiB)
+KendallTau.corkendall(vector1,vector2)
+  168.699 μs (8 allocations: 86.72 KiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 4.3414543061903155
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.6880733944954128
+Results from all 2 functions identical? true
+--------------------------------------------------
+size(vector1) = (2000,)
+size(vector2) = (2000,)
+Target correlation vector1 vs vector2 = 0.3
+Actual (Spearman) correlation = 0.2979165489791372
+StatsBase.corkendall(vector1,vector2)
+  724.200 μs (10 allocations: 126.03 KiB)
+KendallTau.corkendall(vector1,vector2)
+  168.600 μs (8 allocations: 86.72 KiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 4.295373665480427
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.6880733944954128
+Results from all 2 functions identical? true
+--------------------------------------------------
+size(vector1) = (2000,)
+size(vector2) = (2000,)
+Target correlation vector1 vs vector2 = 0.6
+Actual (Spearman) correlation = 0.6267249066812267
+StatsBase.corkendall(vector1,vector2)
+  715.100 μs (10 allocations: 126.03 KiB)
+KendallTau.corkendall(vector1,vector2)
+  166.899 μs (8 allocations: 86.72 KiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 4.284627229641879
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.6880733944954128
+Results from all 2 functions identical? true
+--------------------------------------------------
+size(vector1) = (2000,)
+size(vector2) = (2000,)
+Target correlation vector1 vs vector2 = 0.9
+Actual (Spearman) correlation = 0.8865912206478052
+StatsBase.corkendall(vector1,vector2)
+  689.001 μs (10 allocations: 126.03 KiB)
+KendallTau.corkendall(vector1,vector2)
+  159.801 μs (8 allocations: 86.72 KiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 4.3116188259147314
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.6880733944954128
+Results from all 2 functions identical? true
+###################################################################
+```
+
+"""
+function speedtest_correlation(functions, nr::Int)
+
+    rng = MersenneTwister(1)# make the contents of matrix1 etc. deterministic so successive calls with fixed nc & nr are fully comparable
+    results = Array{Any}(undef, length(functions))
+    times = Array{Float64}(undef, length(functions))
+    allocations = Array{Float64}(undef, length(functions))
+
+    fname = f -> string(Base.parentmodule(f)) * "." * string(f)
+
+    println("#"^67)
+    println("Executing speedtest_correlation $(now())")
+
+    for ρ = -0.9:0.3:0.9
+        println("-"^50)
+
+        bothvectors = randn(nr,2) * LinearAlgebra.cholesky([1.0 ρ;ρ 1.0]).U
+
+        vector1= bothvectors[:,1]
+        vector2= bothvectors[:,2]
+        @show(size(vector1))
+        @show(size(vector2))
+        println("Target correlation vector1 vs vector2 = $ρ")
+        println("Actual (Spearman) correlation = $(StatsBase.corspearman(vector1,vector2))")
+
+        i = 0
+        for fn in functions
+            i += 1
+                println("$(fname(fn))(vector1,vector2)")
+                tmp =  @btimed $fn($vector1,$vector2)
+            results[i], times[i], allocations[i] = tmp[1], tmp[2].time, tmp[3]
+            if i > 1
+                println("Speed ratio $(fname(functions[i])) vs $(fname(functions[1])): $(times[1] / times[i])")
+                println("Ratio of memory allocated $(fname(functions[i])) vs $(fname(functions[1])): $(allocations[i] / allocations[1])")
+            end
+        end
+        if length(functions) > 1
+            resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
+            if !resultsidentical
+                @warn "Results from all $(length(functions)) functions identical? $resultsidentical"
+            else
+                println("Results from all $(length(functions)) functions identical? $resultsidentical")
+            end
+        end
+    end
+    println("#"^67)
+end
+
+#Check that mergesort speed is independent of initial order, but insertionsort faster when vector already sorted?
+function speedtest_sortalgos()
+
+    x = collect(1:1000000)
+    y = collect(1000000:-1:1)
+
+    @btime mergesort!($x,1,length($x))
+    @btime mergesort!($y,1,length($y))
+
+    x = collect(1:10000)
+    y = collect(10000:-1:1)
+
+    @btime insertionsort!($x,1,length($x))
+    @btime insertionsort!($y,1,length($y))
+
 end
