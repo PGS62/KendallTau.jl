@@ -33,7 +33,6 @@ function insertionsort_v1!(v::AbstractVector, lo::Integer, hi::Integer)
     return nswaps
 end
 
-
 #=
 Version 2
 Written by PGS
@@ -50,7 +49,6 @@ function insertionsort_v2!(v::AbstractVector, lo::Integer, hi::Integer)
     sort!(view(v, lo:hi), alg=Base.Sort.InsertionSort, lt=myisless)
     return nswaps
 end   
-
 
 #=
 Version 3
@@ -296,5 +294,3 @@ Results from all 2 functions identical? true
 
 
 =#
-
-
