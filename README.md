@@ -279,72 +279,96 @@ Results from all 3 functions identical? true
 </p>
 </details>
 
-<details><summary><ins>Speedtest output for v1.4 (fixed some type instabilities).</ins></summary>
+<details><summary><ins>Speedtest output for v1.4 (further speedups by fixing type instabilities).</ins></summary>
 <p>
   
 ```julia
-julia> using StatsBase;KendallTau.speedtest([StatsBase.corkendall,KendallTau.corkendall],2000,10)
+julia> using StatsBase;KendallTau.speedtest([StatsBase.corkendall,KendallTau.corkendall,KendallTau.corkendallthreads_v2],2000,10)
 ###################################################################
-Executing speedtest 2021-01-23T12:56:57.841       
+Executing speedtest 2021-01-23T14:17:31.783
 --------------------------------------------------
 size(matrix1) = (2000, 10)
 StatsBase.corkendall(matrix1)
-  33.832 ms (451 allocations: 5.54 MiB)
+  33.376 ms (451 allocations: 5.54 MiB)
 KendallTau.corkendall(matrix1)
-  4.898 ms (298 allocations: 3.40 MiB)
-Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 6.907790160937978
+  4.888 ms (298 allocations: 3.40 MiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 6.827493096041731
 Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.6130525086357451
-Results from all 2 functions identical? true
+KendallTau.corkendallthreads_v2(matrix1)
+  1.558 ms (614 allocations: 3.44 MiB)
+Speed ratio KendallTau.corkendallthreads_v2 vs StatsBase.corkendall: 21.429341894060997
+Ratio of memory allocated KendallTau.corkendallthreads_v2 vs StatsBase.corkendall: 0.6202723771851052
+Results from all 3 functions identical? true
 --------------------------------------------------
 size(matrix1) = (2000, 10)
 size(matrix2) = (2000, 10)
 StatsBase.corkendall(matrix1,matrix2)
-  74.938 ms (1001 allocations: 12.31 MiB)
-KendallTau.corkendall(matrix1,matrix2)   
-  10.092 ms (631 allocations: 7.24 MiB)
-Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 7.425244988753803
+  74.549 ms (1001 allocations: 12.31 MiB)
+KendallTau.corkendall(matrix1,matrix2)
+  10.023 ms (631 allocations: 7.24 MiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 7.438163488334897
 Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.5880152134243097
-Results from all 2 functions identical? true
+KendallTau.corkendallthreads_v2(matrix1,matrix2)
+  3.516 ms (712 allocations: 7.25 MiB)
+Speed ratio KendallTau.corkendallthreads_v2 vs StatsBase.corkendall: 21.20217849259734
+Ratio of memory allocated KendallTau.corkendallthreads_v2 vs StatsBase.corkendall: 0.588845802919708
+Results from all 3 functions identical? true
 --------------------------------------------------
 size(vector1) = (2000,)
 size(matrix1) = (2000, 10)
 StatsBase.corkendall(vector1,matrix1)
-  7.337 ms (103 allocations: 1.23 MiB)
+  7.363 ms (103 allocations: 1.23 MiB)
 KendallTau.corkendall(vector1,matrix1)
-  987.400 μs (65 allocations: 725.55 KiB)
-Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 7.431131253797853
+  986.699 μs (65 allocations: 725.55 KiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 7.462052763811456
 Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.5755739005404333
-Results from all 2 functions identical? true
+KendallTau.corkendallthreads_v2(vector1,matrix1)
+  434.400 μs (134 allocations: 734.52 KiB)
+Speed ratio KendallTau.corkendallthreads_v2 vs StatsBase.corkendall: 16.949355432780848
+Ratio of memory allocated KendallTau.corkendallthreads_v2 vs StatsBase.corkendall: 0.5826887798106004
+Results from all 3 functions identical? true
 --------------------------------------------------
 size(matrix1) = (2000, 10)
 size(vector1) = (2000,)
 StatsBase.corkendall(matrix1,vector1)
-  7.350 ms (101 allocations: 1.23 MiB)
+  7.332 ms (101 allocations: 1.23 MiB)
 KendallTau.corkendall(matrix1,vector1)
-  985.799 μs (63 allocations: 725.45 KiB)
-Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 7.455476217768531
+  984.600 μs (63 allocations: 725.45 KiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 7.4465783059110295
 Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.5755423329614479
-Results from all 2 functions identical? true
+KendallTau.corkendallthreads_v2(matrix1,vector1)
+  425.800 μs (134 allocations: 734.52 KiB)
+Speed ratio KendallTau.corkendallthreads_v2 vs StatsBase.corkendall: 17.219119304837953
+Ratio of memory allocated KendallTau.corkendallthreads_v2 vs StatsBase.corkendall: 0.5827321185074997
+Results from all 3 functions identical? true
 --------------------------------------------------
 size(vector1) = (2000,)
 size(vector2) = (2000,)
 StatsBase.corkendall(vector1,vector2)
-  731.399 μs (10 allocations: 126.03 KiB)
+  731.600 μs (10 allocations: 126.03 KiB)
 KendallTau.corkendall(vector1,vector2)
-  170.699 μs (8 allocations: 86.72 KiB)
-Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 4.284729260276862
+  170.900 μs (8 allocations: 86.72 KiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 4.280866003510825
 Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.6880733944954128
-Results from all 2 functions identical? true
+KendallTau.corkendallthreads_v2(vector1,vector2)
+  173.401 μs (10 allocations: 118.22 KiB)
+Speed ratio KendallTau.corkendallthreads_v2 vs StatsBase.corkendall: 4.219122150391289
+Ratio of memory allocated KendallTau.corkendallthreads_v2 vs StatsBase.corkendall: 0.9380114059013142
+Results from all 3 functions identical? true
 --------------------------------------------------
 size(manyrepeats1) = (2000,)
 size(manyrepeats2) = (2000,)
 StatsBase.corkendall(manyrepeats1,manyrepeats2)
-  442.699 μs (12 allocations: 157.53 KiB)
+  442.600 μs (12 allocations: 157.53 KiB)
 KendallTau.corkendall(manyrepeats1,manyrepeats2)
-  134.701 μs (14 allocations: 126.38 KiB)
-Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 3.2865309091988926
+  135.199 μs (14 allocations: 126.38 KiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 3.2736928527577867
 Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.8022217813925808
-Results from all 2 functions identical? true
+KendallTau.corkendallthreads_v2(manyrepeats1,manyrepeats2)
+  137.200 μs (16 allocations: 157.88 KiB)
+Speed ratio KendallTau.corkendallthreads_v2 vs StatsBase.corkendall: 3.2259475218658893
+Ratio of memory allocated KendallTau.corkendallthreads_v2 vs StatsBase.corkendall: 1.0021821067248562
+Results from all 3 functions identical? true
 ###################################################################
 ```
 
