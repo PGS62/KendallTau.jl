@@ -279,7 +279,7 @@ Results from all 3 functions identical? true
 </p>
 </details>
 
-<details><summary><ins>Speedtest output for v1.4 (Fixed some type instabilities))</ins></summary>
+<details><summary><ins>Speedtest output for v1.4 (fixed some type instabilities).</ins></summary>
 <p>
   
 ```julia
