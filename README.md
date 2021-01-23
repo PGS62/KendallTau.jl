@@ -8,12 +8,12 @@
 
 This (unregistered) Julia package exposes a function `corkendall` that is a candidate to replace the function of the same name in the StatsBase package. 
 
-The package also contains a function `speedtest` that prints a comparison of the execution speed of two (or more) implementations of Kendall Tau. `speedtest` demonstrates that the new version of `corkendall` is about ~~five~~ six times faster than the existing StatsBase version. See [# 634](https://github.com/JuliaStats/StatsBase.jl/issues/634).
+The package also contains a function `speedtest` that prints a comparison of the execution speed of two (or more) implementations of Kendall Tau. `speedtest` demonstrates that the new version of `corkendall` is about ~~five~~ ~~six~~ seven times faster than the existing StatsBase version. See [# 634](https://github.com/JuliaStats/StatsBase.jl/issues/634).
 
 <details><summary><ins>Speedtest output for v1.0</ins></summary>
 <p>
 
-```
+```julia
 julia> speedtest([StatsBase.corkendall,KendallTau.corkendall,KendallTau.corkendallthreads_v2],2000,10)
 ###################################################################
 Executing speedtest 2021-01-18T15:13:17.189
@@ -84,7 +84,7 @@ all(myapprox.(results[2:end], results[1:end - 1], 1.0e-14)) = true
 <details><summary><ins>Speedtest output for v1.2 (note reduced total allocations)</ins></summary>
 <p>
   
-```
+```julia
 julia> speedtest([StatsBase.corkendall,KendallTau.corkendall,KendallTau.corkendallthreads_v2],2000,10)
 ###################################################################
 Executing speedtest 2021-01-19T15:48:47.282
@@ -183,7 +183,7 @@ Results from all 3 functions identical? true
 <details><summary><ins>Speedtest output for v1.3 (further speedups, now uses ~30% less memory than `StatsBase.corkendall`)</ins></summary>
 <p>
   
-```  
+```julia  
 julia> KendallTau.speedtest([StatsBase.corkendall,KendallTau.corkendall,KendallTau.corkendallthreads_v2],2000,10)
 ###################################################################
 Executing speedtest 2021-01-21T14:56:19.489
@@ -276,24 +276,80 @@ Results from all 3 functions identical? true
 </details>
 
 
+</p>
+</details>
 
+<details><summary><ins>Speedtest output for v1.4 (Fixed some type instabilities))</ins></summary>
+<p>
+  
+```julia
+julia> using StatsBase;KendallTau.speedtest([StatsBase.corkendall,KendallTau.corkendall],2000,10)
+###################################################################
+Executing speedtest 2021-01-23T12:56:57.841       
+--------------------------------------------------
+size(matrix1) = (2000, 10)
+StatsBase.corkendall(matrix1)
+  33.832 ms (451 allocations: 5.54 MiB)
+KendallTau.corkendall(matrix1)
+  4.898 ms (298 allocations: 3.40 MiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 6.907790160937978
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.6130525086357451
+Results from all 2 functions identical? true
+--------------------------------------------------
+size(matrix1) = (2000, 10)
+size(matrix2) = (2000, 10)
+StatsBase.corkendall(matrix1,matrix2)
+  74.938 ms (1001 allocations: 12.31 MiB)
+KendallTau.corkendall(matrix1,matrix2)   
+  10.092 ms (631 allocations: 7.24 MiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 7.425244988753803
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.5880152134243097
+Results from all 2 functions identical? true
+--------------------------------------------------
+size(vector1) = (2000,)
+size(matrix1) = (2000, 10)
+StatsBase.corkendall(vector1,matrix1)
+  7.337 ms (103 allocations: 1.23 MiB)
+KendallTau.corkendall(vector1,matrix1)
+  987.400 μs (65 allocations: 725.55 KiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 7.431131253797853
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.5755739005404333
+Results from all 2 functions identical? true
+--------------------------------------------------
+size(matrix1) = (2000, 10)
+size(vector1) = (2000,)
+StatsBase.corkendall(matrix1,vector1)
+  7.350 ms (101 allocations: 1.23 MiB)
+KendallTau.corkendall(matrix1,vector1)
+  985.799 μs (63 allocations: 725.45 KiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 7.455476217768531
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.5755423329614479
+Results from all 2 functions identical? true
+--------------------------------------------------
+size(vector1) = (2000,)
+size(vector2) = (2000,)
+StatsBase.corkendall(vector1,vector2)
+  731.399 μs (10 allocations: 126.03 KiB)
+KendallTau.corkendall(vector1,vector2)
+  170.699 μs (8 allocations: 86.72 KiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 4.284729260276862
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.6880733944954128
+Results from all 2 functions identical? true
+--------------------------------------------------
+size(manyrepeats1) = (2000,)
+size(manyrepeats2) = (2000,)
+StatsBase.corkendall(manyrepeats1,manyrepeats2)
+  442.699 μs (12 allocations: 157.53 KiB)
+KendallTau.corkendall(manyrepeats1,manyrepeats2)
+  134.701 μs (14 allocations: 126.38 KiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 3.2865309091988926
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.8022217813925808
+Results from all 2 functions identical? true
+###################################################################
+```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+</p>
+</details>
 
 
 
