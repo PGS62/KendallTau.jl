@@ -29,15 +29,15 @@ function corkendall!(x::RealVector, y::RealVector, permx=sortperm(x))
             # Sort the corresponding chunk of y, so the rows of hcat(x,y) are 
             # sorted first on x, then (where x values are tied) on y. Hence 
             # double ties can be counted by calling countties.
-            mergesort!(y,  i - k - 1, i - 1)
-            ntiesx += div(k * (k + 1) , 2)
+            sort!(view(y, (i - k - 1):(i - 1)))
+            ntiesx += div(k * (k + 1), 2)
             ndoubleties += countties(y,  i - k - 1, i - 1)
             k = 0
         end
     end
     if k > 0
-        mergesort!(y,  n - k, n)
-        ntiesx += div(k * (k + 1) , 2)
+        sort!(view(y, ((n - k):n)))
+        ntiesx += div(k * (k + 1), 2)
         ndoubleties += countties(y,  n - k, n)
     end
 
@@ -60,7 +60,7 @@ function countties(x::AbstractVector, lo::Integer, hi::Integer)
         if x[i] == x[i - 1]
             thistiecount += 1
         elseif thistiecount > 0
-            result += div(thistiecount * (thistiecount + 1) , 2)
+            result += div(thistiecount * (thistiecount + 1), 2)
             thistiecount = 0
         end
     end
@@ -115,7 +115,7 @@ end
 # but note that the equivalent constant in base/sort.jl is 20.
 const SMALL_THRESHOLD  = 64
 
-#Copy was from https://github.com/JuliaLang/julia/commit/28330a2fef4d9d149ba0fd3ffa06347b50067647 dated 20 Sep 2020
+# Copy was from https://github.com/JuliaLang/julia/commit/28330a2fef4d9d149ba0fd3ffa06347b50067647 dated 20 Sep 2020
 """
     mergesort!(v::AbstractVector, lo::Integer, hi::Integer, t=similar(v, 0))    
 
@@ -167,7 +167,7 @@ end
 midpoint(lo::T, hi::T) where T <: Integer = lo + ((hi - lo) >>> 0x01)
 midpoint(lo::Integer, hi::Integer) = midpoint(promote(lo, hi)...)
 
-#Copy was from https://github.com/JuliaLang/julia/commit/28330a2fef4d9d149ba0fd3ffa06347b50067647 dated 20 Sep 2020
+# Copy was from https://github.com/JuliaLang/julia/commit/28330a2fef4d9d149ba0fd3ffa06347b50067647 dated 20 Sep 2020
 """
     insertionsort!(v::AbstractVector, lo::Integer, hi::Integer)
 
