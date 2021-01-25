@@ -20,7 +20,8 @@ function corkendall!(x::RealVector, y::RealVector, permx=sortperm(x))
     y[:] = y[permx]
 
     npairs = div(n * (n - 1), 2)
-    ntiesx, ntiesy, ndoubleties, k, nswaps = 0, 0, 0, 0, 0
+    #ntiesx, ntiesy, ndoubleties are floats to avoid overflow errors on 32bit os
+    ntiesx, ntiesy, ndoubleties, k, nswaps = 0.0, 0.0, 0.0, 0, 0
 
     @inbounds for i ∈ 2:n
         if x[i - 1] == x[i]
@@ -30,14 +31,14 @@ function corkendall!(x::RealVector, y::RealVector, permx=sortperm(x))
             # sorted first on x, then (where x values are tied) on y. Hence 
             # double ties can be counted by calling countties.
             sort!(view(y, (i - k - 1):(i - 1)))
-            ntiesx += div(k * (k + 1), 2)
+            ntiesx += k * (k + 1)/2
             ndoubleties += countties(y,  i - k - 1, i - 1)
             k = 0
         end
     end
     if k > 0
         sort!(view(y, ((n - k):n)))
-        ntiesx += div(k * (k + 1), 2)
+        ntiesx += k * (k + 1)/ 2
         ndoubleties += countties(y,  n - k, n)
     end
 
@@ -54,19 +55,19 @@ end
 Assumes `x` is sorted. Returns the number of ties within `x[lo:hi]`.
 """
 function countties(x::AbstractVector, lo::Integer, hi::Integer)
-    thistiecount, result = 0, 0
+    thistiecount, result = 0.0, 0.0
     (lo < 1 || hi > length(x)) && error("Bounds error")
     @inbounds for i ∈ (lo + 1):hi
         if x[i] == x[i - 1]
             thistiecount += 1
         elseif thistiecount > 0
-            result += div(thistiecount * (thistiecount + 1), 2)
-            thistiecount = 0
+            result += thistiecount * (thistiecount + 1)/2
+            thistiecount = 0.0
         end
     end
 
     if thistiecount > 0
-        result += div(thistiecount * (thistiecount + 1), 2)
+        result += thistiecount * (thistiecount + 1)/2
     end
     result
 end

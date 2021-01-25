@@ -86,7 +86,12 @@ function compare_implementations(fn1, fn2; abstol::Float64=1e-14, maxcols::Integ
     
     rng = MersenneTwister(1)# make this test code deterministic
 
+    printevery = max(1,numtests ÷ 50)
     for i ∈ 1:numtests ÷ 5
+
+        if mod(i,printevery)==0
+            println("Testing $fn1name vs $fn2name $(5i)/$numtests")
+        end
         # random sizes of the argument arrays
         ncols1 = rand(rng, 1:maxcols)
         ncols2 = rand(rng, 1:maxcols)
@@ -199,3 +204,4 @@ end
 # NB it is important that maxrows in the call below call below is greater than the SMALL_THRESHOLD value
 # otherwise the important function mergesort! never gets tested!
 @test compare_implementations(KendallTau.corkendall, corkendallnaive, abstol=0.0, maxcols=10, maxrows=100, numtests=500) == true
+@test compare_implementations(KendallTau.corkendall, corkendallnaive, abstol=1e14, maxcols=1, maxrows=50000, numtests=10) == true

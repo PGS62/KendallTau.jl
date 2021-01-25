@@ -28,13 +28,12 @@ c22 = corspearman(x2, x2)
 # important to test with inputs longer than SMALL_THRESHOLD or else function mergesort! is not being tested.
 # hence the use of repeat in the tests below.
 
-n = 1000
-
 @test corkendall(x1, y) == -1 / sqrt(90)
 @test corkendall(x2, y) == -1 / sqrt(72)
 @test corkendall(X, y) == [-1 / sqrt(90), -1 / sqrt(72)]
 @test corkendall(y, X) == [-1 / sqrt(90) -1 / sqrt(72)]
 
+n = 50_000 # so vectors tested are 5 times this length
 @test corkendall(repeat(x1, n), repeat(y, n)) ≈ -1 / sqrt(90)
 @test corkendall(repeat(x2, n), repeat(y, n)) ≈ -1 / sqrt(72)
 @test corkendall(repeat(X, n), repeat(y, n)) ≈ [-1 / sqrt(90), -1 / sqrt(72)]
@@ -54,8 +53,10 @@ c22 = corkendall(x2, x2)
 @test corkendall(repeat(X, n), repeat(X, n)) ≈ [c11 c12; c12 c22]
 @test corkendall(repeat(X, n))                  ≈ [c11 c12; c12 c22]
 
-@test corkendall(collect(1:1000), collect(1:1000)) == 1.0
-@test corkendall(collect(1:1000), reverse(collect(1:1000))) == -1.0
+
+@test corkendall(collect(1:100_000), collect(1:100_000)) == 1.0
+@test corkendall(collect(1:100_000), reverse(collect(1:100_000))) == -1.0
+
 @test corkendall(repeat([0,1,1,0], n), repeat([1,0,1,0], n)) == 0.0
 
 z = [1  1  1;
