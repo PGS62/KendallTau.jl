@@ -19,8 +19,8 @@ function corkendall!(x::RealVector, y::RealVector, permx=sortperm(x))
     x[:] = x[permx]
     y[:] = y[permx]
 
-    npairs = div(n * (n - 1), 2)
-    #ntiesx, ntiesy, ndoubleties are floats to avoid overflow errors on 32bit os
+    npairs = float(n) * (n - 1)/ 2
+    #ntiesx, ntiesy, ndoubleties are floats to avoid overflows on 32bit
     ntiesx, ntiesy, ndoubleties, k, nswaps = 0.0, 0.0, 0.0, 0, 0
 
     @inbounds for i ∈ 2:n
@@ -31,14 +31,14 @@ function corkendall!(x::RealVector, y::RealVector, permx=sortperm(x))
             # sorted first on x, then (where x values are tied) on y. Hence 
             # double ties can be counted by calling countties.
             sort!(view(y, (i - k - 1):(i - 1)))
-            ntiesx += k * (k + 1)/2
+            ntiesx += float(k) * (k + 1)/2
             ndoubleties += countties(y,  i - k - 1, i - 1)
             k = 0
         end
     end
     if k > 0
         sort!(view(y, ((n - k):n)))
-        ntiesx += k * (k + 1)/ 2
+        ntiesx += float(k) * (k + 1)/ 2
         ndoubleties += countties(y,  n - k, n)
     end
 
@@ -55,11 +55,12 @@ end
 Assumes `x` is sorted. Returns the number of ties within `x[lo:hi]`.
 """
 function countties(x::AbstractVector, lo::Integer, hi::Integer)
+    #avoid ovorflows on 32 bit by using floats
     thistiecount, result = 0.0, 0.0
     (lo < 1 || hi > length(x)) && error("Bounds error")
     @inbounds for i ∈ (lo + 1):hi
         if x[i] == x[i - 1]
-            thistiecount += 1
+            thistiecount += 1.0
         elseif thistiecount > 0
             result += thistiecount * (thistiecount + 1)/2
             thistiecount = 0.0
@@ -112,7 +113,7 @@ end
 
 # Auxilliary functions for Kendall's rank correlation
 
-# Method speedtest_mergesort appears to to show that a value of 64 is optimal,
+# Tests appeared to show that a value of 64 is optimal,
 # but note that the equivalent constant in base/sort.jl is 20.
 const SMALL_THRESHOLD  = 64
 
@@ -125,7 +126,8 @@ This method is a copy-paste-edit of sort! in base/sort.jl (the method specialise
 but amended to return the bubblesort distance.
 """
 function mergesort!(v::AbstractVector, lo::Integer, hi::Integer, t=similar(v, 0))
-    nswaps = 0
+    #avoid overflow errors (if length(v)> 2^16) on 32 bit by using float
+    nswaps = 0.0
     @inbounds if lo < hi
         hi - lo <= SMALL_THRESHOLD && return insertionsort!(v, lo, hi)
 
@@ -178,13 +180,13 @@ amended to return the bubblesort distance.
 """
 function insertionsort!(v::AbstractVector, lo::Integer, hi::Integer)
     if lo == hi return 0 end
-    nswaps = 0
+    nswaps = 0.0
     @inbounds for i = lo + 1:hi
         j = i
         x = v[i]
         while j > lo
             if x < v[j - 1]
-                nswaps += 1
+                nswaps += 1.0
                 v[j] = v[j - 1]
                 j -= 1
                 continue

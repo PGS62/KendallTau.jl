@@ -33,7 +33,7 @@ c22 = corspearman(x2, x2)
 @test corkendall(X, y) == [-1 / sqrt(90), -1 / sqrt(72)]
 @test corkendall(y, X) == [-1 / sqrt(90) -1 / sqrt(72)]
 
-n = 50_000 # so vectors tested are 5 times this length
+n = 100_000 # so vectors tested are 5 times this length
 @test corkendall(repeat(x1, n), repeat(y, n)) ≈ -1 / sqrt(90)
 @test corkendall(repeat(x2, n), repeat(y, n)) ≈ -1 / sqrt(72)
 @test corkendall(repeat(X, n), repeat(y, n)) ≈ [-1 / sqrt(90), -1 / sqrt(72)]
@@ -73,8 +73,18 @@ z = [1  1  1;
 @test corkendall(z[:,1], z) == [1 0 1 / 3]
 @test corkendall(z, z[:,1]) == [1;0;1 / 3]
 
+z = float(z)
+@test corkendall(z)   == [1 0 1 / 3; 0 1 0;1 / 3 0 1]
+@test corkendall(z, z)   == [1 0 1 / 3; 0 1 0;1 / 3 0 1]
+@test corkendall(z[:,1], z) == [1 0 1 / 3]
+@test corkendall(z, z[:,1]) == [1;0;1 / 3]
+
 w = repeat(z, n)
 @test corkendall(w)   == [1 0 1 / 3; 0 1 0;1 / 3 0 1]
 @test corkendall(w, w)   == [1 0 1 / 3; 0 1 0;1 / 3 0 1]
 @test corkendall(w[:,1], w) == [1 0 1 / 3]
 @test corkendall(w, w[:,1]) == [1;0;1 / 3]
+
+
+
+

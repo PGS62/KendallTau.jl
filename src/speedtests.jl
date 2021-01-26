@@ -126,11 +126,12 @@ function speedtest(functions, nr::Int, nc::Int)
             end
         end
         if length(functions) > 1
+          nfns = length(functions)
             resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
             if !resultsidentical
-                @warn "Results from all $(length(functions)) functions identical? $resultsidentical"
+                @warn "Results from $(nfns ==2 ? "both" : "all $nfns") functions identical? $resultsidentical"
             else
-                println("Results from all $(length(functions)) functions identical? $resultsidentical")
+                println("Results from $(nfns ==2 ? "both" : "all $nfns") functions identical? $resultsidentical")
             end
         end
     end

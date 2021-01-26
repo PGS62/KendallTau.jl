@@ -34,8 +34,8 @@ function corkendallnaive(x::RealVector, y::RealVector)
             numerator += k
         end
     end
-    
-    denominator = sqrt((npairs - tiesx) * (npairs - tiesy))
+    #avoid overflow errors on 32 bit
+    denominator = sqrt(float(npairs - tiesx) * float(npairs - tiesy))
     numerator / denominator
 end
 
