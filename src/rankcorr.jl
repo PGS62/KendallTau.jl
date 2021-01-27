@@ -179,7 +179,7 @@ This method is a copy-paste-edit of sort! in base/sort.jl (the method specialise
 amended to return the bubblesort distance.
 """
 function insertionsort!(v::AbstractVector, lo::Integer, hi::Integer)
-    if lo == hi return 0 end
+    if lo == hi return 0.0 end
     nswaps = 0.0
     @inbounds for i = lo + 1:hi
         j = i

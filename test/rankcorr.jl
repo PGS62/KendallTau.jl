@@ -25,8 +25,6 @@ c22 = corspearman(x2, x2)
 @test corspearman(X)    ≈ [c11 c12; c12 c22] =#
 
 # corkendall
-# important to test with inputs longer than SMALL_THRESHOLD or else function mergesort! is not being tested.
-# hence the use of repeat in the tests below.
 
 @test corkendall(x1, y) == -1 / sqrt(90)
 @test corkendall(x2, y) == -1 / sqrt(72)
