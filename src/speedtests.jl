@@ -260,7 +260,7 @@ function speedtest_mergesort(n=2000)
     testpoints = 10 .* (2:10)
     testpoints = 10 .* (1:13)
     times = zeros(length(testpoints))
-    for testpoint ∈ testpoints
+    for testpoint = testpoints
         println((n, testpoint))
         res = @btimed KendallTau.mergesort2!(randn(MersenneTwister(1), $n), 1, $n, $testpoint)
         i+=1

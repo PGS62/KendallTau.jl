@@ -10,13 +10,13 @@ function corkendallthreads_v3(X::RealMatrix, Y::RealMatrix)
     numtasks = Int(round(nc / chunksize, RoundUp))
 
     tasks = Array{Task,1}(undef, numtasks)
-    for j ∈ 1:numtasks
+    for j = 1:numtasks
         fromcol = (j - 1) * chunksize + 1
         tocol = min(fromcol + chunksize - 1, nc)
         tasks[j] = @spawn corkendall(X, Y[:,fromcol:tocol])
     end
 
-    for j ∈ 1:numtasks
+    for j = 1:numtasks
         fromcol = (j - 1) * chunksize + 1
         tocol = min(fromcol + chunksize - 1, nc)
         C[:,fromcol:tocol] = fetch(tasks[j])
@@ -36,13 +36,13 @@ function corkendallthreads_v4(X::RealMatrix, Y::RealMatrix)
     numtasks = Int(round(nr / chunksize, RoundUp))
 
     tasks = Array{Task,1}(undef, numtasks)
-    for j ∈ 1:numtasks
+    for j = 1:numtasks
         fromcol = (j - 1) * chunksize + 1
         tocol = min(fromcol + chunksize - 1, nr)
         tasks[j] = @spawn corkendall(X[:,fromcol:tocol], Y)
     end
 
-    for j ∈ 1:numtasks
+    for j = 1:numtasks
         fromcol = (j - 1) * chunksize + 1
         tocol = min(fromcol + chunksize - 1, nc)
         C[fromcol:tocol,:] = fetch(tasks[j])

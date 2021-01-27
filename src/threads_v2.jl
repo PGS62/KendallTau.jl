@@ -17,11 +17,11 @@ function corkendallthreads_v2(X::RealMatrix, y::RealVector)
     tasks = Array{Task,1}(undef, n)
 
     permy = sortperm(y)
-    for i ∈ 1:n
+    for i = 1:n
         tasks[i] = @spawn corkendall!(float(copy(y)), float(X[:,i]), permy)
     end
 
-    for i ∈ 1:n
+    for i = 1:n
         C[i] = fetch(tasks[i])
     end
 
@@ -35,11 +35,11 @@ function corkendallthreads_v2(x::RealVector, Y::RealMatrix)
     tasks = Array{Task,1}(undef, n)
 
     permx = sortperm(x)
-    for i ∈ 1:n
+    for i = 1:n
         tasks[i] = @spawn corkendall!(float(copy(x)), float(Y[:,i]), permx)
     end
 
-    for i ∈ 1:n
+    for i = 1:n
         C[1,i] = fetch(tasks[i])
     end
 
@@ -52,15 +52,15 @@ function corkendallthreads_v2(X::RealMatrix)
 
     tasks = Array{Task,2}(undef, n, n)
 
-    for j ∈ 2:n
+    for j = 2:n
         permx = sortperm(X[:,j])
-        for i ∈ 1:j - 1
+        for i = 1:j - 1
             tasks[j,i] = @spawn corkendall!(X[:,j], X[:,i], permx)
         end
     end
 
-    for j ∈ 2:n
-        for i ∈ 1:j - 1
+    for j = 2:n
+        for i = 1:j - 1
             C[j,i] = fetch(tasks[j,i])
             C[i,j] = C[j,i]
         end
@@ -75,11 +75,11 @@ function corkendallthreads_v2(X::RealMatrix, Y::RealMatrix)
     nc = size(Y, 2)
     C = zeros(float(eltype(X)), nr, nc)
     tasks = Array{Task,1}(undef, nc)
-    for j ∈ 1:nc
+    for j = 1:nc
         tasks[j] = @spawn corkendall(X, Y[:,j])
     end
 
-    for j ∈ 1:nc
+    for j = 1:nc
         C[:,j] = fetch(tasks[j])
     end
     

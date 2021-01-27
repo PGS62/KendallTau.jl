@@ -21,7 +21,7 @@ function corkendallnaive(x::RealVector, y::RealVector)
     if length(y) ≠ n error("Vectors must have same length") end
 
     numerator, tiesx, tiesy = 0, 0, 0
-     for i ∈ 2:n, j ∈ 1:(i - 1)
+     for i = 2:n, j = 1:(i - 1)
         k = sign(x[i] - x[j]) * sign(y[i] - y[j])
         if k == 0
             if x[i] == x[j]
@@ -39,16 +39,16 @@ function corkendallnaive(x::RealVector, y::RealVector)
     numerator / denominator
 end
 
-corkendallnaive(X::RealMatrix, y::RealVector) = Float64[corkendallnaive(float(X[:,i]), float(y)) for i ∈ 1:size(X, 2)]
+corkendallnaive(X::RealMatrix, y::RealVector) = Float64[corkendallnaive(float(X[:,i]), float(y)) for i = 1:size(X, 2)]
 
-corkendallnaive(x::RealVector, Y::RealMatrix) = (n = size(Y, 2); reshape(Float64[corkendallnaive(float(x), float(Y[:,i])) for i ∈ 1:n], 1, n))
+corkendallnaive(x::RealVector, Y::RealMatrix) = (n = size(Y, 2); reshape(Float64[corkendallnaive(float(x), float(Y[:,i])) for i = 1:n], 1, n))
 
-corkendallnaive(X::RealMatrix, Y::RealMatrix) = Float64[corkendallnaive(float(X[:,i]), float(Y[:,j])) for i ∈ 1:size(X, 2), j ∈ 1:size(Y, 2)]
+corkendallnaive(X::RealMatrix, Y::RealMatrix) = Float64[corkendallnaive(float(X[:,i]), float(Y[:,j])) for i = 1:size(X, 2), j = 1:size(Y, 2)]
 
 function corkendallnaive(X::RealMatrix)
     n = size(X, 2)
     C = ones(float(eltype(X)), n, n)# avoids dependency on LinearAlgebra
-    for j ∈ 2:n, i ∈ 1:j - 1
+    for j = 2:n, i = 1:j - 1
         C[i,j] = corkendallnaive(X[:,i], X[:,j])
         C[j,i] = C[i,j]
     end
@@ -87,7 +87,7 @@ function compare_implementations(fn1, fn2; abstol::Float64=1e-14, maxcols::Integ
     rng = MersenneTwister(1)# make this test code deterministic
 
     printevery = max(1,numtests ÷ 50)
-    for i ∈ 1:numtests ÷ 5
+    for i = 1:numtests ÷ 5
 
         if mod(i,printevery)==0
             println("Testing $fn1name vs $fn2name $(5i)/$numtests")
@@ -97,7 +97,7 @@ function compare_implementations(fn1, fn2; abstol::Float64=1e-14, maxcols::Integ
         ncols2 = rand(rng, 1:maxcols)
         nrows = rand(rng, 1:maxrows)
 
-        for j ∈ 1:5
+        for j = 1:5
             if j == 1
                 casedesc = "one matrix case"
                 # by restricting elements to 1:nrows, we can be sure repeats exist
