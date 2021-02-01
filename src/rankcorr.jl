@@ -2,9 +2,9 @@
 # except that this file does not contain the code for Spearman's correlation in the first 27 lines of that file.
 
 #######################################
-# 
+#
 #   Kendall correlation
-# 
+#
 #######################################
 
 # Knight, William R. “A Computer Method for Calculating Kendall's Tau with Ungrouped Data.”
@@ -43,7 +43,7 @@ function corkendall!(x::RealVector, y::RealVector, permx::AbstractVector{<:Integ
         ndoubleties += countties(y,  n - k, n)
     end
 
-    nswaps = msort!(y, 1, n)
+    nswaps = merge_sort!(y, 1, n)
     ntiesy = countties(y, 1, n)
 
     # Calls to float below prevent possible overflow errors when
@@ -58,16 +58,23 @@ end
 Compute Kendall's rank correlation coefficient, τ. `x` and `y` must both be either
 matrices or vectors.
 """
-corkendall(x::RealVector, y::RealVector) = corkendall!(float(copy(x)), float(copy(y)))
+corkendall(x::RealVector, y::RealVector) = corkendall!(copy(x), copy(y))
 
-corkendall(X::RealMatrix, y::RealVector) = (permy = sortperm(y);Float64[corkendall!(float(copy(y)), float(X[:,i]), permy) for i in 1:size(X, 2)])
+function corkendall(X::RealMatrix, y::RealVector)
+    permy = sortperm(y)
+    return([corkendall!(copy(y), X[:,i], permy) for i in 1:size(X, 2)])
+end
 
-corkendall(x::RealVector, Y::RealMatrix) = (n = size(Y, 2); permx = sortperm(x); reshape(Float64[corkendall!(float(copy(x)), float(Y[:,i]), permx) for i in 1:n], 1, n))
+function corkendall(x::RealVector, Y::RealMatrix)
+    n = size(Y, 2)
+    permx = sortperm(x)
+    return(reshape([corkendall!(copy(x), Y[:,i], permx) for i in 1:n], 1, n))
+end
 
 function corkendall(X::RealMatrix)
     n = size(X, 2)
-    C = ones(float(eltype(X)), n, n)# Avoids dependency on LinearAlgebra
-    @inbounds for j = 2:n
+    C = Matrix{float(eltype(X))}(I, n, n)
+    for j = 2:n
         permx = sortperm(X[:,j])
         for i = 1:j - 1
             C[j,i] = corkendall!(X[:,j], X[:,i], permx)
@@ -80,8 +87,8 @@ end
 function corkendall(X::RealMatrix, Y::RealMatrix)
     nr = size(X, 2)
     nc = size(Y, 2)
-    C = zeros(float(eltype(X)), nr, nc)
-    @inbounds for j = 1:nr
+    C = Matrix{float(eltype(X))}(undef, nr, nc)
+    for j = 1:nr
         permx = sortperm(X[:,j])
         for i = 1:nc
             C[j,i] = corkendall!(X[:,j], Y[:,i], permx)
@@ -102,7 +109,7 @@ function countties(x::AbstractVector, lo::Integer, hi::Integer)
     # length(x) exceeds 2^16 (32 bit) or 2^32 (64 bit)
     w0 = widen(0)
     thistiecount, result = w0, w0
-    (lo < 1 || hi > length(x)) && error("Bounds error")
+    checkbounds(x, lo:hi)
     @inbounds for i = (lo + 1):hi
         if x[i] == x[i - 1]
             thistiecount += 1
@@ -120,28 +127,28 @@ end
 
 # Tests appear to show that a value of 64 is optimal,
 # but note that the equivalent constant in base/sort.jl is 20.
-const SMALL_THRESHOLD  = 64
+const SMALL_THRESHOLD = 64
 
-# Copy was from https://github.com/JuliaLang/julia/commit/28330a2fef4d9d149ba0fd3ffa06347b50067647 dated 20 Sep 2020
+# merge_sort! copied from Julia Base
+# (commit 28330a2fef4d9d149ba0fd3ffa06347b50067647, dated 20 Sep 2020)
 """
-    msort!(v::AbstractVector, lo::Integer, hi::Integer, t=similar(v, 0))    
+    merge_sort!(v::AbstractVector, lo::Integer, hi::Integer, t=similar(v, 0))    
 
 Mutates `v` by sorting elements `x[lo:hi]` using the merge sort algorithm. 
-This method is a copy-paste-edit of sort! in base/sort.jl (the method specialised on MergeSortAlg),
-but amended to return the bubblesort distance.
+This method is a copy-paste-edit of sort! in base/sort.jl, amended to return the bubblesort distance.
 """
-function msort!(v::AbstractVector, lo::Integer, hi::Integer, t=similar(v, 0))
+function merge_sort!(v::AbstractVector, lo::Integer, hi::Integer, t=similar(v, 0))
     # Use of widen below prevents possible overflow errors when
     # length(v) exceeds 2^16 (32 bit) or 2^32 (64 bit)
     nswaps = widen(0)
     @inbounds if lo < hi
-        hi - lo <= SMALL_THRESHOLD && return isort!(v, lo, hi)
+        hi - lo <= SMALL_THRESHOLD && return insertion_sort!(v, lo, hi)
 
         m = midpoint(lo, hi)
         (length(t) < m - lo + 1) && resize!(t, m - lo + 1)
 
-        nswaps = msort!(v, lo,  m, t)
-        nswaps += msort!(v, m + 1, hi, t)
+        nswaps = merge_sort!(v, lo,  m, t)
+        nswaps += merge_sort!(v, m + 1, hi, t)
 
         i, j = 1, lo
         while j <= m
@@ -171,19 +178,18 @@ function msort!(v::AbstractVector, lo::Integer, hi::Integer, t=similar(v, 0))
     return nswaps
 end
 
-# This function is also copied from base/sort.jl
+# insertion_sort! and midpoint copied from Julia Base
+# (commit 28330a2fef4d9d149ba0fd3ffa06347b50067647, dated 20 Sep 2020)
 midpoint(lo::T, hi::T) where T <: Integer = lo + ((hi - lo) >>> 0x01)
 midpoint(lo::Integer, hi::Integer) = midpoint(promote(lo, hi)...)
 
-# Copy was from https://github.com/JuliaLang/julia/commit/28330a2fef4d9d149ba0fd3ffa06347b50067647 dated 20 Sep 2020
 """
-    isort!(v::AbstractVector, lo::Integer, hi::Integer)
+    insertion_sort!(v::AbstractVector, lo::Integer, hi::Integer)
 
 Mutates `v` by sorting elements `x[lo:hi]` using the insertion sort algorithm. 
-This method is a copy-paste-edit of sort! in base/sort.jl (the method specialised on InsertionSortAlg),
-amended to return the bubblesort distance.
+This method is a copy-paste-edit of sort! in base/sort.jl, amended to return the bubblesort distance.
 """
-function isort!(v::AbstractVector, lo::Integer, hi::Integer)
+function insertion_sort!(v::AbstractVector, lo::Integer, hi::Integer)
     if lo == hi return widen(0) end
     nswaps = widen(0)
     @inbounds for i = lo + 1:hi
