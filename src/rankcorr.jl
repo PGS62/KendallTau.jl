@@ -2,9 +2,9 @@
 # except that this file does not contain the code for Spearman's correlation in the first 27 lines of that file.
 
 #######################################
-#
+# 
 #   Kendall correlation
-#
+# 
 #######################################
 
 # Knight, William R. “A Computer Method for Calculating Kendall's Tau with Ungrouped Data.”
@@ -18,10 +18,11 @@ function corkendall!(x::RealVector, y::RealVector, permx::AbstractVector{<:Integ
     # Initial sorting
     permute!(x, permx)
     permute!(y, permx)
-
-    npairs = float(n) * (n - 1) / 2
-    # ntiesx, ntiesy, ndoubleties are floats to avoid overflows on 32bit
-    ntiesx, ntiesy, ndoubleties, k, nswaps = widen(0), widen(0), widen(0), widen(0), widen(0)
+    
+    # Use widen to avoid overflows on both 32bit and 64bit
+    npairs = div(widen(n) * (n - 1), 2)
+    ntiesx, ndoubleties, nswaps = widen(0), widen(0), widen(0)
+    k = 0
 
     @inbounds for i = 2:n
         if x[i - 1] == x[i]
@@ -30,47 +31,25 @@ function corkendall!(x::RealVector, y::RealVector, permx::AbstractVector{<:Integ
             # Sort the corresponding chunk of y, so the rows of hcat(x,y) are 
             # sorted first on x, then (where x values are tied) on y. Hence 
             # double ties can be counted by calling countties.
-            sort!(view(y, (i - k - 1):(i - 1)))
-            ntiesx += div(k * (k + 1), 2)
+            sort!(view(y, (i - k - 1):(i - 1)))  # Can't use wide integers here
+            ntiesx += div(widen(k) * (k + 1), 2) # Must use wide integers here
             ndoubleties += countties(y,  i - k - 1, i - 1)
             k = 0
         end
     end
     if k > 0
         sort!(view(y, ((n - k):n)))
-        ntiesx += div(k * (k + 1), 2)
+        ntiesx += div(widen(k) * (k + 1), 2)
         ndoubleties += countties(y,  n - k, n)
     end
 
     nswaps = msort!(y, 1, n)
     ntiesy = countties(y, 1, n)
 
+    # Calls to float below prevent possible overflow errors when
+    # length(x) exceeds 77_936 (32 bit) or 5_107_605_667 (64 bit)
     (npairs + ndoubleties - ntiesx - ntiesy - 2 * nswaps) /
      sqrt(float(npairs - ntiesx) * float(npairs - ntiesy))
-end
-
-"""
-    countties(x::RealVector, lo::Integer, hi::Integer)
-
-Return the number of ties within `x[lo:hi]`. Assumes `x` is sorted. 
-"""
-function countties(x::AbstractVector, lo::Integer, hi::Integer)
-    # avoid overflows on both 32 & 64 bit by using widen
-    thistiecount, result = widen(0), widen(0)
-    (lo < 1 || hi > length(x)) && error("Bounds error")
-    @inbounds for i = (lo + 1):hi
-        if x[i] == x[i - 1]
-            thistiecount += 1
-        elseif thistiecount > 0
-            result += div(thistiecount * (thistiecount + 1), 2)
-            thistiecount = 0
-        end
-    end
-
-    if thistiecount > 0
-        result += div(thistiecount * (thistiecount + 1), 2)
-    end
-    result
 end
 
 """
@@ -87,7 +66,7 @@ corkendall(x::RealVector, Y::RealMatrix) = (n = size(Y, 2); permx = sortperm(x);
 
 function corkendall(X::RealMatrix)
     n = size(X, 2)
-    C = ones(float(eltype(X)), n, n)# avoids dependency on LinearAlgebra
+    C = ones(float(eltype(X)), n, n)# Avoids dependency on LinearAlgebra
     @inbounds for j = 2:n
         permx = sortperm(X[:,j])
         for i = 1:j - 1
@@ -113,6 +92,32 @@ end
 
 # Auxilliary functions for Kendall's rank correlation
 
+"""
+    countties(x::RealVector, lo::Integer, hi::Integer)
+
+Return the number of ties within `x[lo:hi]`. Assumes `x` is sorted. 
+"""
+function countties(x::AbstractVector, lo::Integer, hi::Integer)
+    # Use of widen below prevents possible overflow errors when
+    # length(x) exceeds 2^16 (32 bit) or 2^32 (64 bit)
+    w0 = widen(0)
+    thistiecount, result = w0, w0
+    (lo < 1 || hi > length(x)) && error("Bounds error")
+    @inbounds for i = (lo + 1):hi
+        if x[i] == x[i - 1]
+            thistiecount += 1
+        elseif thistiecount > 0
+            result += div(thistiecount * (thistiecount + 1), 2)
+            thistiecount = w0
+        end
+    end
+
+    if thistiecount > 0
+        result += div(thistiecount * (thistiecount + 1), 2)
+    end
+    result
+end
+
 # Tests appear to show that a value of 64 is optimal,
 # but note that the equivalent constant in base/sort.jl is 20.
 const SMALL_THRESHOLD  = 64
@@ -126,8 +131,9 @@ This method is a copy-paste-edit of sort! in base/sort.jl (the method specialise
 but amended to return the bubblesort distance.
 """
 function msort!(v::AbstractVector, lo::Integer, hi::Integer, t=similar(v, 0))
-    # avoid overflow errors (if length(v)> 2^16) on 32 bit by using float
-    nswaps = 0.0
+    # Use of widen below prevents possible overflow errors when
+    # length(v) exceeds 2^16 (32 bit) or 2^32 (64 bit)
+    nswaps = widen(0)
     @inbounds if lo < hi
         hi - lo <= SMALL_THRESHOLD && return isort!(v, lo, hi)
 
@@ -178,14 +184,14 @@ This method is a copy-paste-edit of sort! in base/sort.jl (the method specialise
 amended to return the bubblesort distance.
 """
 function isort!(v::AbstractVector, lo::Integer, hi::Integer)
-    if lo == hi return 0.0 end
-    nswaps = 0.0
+    if lo == hi return widen(0) end
+    nswaps = widen(0)
     @inbounds for i = lo + 1:hi
         j = i
         x = v[i]
         while j > lo
             if x < v[j - 1]
-                nswaps += 1.0
+                nswaps += 1
                 v[j] = v[j - 1]
                 j -= 1
                 continue
