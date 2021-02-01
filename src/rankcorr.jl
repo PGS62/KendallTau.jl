@@ -2,26 +2,26 @@
 # except that this file does not contain the code for Spearman's correlation in the first 27 lines of that file.
 
 #######################################
-# 
+#
 #   Kendall correlation
-# 
+#
 #######################################
 
 # Knight, William R. “A Computer Method for Calculating Kendall's Tau with Ungrouped Data.”
 # Journal of the American Statistical Association, vol. 61, no. 314, 1966, pp. 436–439.
-# JSTOR, www.jstor.org/stable/2282833. Accessed 15 Jan. 2021.
-function corkendall!(x::RealVector, y::RealVector, permx=sortperm(x))
+# JSTOR, www.jstor.org/stable/2282833.
+function corkendall!(x::RealVector, y::RealVector, permx::AbstractVector{<:Integer}=sortperm(x))
     if any(isnan, x) || any(isnan, y) return NaN end
     n = length(x)
     if n != length(y) error("Vectors must have same length") end
 
     # Initial sorting
-    x[:] = x[permx]
-    y[:] = y[permx]
+    permute!(x, permx)
+    permute!(y, permx)
 
     npairs = float(n) * (n - 1) / 2
     # ntiesx, ntiesy, ndoubleties are floats to avoid overflows on 32bit
-    ntiesx, ntiesy, ndoubleties, k, nswaps = 0.0, 0.0, 0.0, 0, 0
+    ntiesx, ntiesy, ndoubleties, k, nswaps = widen(0), widen(0), widen(0), widen(0), widen(0)
 
     @inbounds for i = 2:n
         if x[i - 1] == x[i]
@@ -31,14 +31,14 @@ function corkendall!(x::RealVector, y::RealVector, permx=sortperm(x))
             # sorted first on x, then (where x values are tied) on y. Hence 
             # double ties can be counted by calling countties.
             sort!(view(y, (i - k - 1):(i - 1)))
-            ntiesx += float(k) * (k + 1) / 2
+            ntiesx += div(k * (k + 1), 2)
             ndoubleties += countties(y,  i - k - 1, i - 1)
             k = 0
         end
     end
     if k > 0
         sort!(view(y, ((n - k):n)))
-        ntiesx += float(k) * (k + 1) / 2
+        ntiesx += div(k * (k + 1), 2)
         ndoubleties += countties(y,  n - k, n)
     end
 
@@ -46,29 +46,29 @@ function corkendall!(x::RealVector, y::RealVector, permx=sortperm(x))
     ntiesy = countties(y, 1, n)
 
     (npairs + ndoubleties - ntiesx - ntiesy - 2 * nswaps) /
-     sqrt((npairs - ntiesx) * (npairs - ntiesy))
+     sqrt(float(npairs - ntiesx) * float(npairs - ntiesy))
 end
 
 """
-    countties(x::RealVector,lo::Int64,hi::Int64)
+    countties(x::RealVector, lo::Integer, hi::Integer)
 
-Assumes `x` is sorted. Returns the number of ties within `x[lo:hi]`.
+Return the number of ties within `x[lo:hi]`. Assumes `x` is sorted. 
 """
 function countties(x::AbstractVector, lo::Integer, hi::Integer)
-    # avoid overflows on 32 bit by using floats
-    thistiecount, result = 0.0, 0.0
+    # avoid overflows on both 32 & 64 bit by using widen
+    thistiecount, result = widen(0), widen(0)
     (lo < 1 || hi > length(x)) && error("Bounds error")
     @inbounds for i = (lo + 1):hi
         if x[i] == x[i - 1]
-            thistiecount += 1.0
+            thistiecount += 1
         elseif thistiecount > 0
-            result += thistiecount * (thistiecount + 1) / 2
-            thistiecount = 0.0
+            result += div(thistiecount * (thistiecount + 1), 2)
+            thistiecount = 0
         end
     end
 
     if thistiecount > 0
-        result += thistiecount * (thistiecount + 1) / 2
+        result += div(thistiecount * (thistiecount + 1), 2)
     end
     result
 end
