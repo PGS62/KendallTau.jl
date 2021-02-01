@@ -2,7 +2,7 @@
 module KendallTau
 using Random
 using BenchmarkTools
-#import LinearAlgebra # only used in method speedtest_correlation
+using LinearAlgebra
 #import StatsBase     # only used in method speedtest_correlation  
 
 const RealVector{T <: Real} = AbstractArray{T,1}

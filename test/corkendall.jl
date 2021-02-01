@@ -185,6 +185,8 @@ end
 function myisapprox(x::AbstractArray, y::AbstractArray, abstol::Float64)
     if size(x) ≠ size(y)
         return(false)
+    elseif eltype(x) != eltype(y)
+        return(false)
     else
         return(all(myisapprox.(x, y, abstol)))
     end
