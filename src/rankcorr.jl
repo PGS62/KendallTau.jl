@@ -2,6 +2,29 @@
 # except that this file does not contain the code for Spearman's correlation in the first 27 lines of that file.
 
 #######################################
+# 
+#   Spearman correlation
+# 
+#######################################
+
+"""
+    corspearman(x, y=x)
+
+Compute Spearman's rank correlation coefficient. If `x` and `y` are vectors, the
+output is a float, otherwise it's a matrix corresponding to the pairwise correlations
+of the columns of `x` and `y`.
+"""
+corspearman(x::RealVector, y::RealVector) = cor(tiedrank(x), tiedrank(y))
+
+corspearman(X::RealMatrix, Y::RealMatrix) =
+    cor(mapslices(tiedrank, X, dims=1), mapslices(tiedrank, Y, dims=1))
+corspearman(X::RealMatrix, y::RealVector) = cor(mapslices(tiedrank, X, dims=1), tiedrank(y))
+corspearman(x::RealVector, Y::RealMatrix) = cor(tiedrank(x), mapslices(tiedrank, Y, dims=1))
+
+corspearman(X::RealMatrix) = (Z = mapslices(tiedrank, X, dims=1); cor(Z, Z))
+
+
+#######################################
 #
 #   Kendall correlation
 #
@@ -21,7 +44,7 @@ function corkendall!(x::RealVector, y::RealVector, permx::AbstractVector{<:Integ
     
     # Use widen to avoid overflows on both 32bit and 64bit
     npairs = div(widen(n) * (n - 1), 2)
-    ntiesx, ndoubleties, nswaps = widen(0), widen(0), widen(0)
+    ntiesx = ndoubleties = nswaps = widen(0)
     k = 0
 
     @inbounds for i = 2:n
@@ -31,16 +54,16 @@ function corkendall!(x::RealVector, y::RealVector, permx::AbstractVector{<:Integ
             # Sort the corresponding chunk of y, so the rows of hcat(x,y) are 
             # sorted first on x, then (where x values are tied) on y. Hence 
             # double ties can be counted by calling countties.
-            sort!(view(y, (i - k - 1):(i - 1)))  # Can't use wide integers here
+            sort!(view(y, (i - k - 1):(i - 1)))
             ntiesx += div(widen(k) * (k + 1), 2) # Must use wide integers here
             ndoubleties += countties(y,  i - k - 1, i - 1)
             k = 0
         end
     end
     if k > 0
-        sort!(view(y, ((n - k):n)))
+        sort!(view(y, (n - k):n))
         ntiesx += div(widen(k) * (k + 1), 2)
-        ndoubleties += countties(y,  n - k, n)
+        ndoubleties += countties(y, n - k, n)
     end
 
     nswaps = merge_sort!(y, 1, n)
@@ -73,7 +96,7 @@ end
 
 function corkendall(X::RealMatrix)
     n = size(X, 2)
-    C = Matrix{float(eltype(X))}(I, n, n)
+    C = Matrix{Float64}(I, n, n)
     for j = 2:n
         permx = sortperm(X[:,j])
         for i = 1:j - 1
@@ -87,7 +110,7 @@ end
 function corkendall(X::RealMatrix, Y::RealMatrix)
     nr = size(X, 2)
     nc = size(Y, 2)
-    C = Matrix{float(eltype(X))}(undef, nr, nc)
+    C = Matrix{Float64}(undef, nr, nc)
     for j = 1:nr
         permx = sortperm(X[:,j])
         for i = 1:nc
@@ -107,15 +130,14 @@ Return the number of ties within `x[lo:hi]`. Assumes `x` is sorted.
 function countties(x::AbstractVector, lo::Integer, hi::Integer)
     # Use of widen below prevents possible overflow errors when
     # length(x) exceeds 2^16 (32 bit) or 2^32 (64 bit)
-    w0 = widen(0)
-    thistiecount, result = w0, w0
+    thistiecount = result = widen(0)
     checkbounds(x, lo:hi)
     @inbounds for i = (lo + 1):hi
         if x[i] == x[i - 1]
             thistiecount += 1
         elseif thistiecount > 0
             result += div(thistiecount * (thistiecount + 1), 2)
-            thistiecount = w0
+            thistiecount = widen(0)
         end
     end
 
@@ -132,12 +154,12 @@ const SMALL_THRESHOLD = 64
 # merge_sort! copied from Julia Base
 # (commit 28330a2fef4d9d149ba0fd3ffa06347b50067647, dated 20 Sep 2020)
 """
-    merge_sort!(v::AbstractVector, lo::Integer, hi::Integer, t=similar(v, 0))    
+    merge_sort!(v::AbstractVector, lo::Integer, hi::Integer, t::AbstractVector=similar(v, 0))    
 
 Mutates `v` by sorting elements `x[lo:hi]` using the merge sort algorithm. 
 This method is a copy-paste-edit of sort! in base/sort.jl, amended to return the bubblesort distance.
 """
-function merge_sort!(v::AbstractVector, lo::Integer, hi::Integer, t=similar(v, 0))
+function merge_sort!(v::AbstractVector, lo::Integer, hi::Integer, t::AbstractVector=similar(v, 0))
     # Use of widen below prevents possible overflow errors when
     # length(v) exceeds 2^16 (32 bit) or 2^32 (64 bit)
     nswaps = widen(0)
