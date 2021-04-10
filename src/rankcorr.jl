@@ -1,27 +1,5 @@
 # This file is intended to be a drop-in replacement for file rankcorr.jl in the StatsBase package,
-# except that this file does not contain the code for Spearman's correlation in the first 27 lines of that file.
-
-#######################################
-# 
-#   Spearman correlation
-# 
-#######################################
-
-"""
-    corspearman(x, y=x)
-
-Compute Spearman's rank correlation coefficient. If `x` and `y` are vectors, the
-output is a float, otherwise it's a matrix corresponding to the pairwise correlations
-of the columns of `x` and `y`.
-"""
-corspearman(x::RealVector, y::RealVector) = cor(tiedrank(x), tiedrank(y))
-
-corspearman(X::RealMatrix, Y::RealMatrix) =
-    cor(mapslices(tiedrank, X, dims=1), mapslices(tiedrank, Y, dims=1))
-corspearman(X::RealMatrix, y::RealVector) = cor(mapslices(tiedrank, X, dims=1), tiedrank(y))
-corspearman(x::RealVector, Y::RealMatrix) = cor(tiedrank(x), mapslices(tiedrank, Y, dims=1))
-
-corspearman(X::RealMatrix) = (Z = mapslices(tiedrank, X, dims=1); cor(Z, Z))
+# except that this file does not contain the code for Spearman's correlation in the first 116 lines of that file.
 
 
 #######################################
@@ -41,7 +19,7 @@ function corkendall!(x::RealVector, y::RealVector, permx::AbstractVector{<:Integ
     # Initial sorting
     permute!(x, permx)
     permute!(y, permx)
-    
+
     # Use widen to avoid overflows on both 32bit and 64bit
     npairs = div(widen(n) * (n - 1), 2)
     ntiesx = ndoubleties = nswaps = widen(0)
@@ -77,7 +55,6 @@ end
 
 """
     corkendall(x, y=x)
-
 Compute Kendall's rank correlation coefficient, τ. `x` and `y` must both be either
 matrices or vectors.
 """
@@ -124,7 +101,6 @@ end
 
 """
     countties(x::RealVector, lo::Integer, hi::Integer)
-
 Return the number of ties within `x[lo:hi]`. Assumes `x` is sorted. 
 """
 function countties(x::AbstractVector, lo::Integer, hi::Integer)
@@ -155,7 +131,6 @@ const SMALL_THRESHOLD = 64
 # (commit 28330a2fef4d9d149ba0fd3ffa06347b50067647, dated 20 Sep 2020)
 """
     merge_sort!(v::AbstractVector, lo::Integer, hi::Integer, t::AbstractVector=similar(v, 0))    
-
 Mutates `v` by sorting elements `x[lo:hi]` using the merge sort algorithm. 
 This method is a copy-paste-edit of sort! in base/sort.jl, amended to return the bubblesort distance.
 """
@@ -207,7 +182,6 @@ midpoint(lo::Integer, hi::Integer) = midpoint(promote(lo, hi)...)
 
 """
     insertion_sort!(v::AbstractVector, lo::Integer, hi::Integer)
-
 Mutates `v` by sorting elements `x[lo:hi]` using the insertion sort algorithm. 
 This method is a copy-paste-edit of sort! in base/sort.jl, amended to return the bubblesort distance.
 """
