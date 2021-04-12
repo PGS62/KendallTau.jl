@@ -1,5 +1,7 @@
-# Test corkendall against corkendallnaive, a "reference implementation" defined in this file, that has the advantage of simplicity.
-# 
+#= Test corkendall against corkendallnaive, a "reference implementation" defined in this file, that has the advantage of 
+simplicity.
+PGS The tests in this file are complicated, involving writing a different implementation of Kendall Correlation (corkendallnaive)
+=# 
 
 using KendallTau
 using Test
@@ -7,6 +9,10 @@ using Random
 
 const RealVector{T <: Real} = AbstractArray{T,1}
 const RealMatrix{T <: Real} = AbstractArray{T,2}
+const RealVectorWithMissings{T <: Real} = AbstractArray{<:Union{T, Missing},1}
+const RealMatrixWithMissings{T <: Real} = AbstractArray{<:Union{T, Missing},2}
+
+
 
 """
     corkendallnaive(x::RealVector, y::RealVector)
@@ -17,6 +23,9 @@ the more complex `corkendall`.
 function corkendallnaive(x::RealVector, y::RealVector)
     if any(isnan, x) || any(isnan, y) return NaN end
     n = length(x)
+    if n <= 1
+        return(NaN)
+    end
     npairs = div(n * (n - 1), 2)
     if length(y) ≠ n error("Vectors must have same length") end
 
@@ -39,20 +48,39 @@ function corkendallnaive(x::RealVector, y::RealVector)
     numerator / denominator
 end
 
-corkendallnaive(X::RealMatrix, y::RealVector) = Float64[corkendallnaive(float(X[:,i]), float(y)) for i = 1:size(X, 2)]
+function corkendallnaive(x::RealVectorWithMissings, y::RealVectorWithMissings)
+    a,b = skipmissingpairs_naive(x,y)
+    corkendallnaive(a,b)
+end
 
-corkendallnaive(x::RealVector, Y::RealMatrix) = (n = size(Y, 2); reshape(Float64[corkendallnaive(float(x), float(Y[:,i])) for i = 1:n], 1, n))
 
-corkendallnaive(X::RealMatrix, Y::RealMatrix) = Float64[corkendallnaive(float(X[:,i]), float(Y[:,j])) for i = 1:size(X, 2), j = 1:size(Y, 2)]
+corkendallnaive(X::Union{RealMatrix,RealMatrixWithMissings}, y::Union{RealVector,RealVectorWithMissings}) = Float64[corkendallnaive(float(X[:,i]), float(y)) for i = 1:size(X, 2)]
 
-function corkendallnaive(X::RealMatrix)
+corkendallnaive(x::Union{RealVector,RealVectorWithMissings}, Y::Union{RealMatrix,RealMatrixWithMissings}) = (n = size(Y, 2); reshape(Float64[corkendallnaive(float(x), float(Y[:,i])) for i = 1:n], 1, n))
+
+corkendallnaive(X::Union{RealMatrix,RealMatrixWithMissings}, Y::Union{RealMatrix,RealMatrixWithMissings}) = Float64[corkendallnaive(float(X[:,i]), float(Y[:,j])) for i = 1:size(X, 2), j = 1:size(Y, 2)]
+
+function corkendallnaive(X::Union{RealMatrix,RealMatrixWithMissings})
     n = size(X, 2)
-    C = ones(float(eltype(X)), n, n)# avoids dependency on LinearAlgebra
+    C = ones(Float64, n, n)
     for j in 2:n, i in 1:j - 1
         C[i,j] = corkendallnaive(X[:,i], X[:,j])
         C[j,i] = C[i,j]
     end
     return C
+end
+
+"""
+    skipmissingpairs_naive(x::RealVectorWithMissings,y::RealVectorWithMissings)
+Simpler but slower version of skipmissingpairs    .
+"""
+function skipmissingpairs_naive(x::RealVectorWithMissings,y::RealVectorWithMissings)
+	keep = .!(ismissing.(x) .| ismissing.(y))
+	x = x[keep]
+	y = y[keep]
+	x = collect(skipmissing(x))
+	y = collect(skipmissing(y))
+	x,y
 end
 
 """
@@ -74,6 +102,7 @@ The function also checks that `fn1` and `fn2` never mutate their arguments.
 """
 function compare_implementations(fn1=corkendall, fn2=corkendallnaive; abstol::Float64=1e-14, maxcols::Integer, maxrows::Integer, numtests::Integer)
     
+    prob_missing = 0.1
     fn1name = string(Base.parentmodule(fn1)) * "." * string(fn1)
     fn2name = string(Base.parentmodule(fn2)) * "." * string(fn2)
 
@@ -96,34 +125,66 @@ function compare_implementations(fn1=corkendall, fn2=corkendallnaive; abstol::Fl
         ncols2 = rand(rng, 1:maxcols)
         nrows = rand(rng, 1:maxrows)
 
-        for j = 1:5
+        arg1 = [1.0]
+        arg2 = [2.0]
+
+        for j = 1:10
             if j == 1
                 casedesc = "one matrix case"
                 # by restricting elements to 1:nrows, we can be sure repeats exist
                 arg1 = rand(rng, 1:nrows, nrows, ncols1)
-            elseif j == 2
+            elseif j == 1
+                casedesc = "one matrix case, with missings"
+                # by restricting elements to 1:nrows, we can be sure repeats exist
+                arg1 = rand(rng, 1:nrows, nrows, ncols1)
+                arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
+            elseif j == 3
                 casedesc = "two matrix case"
                 arg1 = rand(rng, 1:nrows, nrows, ncols1)
                 arg2 = rand(rng, 1:nrows, nrows, ncols2)
-            elseif j == 3
+            elseif j == 4
+                casedesc = "two matrix case, with missings"
+                arg1 = rand(rng, 1:nrows, nrows, ncols1)
+                arg2 = rand(rng, 1:nrows, nrows, ncols2)
+                arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
+                arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
+            elseif j == 5
                 casedesc = "vector-matrix case"
                 arg1 = rand(rng, 1:nrows, nrows)
                 arg2 = rand(rng, 1:nrows, nrows, ncols2)
-            elseif j == 4
+            elseif j == 6
+                casedesc = "vector-matrix case, with missings"
+                arg1 = rand(rng, 1:nrows, nrows)
+                arg2 = rand(rng, 1:nrows, nrows, ncols2)
+                arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
+                arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
+            elseif j == 7
                 casedesc = "matrix-vector case"
                 arg1 = rand(rng, 1:nrows, nrows, ncols1)
                 arg2 = randn(rng, nrows)
-            elseif j == 5
+            elseif j == 8
+                casedesc = "matrix-vector case, with missings"
+                arg1 = rand(rng, 1:nrows, nrows, ncols1)
+                arg2 = randn(rng, nrows)
+                arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
+                arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
+            elseif j == 9
                 casedesc = "vector-vector case"
                 arg1 = rand(rng, 1:nrows, nrows)
                 arg2 = rand(rng, 1:nrows, nrows)
+            elseif j == 10
+                casedesc = "vector-vector case, with missings"
+                arg1 = rand(rng, 1:nrows, nrows)
+                arg2 = rand(rng, 1:nrows, nrows)
+                arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
+                arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
             end
 
             # sometimes flip to floats
             if randn() < 0
                 arg1 = float(arg1)
             end
-            if j > 1
+            if j > 2
                 if randn() < 0
                     arg2 = float(arg2)
                 end 
@@ -131,17 +192,17 @@ function compare_implementations(fn1=corkendall, fn2=corkendallnaive; abstol::Fl
 
             arg1_backup = copy(arg1)
 
-            if j == 1
+            if j <= 2
                 res1 = fn1(arg1)
-                if arg1 ≠ arg1_backup @error("Detected that function $fn1name mutated its argument, $casedesc") end
+                myisequal(arg1, arg1_backup) || @error("Detected that function $fn1name mutated its argument, $casedesc")
                 res2 = fn2(arg1)
-                if arg1 ≠ arg1_backup @error("Detected that function $fn2name mutated its argument, $casedesc") end
+                myisequal(arg1, arg1_backup) || @error("Detected that function $fn2name mutated its argument, $casedesc")
             else
                 arg2_backup = copy(arg2)
                 res1 = fn1(arg1, arg2)
-                if arg1 ≠ arg1_backup || arg2 ≠ arg2_backup  @error("Detected that function $fn1name mutated one of its argument, $casedesc") end
+                (myisequal(arg1, arg1_backup) && myisequal(arg2, arg2_backup)) ||  @error("Detected that function $fn1name mutated one of its argument, $casedesc")
                 res2 = fn2(arg1, arg2)
-                if arg1 ≠ arg1_backup || arg2 ≠ arg2_backup  @error("Detected that function $fn2name mutated one of its argument, $casedesc") end
+                (myisequal(arg1, arg1_backup) && myisequal(arg2, arg2_backup)) ||   @error("Detected that function $fn2name mutated one of its argument, $casedesc")
             end
 
             # test the test!
@@ -175,18 +236,28 @@ function myisapprox(x::AbstractArray, y::AbstractArray, abstol::Float64)
     end
 end
 
-function myisapprox(x::Float64, y::Float64, abstol::Float64)
-    if isnan(x) && isnan(y)
+function myisapprox(x::Union{Float64,Int64,Missing}, y::Union{Float64,Int64,Missing}, abstol::Float64)
+    if ismissing(x) && ismissing(y)
         return(true)
-        elseif isnan(x) || isnan(y)
+    elseif ismissing(x) || ismissing(y)
+        return(false)
+    elseif isnan(x) && isnan(y)
+        return(true)
+    elseif isnan(x) || isnan(y)
+        return(false)
+    elseif ismissing(x) || ismissing(y)
         return(false)
     else
         return(abs(x - y) <= abstol)
     end
 end
 
+myisequal(x,y) = myisapprox(x,y,0.0)
+
+
 # Notice strict test with absolute tolerance of differences set to zero.
 # NB it is important that maxrows in the call below call below is greater than the SMALL_THRESHOLD value
 # otherwise the important function mergesort! never gets tested!
+@test compare_implementations(KendallTau.corkendall, corkendallnaive, abstol=0.0, maxcols=10, maxrows=10, numtests=500) == true
 @test compare_implementations(KendallTau.corkendall, corkendallnaive, abstol=0.0, maxcols=10, maxrows=100, numtests=500) == true
 @test compare_implementations(KendallTau.corkendall, corkendallnaive, abstol=1e14, maxcols=1, maxrows=50000, numtests=10) == true

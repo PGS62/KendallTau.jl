@@ -3,9 +3,9 @@
 
 
 #######################################
-#
+# 
 #   Kendall correlation
-#
+# 
 #######################################
 
 # Knight, William R. “A Computer Method for Calculating Kendall's Tau with Ungrouped Data.”
@@ -16,9 +16,33 @@ function corkendall!(x::RealVector, y::RealVector, permx::AbstractVector{<:Integ
     n = length(x)
     if n != length(y) error("Vectors must have same length") end
 
-    # Initial sorting
     permute!(x, permx)
     permute!(y, permx)
+
+    corkendall_sorted!(x, y)
+end
+
+function corkendall!(x::RealVectorWithMissings, y::RealVectorWithMissings, permx::AbstractVector{<:Integer}=sortperm(x))
+    length(x) == length(y) || error("Vectors must have same length")
+
+    permute!(x, permx)
+    permute!(y, permx)
+
+	x, y = skipmissingpairs(x, y)
+
+	if length(x) < 2 ; return (NaN);end
+
+	corkendall_sorted!(x, y)
+end
+
+"""
+    corkendall_sorted!(x::RealVector, y::RealVector)
+Kendall correlation between `x` and `y` but note argument`x` must already be sorted.
+"""
+function corkendall_sorted!(x::RealVector, y::RealVector)
+    if any(isnan, x) || any(isnan, y) return NaN end
+    n = length(x)
+    n == length(y) || error("Vectors must have same length")
 
     # Use widen to avoid overflows on both 32bit and 64bit
     npairs = div(widen(n) * (n - 1), 2)
@@ -58,20 +82,20 @@ end
 Compute Kendall's rank correlation coefficient, τ. `x` and `y` must both be either
 matrices or vectors.
 """
-corkendall(x::RealVector, y::RealVector) = corkendall!(copy(x), copy(y))
+corkendall(x::Union{RealVector,RealVectorWithMissings}, y::Union{RealVector,RealVectorWithMissings}) = corkendall!(copy(x), copy(y))
 
-function corkendall(X::RealMatrix, y::RealVector)
+function corkendall(X::Union{RealMatrix,RealMatrixWithMissings}, y::Union{RealVector,RealVectorWithMissings})
     permy = sortperm(y)
     return([corkendall!(copy(y), X[:,i], permy) for i in 1:size(X, 2)])
 end
 
-function corkendall(x::RealVector, Y::RealMatrix)
+function corkendall(x::Union{RealVector,RealVectorWithMissings}, Y::Union{RealMatrix,RealMatrixWithMissings})
     n = size(Y, 2)
     permx = sortperm(x)
     return(reshape([corkendall!(copy(x), Y[:,i], permx) for i in 1:n], 1, n))
 end
 
-function corkendall(X::RealMatrix)
+function corkendall(X::Union{RealMatrix,RealMatrixWithMissings})
     n = size(X, 2)
     C = Matrix{Float64}(I, n, n)
     for j = 2:n
@@ -84,7 +108,7 @@ function corkendall(X::RealMatrix)
     return C
 end
 
-function corkendall(X::RealMatrix, Y::RealMatrix)
+function corkendall(X::Union{RealMatrix,RealMatrixWithMissings}, Y::Union{RealMatrix,RealMatrixWithMissings})
     nr = size(X, 2)
     nc = size(Y, 2)
     C = Matrix{Float64}(undef, nr, nc)
@@ -203,4 +227,76 @@ function insertion_sort!(v::AbstractVector, lo::Integer, hi::Integer)
         v[j] = x
     end
     return nswaps
+end
+
+"""
+    skipmissingpairs(x::RealVectorWithMissings{T},y::RealVectorWithMissings{U}) where T where U
+Returns	a pair `(a,b)`, filtered copies of `x` and `y`, in which elements `x[i]` and `y[i]`` are "skipped"
+(filtered out) if either `ismissing(x[i])` or `ismissing(y[i])`.
+"""
+function skipmissingpairs(x::RealVectorWithMissings{T}, y::RealVectorWithMissings{U}) where T where U
+
+    length(x) == length(y) || error("Vectors must have same length")
+
+    # x can be Vector{Missing}, in which case T is undefined, similarly for y and U.
+    tdefined = !(x isa Vector{Missing})
+    udefined = !(y isa Vector{Missing})
+    
+    if tdefined && udefined
+        n::Int = 0
+        @inbounds for i = 1:length(x)
+            if !(ismissing(x[i]) || ismissing(y[i]))
+                n += 1
+            end
+        end
+
+        a = Vector{T}(undef, n)
+        b = Vector{U}(undef, n)
+        j::Int = 0
+        
+        @inbounds for i = 1:length(x)
+            if !(ismissing(x[i]) || ismissing(y[i]))
+                j += 1
+                a[j] = x[i]
+                b[j] = y[i]
+            end
+        end
+    else
+        T2 = tdefined ? T : Missing
+        U2 = udefined ? U : Missing
+        a = Vector{T2}(undef, 0)
+        b = Vector{U2}(undef, 0)
+    end
+    a, b
+end
+
+#=test different ways of "skipping missing pairs". Unfortunately Missings.skipmissings seems to have quite poor performance:
+julia> KendallTau.test_skipmissings(10000)
+  46.700 μs (7 allocations: 181.58 KiB)
+  151.800 μs (46 allocations: 514.88 KiB)
+  25.400 μs (4 allocations: 156.41 KiB)
+=#
+function test_skipmissings(n=10000)
+
+    x = [missing;1:n]
+    y = [1:n;missing]
+
+    # simplest approach I could think of
+    @btime begin
+        keep = .!(ismissing.($x) .| ismissing.($y))
+        x2 = $x[keep]
+        y2= $y[keep]
+    end
+
+    # using Missings.skipmissings
+    @btime begin
+        itrx, itry = Missings.skipmissings($x, $y)
+        x3 = collect(itrx)
+        y3 = collect(itry)
+    end
+
+    #use KendallTau.skipmissingpairs
+    @btime x4, y4 = KendallTau.skipmissingpairs($x, $y)
+
+    nothing
 end
