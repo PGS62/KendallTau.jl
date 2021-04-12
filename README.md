@@ -377,15 +377,9 @@ Results from all 3 functions identical? true
 
 
 
+## Update 12 April 2021
+The code of `corkendall` from this package was incorporated in Julia StatsBase on 8 February 2021 (see [this](https://github.com/JuliaStats/StatsBase.jl/commit/11ac5b596405367b3217d3d962e22523fef9bb0d) commit). More recently I have added methods to `corkendall` to handle missing values, using an approach equivalent to R's "pairwise.complete.obs" (see R documentation [here](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/cor)) but it's worth noting that such an approach can be ["dangerous"](http://bwlewis.github.io/covar/missing.html), certainly data sets need to be examined carefully before choosing this approach.
 
-## Other features:
-A function `corkendallnaive` that implements the obvious order N^2 algorithm. This function is not exported, but is used in the function `compare_implementations` in
-`tests/rankcorr.jl` which is quite a thorough test harness, and could be copied over to `StatsBase/tests/rankcorr.jl`.
-
-Functions `corkendallthreads_v1`, `corkendallthreads_v2` and `corkendallthreads_v3` which are experimental for the time being.
-
-## To do
-In the event that either `x` or `y` contain `nan` values the function currently returns `nan`. The Kendall Tau calculators in both Python and R allow alternative (and often useful) handling of `nan` values, and I would like to implement something similar. See argument `nan_policy` to the Python function `scipy.stats.kendalltau` [here](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.kendalltau.html) and argument `use` to the R function `cor` [here](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/cor). For my own projects, I particularly need an equivalent of R's `use = "pairwise.complete.obs"`
 
 Philip Swannell  
 18 Jan 2021
