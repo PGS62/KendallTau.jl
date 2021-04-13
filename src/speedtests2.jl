@@ -1,7 +1,7 @@
 
 # Code to investigate performance impact of the presence of missings in the arguments passed to corkendall
 
-function sprinklemissings(rng, x, proportionmissing)
+function sprinklemissings(x, proportionmissing,rng = MersenneTwister())
 	randoms = rand(rng, size(x)...)
 	ifelse.(randoms .< proportionmissing, missing, x)
 end
@@ -51,10 +51,10 @@ function impactofmissings(nr::Int, nc::Int, proportionmissing::Float64=0.1)
 			message = " no missings in argument(s)"
 			if i == 2
 				message = " argument(s) amended to contain $(100proportionmissing)% missings"
-				matrix1 = sprinklemissings(rng, matrix1, proportionmissing)
-				matrix2 = sprinklemissings(rng, matrix2, proportionmissing)
-				vector1 = sprinklemissings(rng, vector1, proportionmissing)
-				vector2 = sprinklemissings(rng, vector2, proportionmissing)
+				matrix1 = sprinklemissings(matrix1, proportionmissing,rng)
+				matrix2 = sprinklemissings(matrix2, proportionmissing,rng)
+				vector1 = sprinklemissings(vector1, proportionmissing,rng)
+				vector2 = sprinklemissings(vector2, proportionmissing,rng)
 			end
 
             if k == 1
@@ -95,14 +95,9 @@ end
 
 
 function testmissings()
-x = [missing;1:1000]
-y = [1:1000;missing]
-
-
-
-#@benchmark sm1($x,$y)
-@benchmark skipmissingpairs($x,$y)
-
+    x = [missing;1:1000]
+    y = [1:1000;missing]
+    @benchmark skipmissingpairs($x,$y)
 end	
 
 

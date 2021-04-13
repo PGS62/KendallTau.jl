@@ -121,6 +121,28 @@ function corkendall(X::Union{RealMatrix,RealMatrixWithMissings}, Y::Union{RealMa
     return C
 end
 
+"""
+    corkendall_belowdiagonal(X::Union{RealMatrix,RealMatrixWithMissings}, colnos::UnitRange{Int64})
+For use from multi-threading code to avoid double calculation of elements. Returns corkendall(X)[:,colnos] but with NaNs
+on and above the diagonal of corkendall(X).
+"""
+function corkendall_belowdiagonal(X::Union{RealMatrix,RealMatrixWithMissings}, colnos::UnitRange{Int64})
+    nr = size(X, 2)
+    nc = length(colnos)
+    C = Matrix{Float64}(undef, nr, nc)
+    for j = 1:nr
+        permx = sortperm(X[:,j])
+        for i = 1:nc
+            if j > i + colnos[1] - 1
+                C[j,i] = corkendall!(X[:,j], X[:,colnos[i]], permx)
+            else
+                C[j,i] = NaN
+            end    
+        end
+    end
+    return C
+end
+
 # Auxilliary functions for Kendall's rank correlation
 
 """
@@ -143,7 +165,7 @@ function countties(x::AbstractVector, lo::Integer, hi::Integer)
 
     if thistiecount > 0
         result += div(thistiecount * (thistiecount + 1), 2)
-    end
+end
     result
 end
 
@@ -270,12 +292,11 @@ function skipmissingpairs(x::RealVectorWithMissings{T}, y::RealVectorWithMissing
     a, b
 end
 
-#=test different ways of "skipping missing pairs". Unfortunately Missings.skipmissings seems to have quite poor performance:
+#= test different ways of "skipping missing pairs". Unfortunately Missings.skipmissings seems to have quite poor performance:
 julia> KendallTau.test_skipmissings(10000)
   46.700 μs (7 allocations: 181.58 KiB)
   151.800 μs (46 allocations: 514.88 KiB)
-  25.400 μs (4 allocations: 156.41 KiB)
-=#
+  25.400 μs (4 allocations: 156.41 KiB) =#
 function test_skipmissings(n=10000)
 
     x = [missing;1:n]
@@ -285,7 +306,7 @@ function test_skipmissings(n=10000)
     @btime begin
         keep = .!(ismissing.($x) .| ismissing.($y))
         x2 = $x[keep]
-        y2= $y[keep]
+        y2 = $y[keep]
     end
 
     # using Missings.skipmissings
@@ -295,7 +316,7 @@ function test_skipmissings(n=10000)
         y3 = collect(itry)
     end
 
-    #use KendallTau.skipmissingpairs
+    # use KendallTau.skipmissingpairs
     @btime x4, y4 = KendallTau.skipmissingpairs($x, $y)
 
     nothing

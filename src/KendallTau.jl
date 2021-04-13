@@ -13,9 +13,7 @@ const RealMatrixWithMissings{T <: Real} = AbstractArray{<:Union{T, Missing},2}
 
 include("rankcorr.jl")
 if VERSION >= v"1.5" #@spawn not available on 1.0
-    include("threads_v1.jl")
-    include("threads_v2.jl")
-    include("threads_v3.jl")
+    include("threads.jl")
 end
 include("speedtests.jl")
 include("speedtests2.jl")
