@@ -22,11 +22,13 @@ end
 
 function corkendall!(x::RealVectorWithMissings, y::RealVectorWithMissings, permx::AbstractVector{<:Integer}=sortperm(x))
     length(x) == length(y) || error("Vectors must have same length")
-	if length(x) < 2 ; return (NaN);end
+	if length(x) < 2; return (NaN);end
 
     permute!(x, permx)
     permute!(y, permx)
 	x, y = skipmissingpairs(x, y)
+
+    if length(x) < 2; return(NaN);end
 
 	corkendall_sorted!(x, y)
 end

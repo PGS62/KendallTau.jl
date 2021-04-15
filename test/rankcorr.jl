@@ -1,3 +1,7 @@
+#=TODO - replace test code below with equivalent from StatsBase
+then add tests for auxiliary functions partitioncols and skipmissings, and tests for handling of missing values.
+=#
+
 using KendallTau
 using Test
 using Random

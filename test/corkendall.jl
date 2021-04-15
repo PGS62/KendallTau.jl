@@ -53,7 +53,6 @@ function corkendallnaive(x::RealVectorWithMissings, y::RealVectorWithMissings)
     corkendallnaive(a,b)
 end
 
-
 corkendallnaive(X::Union{RealMatrix,RealMatrixWithMissings}, y::Union{RealVector,RealVectorWithMissings}) = Float64[corkendallnaive(float(X[:,i]), float(y)) for i = 1:size(X, 2)]
 
 corkendallnaive(x::Union{RealVector,RealVectorWithMissings}, Y::Union{RealMatrix,RealMatrixWithMissings}) = (n = size(Y, 2); reshape(Float64[corkendallnaive(float(x), float(Y[:,i])) for i = 1:n], 1, n))
@@ -261,3 +260,6 @@ myisequal(x,y) = myisapprox(x,y,0.0)
 @test compare_implementations(KendallTau.corkendall, corkendallnaive, abstol=0.0, maxcols=10, maxrows=10, numtests=500) == true
 @test compare_implementations(KendallTau.corkendall, corkendallnaive, abstol=0.0, maxcols=10, maxrows=100, numtests=500) == true
 @test compare_implementations(KendallTau.corkendall, corkendallnaive, abstol=1e14, maxcols=1, maxrows=50000, numtests=10) == true
+@test compare_implementations(KendallTau.corkendallthreads, corkendallnaive, abstol=0.0, maxcols=10, maxrows=10, numtests=500) == true
+@test compare_implementations(KendallTau.corkendallthreads, corkendallnaive, abstol=0.0, maxcols=10, maxrows=100, numtests=500) == true
+@test compare_implementations(KendallTau.corkendallthreads, corkendallnaive, abstol=1e14, maxcols=1, maxrows=50000, numtests=10) == true
