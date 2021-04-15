@@ -11,28 +11,6 @@
 # Knight, William R. “A Computer Method for Calculating Kendall's Tau with Ungrouped Data.”
 # Journal of the American Statistical Association, vol. 61, no. 314, 1966, pp. 436–439.
 # JSTOR, www.jstor.org/stable/2282833.
-function corkendall!(x::RealVector, y::RealVector, permx::AbstractVector{<:Integer}=sortperm(x))
-    length(x) == length(y) || error("Vectors must have same length")
-
-    permute!(x, permx)
-    permute!(y, permx)
-
-    corkendall_sorted!(x, y)
-end
-
-function corkendall!(x::RealVectorWithMissings, y::RealVectorWithMissings, permx::AbstractVector{<:Integer}=sortperm(x))
-    length(x) == length(y) || error("Vectors must have same length")
-	if length(x) < 2; return (NaN);end
-
-    permute!(x, permx)
-    permute!(y, permx)
-	x, y = skipmissingpairs(x, y)
-
-    if length(x) < 2; return(NaN);end
-
-	corkendall_sorted!(x, y)
-end
-
 """
     corkendall_sorted!(x::RealVector, y::RealVector)
 Kendall correlation between `x` and `y` but note argument`x` must already be sorted.
@@ -73,6 +51,27 @@ function corkendall_sorted!(x::RealVector, y::RealVector)
     # length(x) exceeds 77_936 (32 bit) or 5_107_605_667 (64 bit)
     (npairs + ndoubleties - ntiesx - ntiesy - 2 * nswaps) /
      sqrt(float(npairs - ntiesx) * float(npairs - ntiesy))
+end
+
+function corkendall!(x::RealVector, y::RealVector, permx::AbstractVector{<:Integer}=sortperm(x))
+    length(x) == length(y) || error("Vectors must have same length")
+
+    permute!(x, permx)
+    permute!(y, permx)
+
+    corkendall_sorted!(x, y)
+end
+
+function corkendall!(x::RealVectorWithMissings, y::RealVectorWithMissings, permx::AbstractVector{<:Integer}=sortperm(x))
+    length(x) == length(y) || error("Vectors must have same length")
+
+    permute!(x, permx)
+    permute!(y, permx)
+
+	x, y = skipmissingpairs(x, y)
+    if length(x) < 2; return(NaN);end
+
+	corkendall_sorted!(x, y)
 end
 
 """
