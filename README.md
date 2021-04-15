@@ -109,8 +109,17 @@ Results from all 3 functions identical? true
 
 
 
-## Update 12 April 2021
-The code of `corkendall` from this package was incorporated in Julia StatsBase on 8 February 2021 (see [this](https://github.com/JuliaStats/StatsBase.jl/commit/11ac5b596405367b3217d3d962e22523fef9bb0d) commit). More recently I have added methods to `corkendall` to handle missing values, using an approach equivalent to R's "pairwise.complete.obs" (see R documentation [here](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/cor)) but it's worth noting that such an approach can be ["dangerous"](http://bwlewis.github.io/covar/missing.html), certainly data sets need to be examined carefully before choosing this approach.
+## Update 15 April 2021
+The code of `corkendall` from this package was incorporated in Julia StatsBase on 8 February 2021 (see [this](https://github.com/JuliaStats/StatsBase.jl/commit/11ac5b596405367b3217d3d962e22523fef9bb0d) commit).
+
+More recently I have made two further changed to `corkendall`:
+
+1) Added methods to to handle missing values, using an approach equivalent to R's "pairwise.complete.obs" (see R documentation [here](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/cor))
+At present, no other approaches to handling missing values (e.g. R's "complete.obs") are supported.
+
+2) Added a separate function `corkendallthreads`, a faster version that uses Julia's threading capabilities. The speedup that this provides is dependent on the size of the input matrices, but is by up to a factor of 3.8 on a four-core PC. See file speedtestresults.txt.
+
+
 
 
 Philip Swannell  

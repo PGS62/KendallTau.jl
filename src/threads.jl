@@ -96,12 +96,12 @@ end
 
 """
     partitioncols(nc::Int64, triangular::Bool)
-Auxilliary function for task load balancing. Returns a vector of `UnitRange`s, which partition the columns of the 
+Auxiliary function for task load balancing. Returns a vector of `UnitRange`s, which partition the columns of the 
 correlation matrix to be calculated, one "chunk" per task.
 # Arguments
 - `nc::Int64`: the number of columns in the correlation matrix.
-- `triangular::Bool`: should be `true` when calculating below-the-diagonal elements of a correlation matrix. In this case
-the partitions have (approximately) equal numbers of elements below the diagonal, so early partitions are narrower
+- `triangular::Bool`: should be `true` when calculating below-the-diagonal elements of a correlation matrix. In this
+case the partitions have (approximately) equal numbers of elements below the diagonal, so early partitions are narrower
 than later partitions.
 - `numtasks`: the number of tasks (or chunks) to partition to. The length of the return from the function
 is `min(nc,numtasks)`.
