@@ -292,32 +292,3 @@ function skipmissingpairs(x::RealVectorWithMissings{T}, y::RealVectorWithMissing
     a, b
 end
 
-#= test different ways of "skipping missing pairs". Unfortunately Missings.skipmissings seems to have quite poor performance:
-julia> KendallTau.test_skipmissings(10000)
-  46.700 μs (7 allocations: 181.58 KiB)
-  151.800 μs (46 allocations: 514.88 KiB)
-  25.400 μs (4 allocations: 156.41 KiB) =#
-function test_skipmissings(n=10000)
-
-    x = [missing;1:n]
-    y = [1:n;missing]
-
-    # simplest approach I could think of
-    @btime begin
-        keep = .!(ismissing.($x) .| ismissing.($y))
-        x2 = $x[keep]
-        y2 = $y[keep]
-    end
-
-    # using Missings.skipmissings
-    @btime begin
-        itrx, itry = Missings.skipmissings($x, $y)
-        x3 = collect(itrx)
-        y3 = collect(itry)
-    end
-
-    # use KendallTau.skipmissingpairs
-    @btime x4, y4 = KendallTau.skipmissingpairs($x, $y)
-
-    nothing
-end
