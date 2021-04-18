@@ -9,8 +9,8 @@ using Random
 
 const RealVector{T <: Real} = AbstractArray{T,1}
 const RealMatrix{T <: Real} = AbstractArray{T,2}
-const RealVectorWithMissings{T <: Real} = AbstractArray{<:Union{T, Missing},1}
-const RealMatrixWithMissings{T <: Real} = AbstractArray{<:Union{T, Missing},2}
+const RealOrMissingVector{T <: Real} = AbstractArray{<:Union{T, Missing},1}
+const RealOrMissingMatrix{T <: Real} = AbstractArray{<:Union{T, Missing},2}
 
 
 
@@ -48,18 +48,18 @@ function corkendallnaive(x::RealVector, y::RealVector)
     numerator / denominator
 end
 
-function corkendallnaive(x::RealVectorWithMissings, y::RealVectorWithMissings)
+function corkendallnaive(x::RealOrMissingVector, y::RealOrMissingVector)
     a,b = skipmissingpairs_naive(x,y)
     corkendallnaive(a,b)
 end
 
-corkendallnaive(X::Union{RealMatrix,RealMatrixWithMissings}, y::Union{RealVector,RealVectorWithMissings}) = Float64[corkendallnaive(float(X[:,i]), float(y)) for i = 1:size(X, 2)]
+corkendallnaive(X::Union{RealMatrix,RealOrMissingMatrix}, y::Union{RealVector,RealOrMissingVector}) = Float64[corkendallnaive(float(X[:,i]), float(y)) for i = 1:size(X, 2)]
 
-corkendallnaive(x::Union{RealVector,RealVectorWithMissings}, Y::Union{RealMatrix,RealMatrixWithMissings}) = (n = size(Y, 2); reshape(Float64[corkendallnaive(float(x), float(Y[:,i])) for i = 1:n], 1, n))
+corkendallnaive(x::Union{RealVector,RealOrMissingVector}, Y::Union{RealMatrix,RealOrMissingMatrix}) = (n = size(Y, 2); reshape(Float64[corkendallnaive(float(x), float(Y[:,i])) for i = 1:n], 1, n))
 
-corkendallnaive(X::Union{RealMatrix,RealMatrixWithMissings}, Y::Union{RealMatrix,RealMatrixWithMissings}) = Float64[corkendallnaive(float(X[:,i]), float(Y[:,j])) for i = 1:size(X, 2), j = 1:size(Y, 2)]
+corkendallnaive(X::Union{RealMatrix,RealOrMissingMatrix}, Y::Union{RealMatrix,RealOrMissingMatrix}) = Float64[corkendallnaive(float(X[:,i]), float(Y[:,j])) for i = 1:size(X, 2), j = 1:size(Y, 2)]
 
-function corkendallnaive(X::Union{RealMatrix,RealMatrixWithMissings})
+function corkendallnaive(X::Union{RealMatrix,RealOrMissingMatrix})
     n = size(X, 2)
     C = ones(Float64, n, n)
     for j in 2:n, i in 1:j - 1
@@ -70,10 +70,10 @@ function corkendallnaive(X::Union{RealMatrix,RealMatrixWithMissings})
 end
 
 """
-    skipmissingpairs_naive(x::RealVectorWithMissings,y::RealVectorWithMissings)
+    skipmissingpairs_naive(x::RealOrMissingVector,y::RealOrMissingVector)
 Simpler but slower version of skipmissingpairs    .
 """
-function skipmissingpairs_naive(x::RealVectorWithMissings,y::RealVectorWithMissings)
+function skipmissingpairs_naive(x::RealOrMissingVector,y::RealOrMissingVector)
 	keep = .!(ismissing.(x) .| ismissing.(y))
 	x = x[keep]
 	y = y[keep]
@@ -257,9 +257,11 @@ myisequal(x,y) = myisapprox(x,y,0.0)
 # Notice strict test with absolute tolerance of differences set to zero.
 # NB it is important that maxrows in the call below call below is greater than the SMALL_THRESHOLD value
 # otherwise the important function mergesort! never gets tested!
-@test compare_implementations(KendallTau.corkendall, corkendallnaive, abstol=0.0, maxcols=10, maxrows=10, numtests=500) == true
-@test compare_implementations(KendallTau.corkendall, corkendallnaive, abstol=0.0, maxcols=10, maxrows=100, numtests=500) == true
-@test compare_implementations(KendallTau.corkendall, corkendallnaive, abstol=1e14, maxcols=1, maxrows=50000, numtests=10) == true
-@test compare_implementations(KendallTau.corkendallthreads, corkendallnaive, abstol=0.0, maxcols=10, maxrows=10, numtests=500) == true
-@test compare_implementations(KendallTau.corkendallthreads, corkendallnaive, abstol=0.0, maxcols=10, maxrows=100, numtests=500) == true
-@test compare_implementations(KendallTau.corkendallthreads, corkendallnaive, abstol=1e14, maxcols=1, maxrows=50000, numtests=10) == true
+#@test compare_implementations(KendallTau.corkendall, corkendallnaive, abstol=0.0, maxcols=10, maxrows=10, numtests=500) == true
+#@test compare_implementations(KendallTau.corkendall, corkendallnaive, abstol=0.0, maxcols=10, maxrows=100, numtests=500) == true
+#@test compare_implementations(KendallTau.corkendall, corkendallnaive, abstol=1e14, maxcols=1, maxrows=50000, numtests=10) == true
+#@test compare_implementations(KendallTau.corkendallthreads_v4, corkendallnaive, abstol=0.0, maxcols=10, maxrows=10, numtests=500) == true
+#@test compare_implementations(KendallTau.corkendallthreads_v4, corkendallnaive, abstol=0.0, maxcols=10, maxrows=100, numtests=500) == true
+#@test compare_implementations(KendallTau.corkendallthreads_v4, corkendallnaive, abstol=1e14, maxcols=1, maxrows=50000, numtests=10) == true
+@test compare_implementations(KendallTau.corkendallthreads_v1, corkendallnaive, abstol=0.0, maxcols=10, maxrows=100, numtests=50) == true
+@test compare_implementations(KendallTau.corkendallthreads_v2, corkendallnaive, abstol=0.0, maxcols=10, maxrows=100, numtests=50) == true

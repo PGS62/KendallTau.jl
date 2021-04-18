@@ -1,17 +1,18 @@
 # EXPERIMENTAL - Threaded version 
+
 import Base.Threads.@spawn
 
 # Threading not possible in this case
-corkendallthreads(x::Union{RealVector,RealVectorWithMissings}, y::Union{RealVector,RealVectorWithMissings}) = corkendall!(copy(x), copy(y))
+corkendallthreads_v4(x::Union{RealVector,RealOrMissingVector}, y::Union{RealVector,RealOrMissingVector}) = corkendall(x, y)
 
-function corkendallthreads(X::Union{RealMatrix,RealMatrixWithMissings}, Y::Union{RealMatrix,RealMatrixWithMissings})
+function corkendallthreads_v4(X::Union{RealMatrix,RealOrMissingMatrix}, Y::Union{RealMatrix,RealOrMissingMatrix})
     nr = size(X, 2)
     nc = size(Y, 2)
     
     #speedup provided by threading is greater when the second argument has more columns, so switch.
     #TODO test that hypothesis more thoroughly!
     if nr > nc
-        return(convert(RealMatrix, transpose(corkendallthreads(Y, X))))
+        return(convert(RealMatrix, transpose(corkendallthreads_v4(Y, X))))
     end
 
     C = zeros(Float64, nr, nc)
@@ -30,19 +31,22 @@ function corkendallthreads(X::Union{RealMatrix,RealMatrixWithMissings}, Y::Union
     return C
 end
 
-function corkendallthreads(X::Union{RealMatrix,RealMatrixWithMissings})
+function corkendallthreads_v4(X::Union{RealMatrix,RealOrMissingMatrix})
     nr = nc = size(X, 2)
     C = zeros(Float64, nr, nc)
 
-    chunks = partitioncols(nc, true)
+    chunks = partitioncols(nc, true,max(Threads.nthreads(),nc/100))
 
     tasks = Array{Task,1}(undef, length(chunks))
     for j = 1:length(chunks)
-        tasks[j] = @spawn corkendall_belowdiagonal(X, chunks[j])
+        tasks[j] = @spawn ck_belowdiagonal(X, chunks[j])
     end
 
+    #i = 0
     for (c,t) in zip(chunks,tasks)
         C[:,c] = fetch(t)
+     #   i+=1
+     #   println("fetched task $i")
     end
     
     for j = 1:nr
@@ -55,17 +59,17 @@ function corkendallthreads(X::Union{RealMatrix,RealMatrixWithMissings})
     return C
 end
 
-function corkendallthreads(x::Union{RealVector,RealVectorWithMissings}, Y::Union{RealMatrix,RealMatrixWithMissings})
+function corkendallthreads_v4(x::Union{RealVector,RealOrMissingVector}, Y::Union{RealMatrix,RealOrMissingMatrix})
     nr = 1
     nc = size(Y, 2)
 
     C = zeros(Float64, nr, nc)
 
-    chunks = partitioncols(nc, false)
+    chunks = partitioncols(nc, false,max(8,nc/20))
 
     tasks = Array{Task,1}(undef, length(chunks))
     for j = 1:length(chunks)
-        tasks[j] = @spawn corkendall(x, Y[:,chunks[j]])
+        tasks[j] = @spawn corkendall(x, view(Y,:,chunks[j]))
     end
 
     for (c,t) in zip(chunks,tasks)
@@ -75,7 +79,7 @@ function corkendallthreads(x::Union{RealVector,RealVectorWithMissings}, Y::Union
     return C
 end
 
-function corkendallthreads(X::Union{RealMatrix,RealMatrixWithMissings}, y::Union{RealVector,RealVectorWithMissings})
+function corkendallthreads_v4(X::Union{RealMatrix,RealOrMissingMatrix}, y::Union{RealVector,RealOrMissingVector})
     l = size(X, 2)
     #it is idiosyncratic that this method returns a vector, not a matrix.
     C = zeros(Float64, l)
@@ -154,4 +158,27 @@ function partitioncols(nc::Int64, triangular::Bool, numtasks=Threads.nthreads())
     end
 
     return(chunks)
+end
+
+"""
+    ck_belowdiagonal(X::Union{RealMatrix,RealOrMissingMatrix}, colnos::UnitRange{Int64})
+For use from multi-threading code to avoid double calculation of elements. Returns corkendall(X)[:,colnos] but with NaNs
+on and above the diagonal of corkendall(X).
+"""
+function ck_belowdiagonal(X::Union{RealMatrix,RealOrMissingMatrix}, colnos::UnitRange{Int64})
+    nr = size(X, 2)
+    nc = length(colnos)
+    C = Matrix{Float64}(undef, nr, nc)
+    for j = 1:nr
+        permx = sortperm(X[:,j])
+        sortedx = X[:,j][permx]
+        for i = 1:nc
+            if j > i + colnos[1] - 1
+                C[j,i] = ck_sorted!(sortedx, X[:,colnos[i]], permx)
+            else
+                C[j,i] = NaN
+            end    
+        end
+    end
+    return C
 end

@@ -12,10 +12,12 @@
 # Journal of the American Statistical Association, vol. 61, no. 314, 1966, pp. 436–439.
 # JSTOR, www.jstor.org/stable/2282833.
 """
-    corkendall_sorted!(x::RealVector, y::RealVector)
-Kendall correlation between `x` and `y` but note argument`x` must already be sorted.
+    ck_sortedshuffled!(x::RealVector, y::RealVector)
+Kendall correlation between two vectors but this function omits the initial sorting of arguments. So calculating
+Kendall correlation between `x` and `y` is a three stage process: a) sort `x` to get `sortedx`; b) apply the same 
+permutation to `y` to get `shuffledy`; c) call this function on `sortedx` and `shuffledy`.
 """
-function corkendall_sorted!(x::RealVector, y::RealVector)
+function ck_sortedshuffled!(x::RealVector, y::RealVector)
     if any(isnan, x) || any(isnan, y) return NaN end
     n = length(x)
     n == length(y) || error("Vectors must have same length")
@@ -53,25 +55,45 @@ function corkendall_sorted!(x::RealVector, y::RealVector)
      sqrt(float(npairs - ntiesx) * float(npairs - ntiesy))
 end
 
-function corkendall!(x::RealVector, y::RealVector, permx::AbstractVector{<:Integer}=sortperm(x))
+"""
+    ck!(x::RealVector, y::RealVector, permx::AbstractVector{<:Integer}=sortperm(x))
+Kendall correlation between two vectors `x` and `y`. Third argument `permx` is the permutation that must be applied to
+`x` to sort it.
+"""
+function ck!(x::RealVector, y::RealVector, permx::AbstractVector{<:Integer}=sortperm(x))
     length(x) == length(y) || error("Vectors must have same length")
-
     permute!(x, permx)
     permute!(y, permx)
-
-    corkendall_sorted!(x, y)
+    ck_sortedshuffled!(x, y)
 end
 
-function corkendall!(x::RealVectorWithMissings, y::RealVectorWithMissings, permx::AbstractVector{<:Integer}=sortperm(x))
+function ck!(x::RealOrMissingVector, y::RealOrMissingVector, permx::AbstractVector{<:Integer}=sortperm(x))
     length(x) == length(y) || error("Vectors must have same length")
-
     permute!(x, permx)
     permute!(y, permx)
-
 	x, y = skipmissingpairs(x, y)
-    if length(x) < 2; return(NaN);end
+    length(x) >= 2 || return(NaN)
+	ck_sortedshuffled!(x, y)
+end
 
-	corkendall_sorted!(x, y)
+"""
+    ck_sorted!(sortedx::RealVector, y::RealVector, permx::AbstractVector{<:Integer})
+Kendall correlation between two vectors but this function omits the initial sorting of the first argument. So 
+calculating Kendall correlation between `x` and `y` is a two stage process: a) sort `x` to get `sortedx`; b) call this
+function on `sortedx` and `y`, with the third argument being the permutation that achieved the sorting of `x`.
+"""
+function ck_sorted!(sortedx::RealVector, y::RealVector, permx::AbstractVector{<:Integer})
+    length(sortedx) == length(y) || error("Vectors must have same length")
+    permute!(y, permx)
+    ck_sortedshuffled!(sortedx, y)
+end
+
+function ck_sorted!(sortedx::RealOrMissingVector, y::RealOrMissingVector, permx::AbstractVector{<:Integer})
+    length(sortedx) == length(y) || error("Vectors must have same length")
+    permute!(y, permx)
+	sortedx, y = skipmissingpairs(sortedx, y)
+    length(sortedx) >= 2 || return(NaN)
+	ck_sortedshuffled!(sortedx, y)
 end
 
 """
@@ -79,62 +101,48 @@ end
 Compute Kendall's rank correlation coefficient, τ. `x` and `y` must both be either
 matrices or vectors.
 """
-corkendall(x::Union{RealVector,RealVectorWithMissings}, y::Union{RealVector,RealVectorWithMissings}) = corkendall!(copy(x), copy(y))
-
-function corkendall(X::Union{RealMatrix,RealMatrixWithMissings}, y::Union{RealVector,RealVectorWithMissings})
-    permy = sortperm(y)
-    return([corkendall!(copy(y), X[:,i], permy) for i in 1:size(X, 2)])
+function corkendall(x::Union{RealVector,RealOrMissingVector}, y::Union{RealVector,RealOrMissingVector})
+    permx = sortperm(x)
+    sortedx = x[permx]
+    ck_sorted!(sortedx, copy(y), permx)
 end
 
-function corkendall(x::Union{RealVector,RealVectorWithMissings}, Y::Union{RealMatrix,RealMatrixWithMissings})
+function corkendall(X::Union{RealMatrix,RealOrMissingMatrix}, y::Union{RealVector,RealOrMissingVector})
+    permy = sortperm(y)
+    sortedy = y[permy]
+    return([ck_sorted!(copy(sortedy), X[:,i], permy) for i in 1:size(X, 2)])
+end
+
+function corkendall(x::Union{RealVector,RealOrMissingVector}, Y::Union{RealMatrix,RealOrMissingMatrix})
     n = size(Y, 2)
     permx = sortperm(x)
-    return(reshape([corkendall!(copy(x), Y[:,i], permx) for i in 1:n], 1, n))
+    sortedx = x[permx]
+    return(reshape([ck_sorted!(copy(sortedx), Y[:,i], permx) for i in 1:n], 1, n))
 end
 
-function corkendall(X::Union{RealMatrix,RealMatrixWithMissings})
+function corkendall(X::Union{RealMatrix,RealOrMissingMatrix})
     n = size(X, 2)
     C = Matrix{Float64}(I, n, n)
     for j = 2:n
         permx = sortperm(X[:,j])
+        sortedx = X[:,j][permx]
         for i = 1:j - 1
-            C[j,i] = corkendall!(X[:,j], X[:,i], permx)
+            C[j,i] = ck_sorted!(sortedx, X[:,i], permx)
             C[i,j] = C[j,i]
         end
     end
     return C
 end
 
-function corkendall(X::Union{RealMatrix,RealMatrixWithMissings}, Y::Union{RealMatrix,RealMatrixWithMissings})
+function corkendall(X::Union{RealMatrix,RealOrMissingMatrix}, Y::Union{RealMatrix,RealOrMissingMatrix})
     nr = size(X, 2)
     nc = size(Y, 2)
     C = Matrix{Float64}(undef, nr, nc)
     for j = 1:nr
         permx = sortperm(X[:,j])
+        sortedx = X[:,j][permx]
         for i = 1:nc
-            C[j,i] = corkendall!(X[:,j], Y[:,i], permx)
-        end
-    end
-    return C
-end
-
-"""
-    corkendall_belowdiagonal(X::Union{RealMatrix,RealMatrixWithMissings}, colnos::UnitRange{Int64})
-For use from multi-threading code to avoid double calculation of elements. Returns corkendall(X)[:,colnos] but with NaNs
-on and above the diagonal of corkendall(X).
-"""
-function corkendall_belowdiagonal(X::Union{RealMatrix,RealMatrixWithMissings}, colnos::UnitRange{Int64})
-    nr = size(X, 2)
-    nc = length(colnos)
-    C = Matrix{Float64}(undef, nr, nc)
-    for j = 1:nr
-        permx = sortperm(X[:,j])
-        for i = 1:nc
-            if j > i + colnos[1] - 1
-                C[j,i] = corkendall!(X[:,j], X[:,colnos[i]], permx)
-            else
-                C[j,i] = NaN
-            end    
+            C[j,i] = ck_sorted!(sortedx, Y[:,i], permx)
         end
     end
     return C
@@ -162,7 +170,7 @@ function countties(x::AbstractVector, lo::Integer, hi::Integer)
 
     if thistiecount > 0
         result += div(thistiecount * (thistiecount + 1), 2)
-end
+    end
     result
 end
 
@@ -249,11 +257,11 @@ function insertion_sort!(v::AbstractVector, lo::Integer, hi::Integer)
 end
 
 """
-    skipmissingpairs(x::RealVectorWithMissings{T},y::RealVectorWithMissings{U}) where T where U
+    skipmissingpairs(x::RealOrMissingVector{T},y::RealOrMissingVector{U}) where T where U
 Returns	a pair `(a,b)`, filtered copies of `x` and `y`, in which elements `x[i]` and `y[i]`` are "skipped"
 (filtered out) if either `ismissing(x[i])` or `ismissing(y[i])`.
 """
-function skipmissingpairs(x::RealVectorWithMissings{T}, y::RealVectorWithMissings{U}) where T where U
+function skipmissingpairs(x::RealOrMissingVector{T}, y::RealOrMissingVector{U}) where T where U
 
     length(x) == length(y) || error("Vectors must have same length")
 
@@ -288,3 +296,4 @@ function skipmissingpairs(x::RealVectorWithMissings{T}, y::RealVectorWithMissing
     end
     a, b
 end
+
