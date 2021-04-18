@@ -18,11 +18,11 @@ function corkendallthreads_v1(X::Union{RealMatrix,RealOrMissingMatrix}, y::Union
     tasks = Array{Task,1}(undef, n)
 
     permy = sortperm(y)
-    for i ∈ 1:n
+    for i = 1:n
         tasks[i] = @spawn ck!(float(copy(y)), float(X[:,i]), permy)
     end
 
-    for i ∈ 1:n
+    for i = 1:n
         C[i] = fetch(tasks[i])
     end
 
@@ -36,11 +36,11 @@ function corkendallthreads_v1(x::Union{RealVector,RealOrMissingVector}, Y::Union
     tasks = Array{Task,1}(undef, n)
 
     permx = sortperm(x)
-    for i ∈ 1:n
+    for i = 1:n
         tasks[i] = @spawn ck!(float(copy(x)), float(Y[:,i]), permx)
     end
 
-    for i ∈ 1:n
+    for i = 1:n
         C[1,i] = fetch(tasks[i])
     end
 
@@ -53,15 +53,15 @@ function corkendallthreads_v1(X::Union{RealMatrix,RealOrMissingMatrix})
 
     tasks = Array{Task,2}(undef, n, n)
 
-    for j ∈ 2:n
+    for j = 2:n
         permx = sortperm(X[:,j])
-        for i ∈ 1:j - 1
+        for i = 1:j - 1
             tasks[j,i] = @spawn ck!(X[:,j], X[:,i], permx)
         end
     end
 
-    for j ∈ 2:n
-        for i ∈ 1:j - 1
+    for j = 2:n
+        for i = 1:j - 1
             C[j,i] = fetch(tasks[j,i])
             C[i,j] = C[j,i]
         end
@@ -75,14 +75,14 @@ function corkendallthreads_v1(X::Union{RealMatrix,RealOrMissingMatrix}, Y::Union
     nc = size(Y, 2)
     C = zeros(float(eltype(X)), nr, nc)
     tasks = Array{Task,2}(undef, nr, nc)
-    for j ∈ 1:nr
+    for j = 1:nr
         permx = sortperm(X[:,j])
-        for i ∈ 1:nc
+        for i = 1:nc
             tasks[j,i] = @spawn ck!(X[:,j], Y[:,i], permx)
         end
     end
 
-    for j ∈ 1:nr,i ∈ 1:nc
+    for j = 1:nr,i = 1:nc
         C[j,i] = fetch(tasks[j,i])
     end
     

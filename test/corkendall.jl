@@ -257,11 +257,11 @@ myisequal(x,y) = myisapprox(x,y,0.0)
 # Notice strict test with absolute tolerance of differences set to zero.
 # NB it is important that maxrows in the call below call below is greater than the SMALL_THRESHOLD value
 # otherwise the important function mergesort! never gets tested!
-#@test compare_implementations(KendallTau.corkendall, corkendallnaive, abstol=0.0, maxcols=10, maxrows=10, numtests=500) == true
-#@test compare_implementations(KendallTau.corkendall, corkendallnaive, abstol=0.0, maxcols=10, maxrows=100, numtests=500) == true
-#@test compare_implementations(KendallTau.corkendall, corkendallnaive, abstol=1e14, maxcols=1, maxrows=50000, numtests=10) == true
-#@test compare_implementations(KendallTau.corkendallthreads_v4, corkendallnaive, abstol=0.0, maxcols=10, maxrows=10, numtests=500) == true
-#@test compare_implementations(KendallTau.corkendallthreads_v4, corkendallnaive, abstol=0.0, maxcols=10, maxrows=100, numtests=500) == true
-#@test compare_implementations(KendallTau.corkendallthreads_v4, corkendallnaive, abstol=1e14, maxcols=1, maxrows=50000, numtests=10) == true
+@test compare_implementations(KendallTau.corkendall, corkendallnaive, abstol=0.0, maxcols=10, maxrows=10, numtests=500) == true
+@test compare_implementations(KendallTau.corkendall, corkendallnaive, abstol=0.0, maxcols=10, maxrows=100, numtests=500) == true
+@test compare_implementations(KendallTau.corkendall, corkendallnaive, abstol=1e14, maxcols=1, maxrows=50000, numtests=10) == true
+@test compare_implementations(KendallTau.corkendallthreads_v4, corkendallnaive, abstol=0.0, maxcols=10, maxrows=10, numtests=500) == true
+@test compare_implementations(KendallTau.corkendallthreads_v4, corkendallnaive, abstol=0.0, maxcols=10, maxrows=100, numtests=500) == true
+@test compare_implementations(KendallTau.corkendallthreads_v4, corkendallnaive, abstol=1e14, maxcols=1, maxrows=50000, numtests=10) == true
 @test compare_implementations(KendallTau.corkendallthreads_v1, corkendallnaive, abstol=0.0, maxcols=10, maxrows=100, numtests=50) == true
 @test compare_implementations(KendallTau.corkendallthreads_v2, corkendallnaive, abstol=0.0, maxcols=10, maxrows=100, numtests=50) == true

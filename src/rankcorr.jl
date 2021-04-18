@@ -102,11 +102,11 @@ Compute Kendall's rank correlation coefficient, τ. `x` and `y` must both be eit
 matrices or vectors.
 """
 function corkendall(x::Union{RealVector,RealOrMissingVector}, y::Union{RealVector,RealOrMissingVector})
-    permx = sortperm(x)
-    sortedx = x[permx]
-    ck_sorted!(sortedx, copy(y), permx)
+    ck!(copy(x), copy(y))
 end
 
+#= It is idiosyncratic that this method returns a vector, not a matrix, i.e. not consistent with Statistics.cor
+ or corspearman. But fixing that is a breaking change. =#
 function corkendall(X::Union{RealMatrix,RealOrMissingMatrix}, y::Union{RealVector,RealOrMissingVector})
     permy = sortperm(y)
     sortedy = y[permy]
@@ -296,4 +296,3 @@ function skipmissingpairs(x::RealOrMissingVector{T}, y::RealOrMissingVector{U}) 
     end
     a, b
 end
-
