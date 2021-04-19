@@ -8,94 +8,6 @@
 # 
 #######################################
 
-# Knight, William R. “A Computer Method for Calculating Kendall's Tau with Ungrouped Data.”
-# Journal of the American Statistical Association, vol. 61, no. 314, 1966, pp. 436–439.
-# JSTOR, www.jstor.org/stable/2282833.
-"""
-    ck_sortedshuffled!(x::RealVector, y::RealVector)
-Kendall correlation between two vectors but this function omits the initial sorting of arguments. So calculating
-Kendall correlation between `x` and `y` is a three stage process: a) sort `x` to get `sortedx`; b) apply the same 
-permutation to `y` to get `shuffledy`; c) call this function on `sortedx` and `shuffledy`.
-"""
-function ck_sortedshuffled!(x::RealVector, y::RealVector)
-    if any(isnan, x) || any(isnan, y) return NaN end
-    n = length(x)
-    n == length(y) || error("Vectors must have same length")
-
-    # Use widen to avoid overflows on both 32bit and 64bit
-    npairs = div(widen(n) * (n - 1), 2)
-    ntiesx = ndoubleties = nswaps = widen(0)
-    k = 0
-
-    @inbounds for i = 2:n
-        if x[i - 1] == x[i]
-            k += 1
-        elseif k > 0
-            # Sort the corresponding chunk of y, so the rows of hcat(x,y) are 
-            # sorted first on x, then (where x values are tied) on y. Hence 
-            # double ties can be counted by calling countties.
-            sort!(view(y, (i - k - 1):(i - 1)))
-            ntiesx += div(widen(k) * (k + 1), 2) # Must use wide integers here
-            ndoubleties += countties(y,  i - k - 1, i - 1)
-            k = 0
-        end
-    end
-    if k > 0
-        sort!(view(y, (n - k):n))
-        ntiesx += div(widen(k) * (k + 1), 2)
-        ndoubleties += countties(y, n - k, n)
-    end
-
-    nswaps = merge_sort!(y, 1, n)
-    ntiesy = countties(y, 1, n)
-
-    # Calls to float below prevent possible overflow errors when
-    # length(x) exceeds 77_936 (32 bit) or 5_107_605_667 (64 bit)
-    (npairs + ndoubleties - ntiesx - ntiesy - 2 * nswaps) /
-     sqrt(float(npairs - ntiesx) * float(npairs - ntiesy))
-end
-
-"""
-    ck!(x::RealVector, y::RealVector, permx::AbstractVector{<:Integer}=sortperm(x))
-Kendall correlation between two vectors `x` and `y`. Third argument `permx` is the permutation that must be applied to
-`x` to sort it.
-"""
-function ck!(x::RealVector, y::RealVector, permx::AbstractVector{<:Integer}=sortperm(x))
-    length(x) == length(y) || error("Vectors must have same length")
-    permute!(x, permx)
-    permute!(y, permx)
-    ck_sortedshuffled!(x, y)
-end
-
-function ck!(x::RealOrMissingVector, y::RealOrMissingVector, permx::AbstractVector{<:Integer}=sortperm(x))
-    length(x) == length(y) || error("Vectors must have same length")
-    permute!(x, permx)
-    permute!(y, permx)
-	x, y = skipmissingpairs(x, y)
-    length(x) >= 2 || return(NaN)
-	ck_sortedshuffled!(x, y)
-end
-
-"""
-    ck_sorted!(sortedx::RealVector, y::RealVector, permx::AbstractVector{<:Integer})
-Kendall correlation between two vectors but this function omits the initial sorting of the first argument. So 
-calculating Kendall correlation between `x` and `y` is a two stage process: a) sort `x` to get `sortedx`; b) call this
-function on `sortedx` and `y`, with the third argument being the permutation that achieved the sorting of `x`.
-"""
-function ck_sorted!(sortedx::RealVector, y::RealVector, permx::AbstractVector{<:Integer})
-    length(sortedx) == length(y) || error("Vectors must have same length")
-    permute!(y, permx)
-    ck_sortedshuffled!(sortedx, y)
-end
-#method for when missings appear, so call skipmissingpairs.
-function ck_sorted!(sortedx::RealOrMissingVector, y::RealOrMissingVector, permx::AbstractVector{<:Integer})
-    length(sortedx) == length(y) || error("Vectors must have same length")
-    permute!(y, permx)
-	sortedx, y = skipmissingpairs(sortedx, y)
-    length(sortedx) >= 2 || return(NaN)
-	ck_sortedshuffled!(sortedx, y)
-end
-
 """
     corkendall(x, y=x)
 Compute Kendall's rank correlation coefficient, τ. `x` and `y` must both be either
@@ -148,7 +60,95 @@ function corkendall(X::Union{RealMatrix,RealOrMissingMatrix}, Y::Union{RealMatri
     return C
 end
 
+
+# Knight, William R. “A Computer Method for Calculating Kendall's Tau with Ungrouped Data.”
+# Journal of the American Statistical Association, vol. 61, no. 314, 1966, pp. 436–439.
+# JSTOR, www.jstor.org/stable/2282833.
+"""
+    ck_sortedshuffled!(x::RealVector, y::RealVector)
+Kendall correlation between two vectors but this function omits the initial sorting of arguments. So calculating
+Kendall correlation between `x` and `y` is a three stage process: a) sort `x` to get `sortedx`; b) apply the same 
+permutation to `y` to get `shuffledy`; c) call this function on `sortedx` and `shuffledy`.
+"""
+function ck_sortedshuffled!(x::RealVector, y::RealVector)
+    if any(isnan, x) || any(isnan, y) return NaN end
+    n = length(x)
+    n == length(y) || error("Vectors must have same length")
+
+    # Use widen to avoid overflows on both 32bit and 64bit
+    npairs = div(widen(n) * (n - 1), 2)
+    ntiesx = ndoubleties = nswaps = widen(0)
+    k = 0
+
+    @inbounds for i = 2:n
+        if x[i - 1] == x[i]
+            k += 1
+        elseif k > 0
+            # Sort the corresponding chunk of y, so the rows of hcat(x,y) are 
+            # sorted first on x, then (where x values are tied) on y. Hence 
+            # double ties can be counted by calling countties.
+            sort!(view(y, (i - k - 1):(i - 1)))
+            ntiesx += div(widen(k) * (k + 1), 2) # Must use wide integers here
+            ndoubleties += countties(y,  i - k - 1, i - 1)
+            k = 0
+        end
+    end
+    if k > 0
+        sort!(view(y, (n - k):n))
+        ntiesx += div(widen(k) * (k + 1), 2)
+        ndoubleties += countties(y, n - k, n)
+    end
+
+    nswaps = merge_sort!(y, 1, n)
+    ntiesy = countties(y, 1, n)
+
+    # Calls to float below prevent possible overflow errors when
+    # length(x) exceeds 77_936 (32 bit) or 5_107_605_667 (64 bit)
+    (npairs + ndoubleties - ntiesx - ntiesy - 2 * nswaps) /
+     sqrt(float(npairs - ntiesx) * float(npairs - ntiesy))
+end
+
 # Auxiliary functions for Kendall's rank correlation
+"""
+    ck!(x::RealVector, y::RealVector, permx::AbstractVector{<:Integer}=sortperm(x))
+Kendall correlation between two vectors `x` and `y`. Third argument `permx` is the permutation that must be applied to
+`x` to sort it.
+"""
+function ck!(x::RealVector, y::RealVector, permx::AbstractVector{<:Integer}=sortperm(x))
+    length(x) == length(y) || error("Vectors must have same length")
+    permute!(x, permx)
+    permute!(y, permx)
+    ck_sortedshuffled!(x, y)
+end
+
+function ck!(x::RealOrMissingVector, y::RealOrMissingVector, permx::AbstractVector{<:Integer}=sortperm(x))
+    length(x) == length(y) || error("Vectors must have same length")
+    permute!(x, permx)
+    permute!(y, permx)
+	x, y = skipmissingpairs(x, y)
+    length(x) >= 2 || return(NaN)
+	ck_sortedshuffled!(x, y)
+end
+
+"""
+    ck_sorted!(sortedx::RealVector, y::RealVector, permx::AbstractVector{<:Integer})
+Kendall correlation between two vectors but this function omits the initial sorting of the first argument. So 
+calculating Kendall correlation between `x` and `y` is a two stage process: a) sort `x` to get `sortedx`; b) call this
+function on `sortedx` and `y`, with the third argument being the permutation that achieved the sorting of `x`.
+"""
+function ck_sorted!(sortedx::RealVector, y::RealVector, permx::AbstractVector{<:Integer})
+    length(sortedx) == length(y) || error("Vectors must have same length")
+    permute!(y, permx)
+    ck_sortedshuffled!(sortedx, y)
+end
+#method for when missings appear, so call skipmissingpairs.
+function ck_sorted!(sortedx::RealOrMissingVector, y::RealOrMissingVector, permx::AbstractVector{<:Integer})
+    length(sortedx) == length(y) || error("Vectors must have same length")
+    permute!(y, permx)
+	sortedx, y = skipmissingpairs(sortedx, y)
+    length(sortedx) >= 2 || return(NaN)
+	ck_sortedshuffled!(sortedx, y)
+end
 
 """
     countties(x::RealVector, lo::Integer, hi::Integer)
@@ -254,45 +254,4 @@ function insertion_sort!(v::AbstractVector, lo::Integer, hi::Integer)
         v[j] = x
     end
     return nswaps
-end
-
-"""
-    skipmissingpairs(x::RealOrMissingVector{T},y::RealOrMissingVector{U}) where T where U
-Returns	a pair `(a,b)`, filtered copies of `x` and `y`, in which elements `x[i]` and `y[i]`` are "skipped"
-(filtered out) if either `ismissing(x[i])` or `ismissing(y[i])`.
-"""
-function skipmissingpairs(x::RealOrMissingVector{T}, y::RealOrMissingVector{U}) where T where U
-
-    length(x) == length(y) || error("Vectors must have same length")
-
-    # x can be Vector{Missing}, in which case T is undefined, similarly for y and U.
-    tdefined = !(x isa Vector{Missing})
-    udefined = !(y isa Vector{Missing})
-    
-    if tdefined && udefined
-        n::Int = 0
-        @inbounds for i = 1:length(x)
-            if !(ismissing(x[i]) || ismissing(y[i]))
-                n += 1
-            end
-        end
-
-        a = Vector{T}(undef, n)
-        b = Vector{U}(undef, n)
-        j::Int = 0
-        
-        @inbounds for i = 1:length(x)
-            if !(ismissing(x[i]) || ismissing(y[i]))
-                j += 1
-                a[j] = x[i]
-                b[j] = y[i]
-            end
-        end
-    else
-        T2 = tdefined ? T : Missing
-        U2 = udefined ? U : Missing
-        a = Vector{T2}(undef, 0)
-        b = Vector{U2}(undef, 0)
-    end
-    a, b
 end
