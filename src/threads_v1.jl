@@ -1,5 +1,5 @@
 #= EXPERIMENTAL - Threaded version... this version 1 uses one thread per element of the returned matrix, which
-turns out to scale very poorly.=#
+turns out to scale poorly.=#
 
 import Base.Threads.@spawn
 

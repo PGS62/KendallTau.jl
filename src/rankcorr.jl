@@ -87,7 +87,7 @@ function ck_sorted!(sortedx::RealVector, y::RealVector, permx::AbstractVector{<:
     permute!(y, permx)
     ck_sortedshuffled!(sortedx, y)
 end
-
+#method for when missings appear, so call skipmissingpairs.
 function ck_sorted!(sortedx::RealOrMissingVector, y::RealOrMissingVector, permx::AbstractVector{<:Integer})
     length(sortedx) == length(y) || error("Vectors must have same length")
     permute!(y, permx)

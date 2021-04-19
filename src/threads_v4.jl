@@ -42,11 +42,8 @@ function corkendallthreads_v4(X::Union{RealMatrix,RealOrMissingMatrix})
         tasks[j] = @spawn ck_belowdiagonal(X, chunks[j])
     end
 
-    #i = 0
     for (c,t) in zip(chunks,tasks)
         C[:,c] = fetch(t)
-     #   i+=1
-     #   println("fetched task $i")
     end
     
     for j = 1:nr

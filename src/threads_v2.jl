@@ -1,13 +1,7 @@
-# EXPERIMENTAL - Threaded version 2. Try fewer threads, one per columns of the return
+# EXPERIMENTAL - Threaded version 2. Try fewer threads, one per column of the return
 
 import Base.Threads.@spawn
 
-"""
-    corkendallthreads_v2(x, y=x)
-
-Compute Kendall's rank correlation coefficient, τ. `x` and `y` must both be either
-matrices or vectors. Uses threads when either `x` or `y` is a matrix.
-"""
 corkendallthreads_v2(x::Union{RealVector,RealOrMissingVector}, y::Union{RealVector,RealOrMissingVector}) = corkendall(float(copy(x)), float(copy(y)))# threads not used in this case
 
 function corkendallthreads_v2(X::Union{RealMatrix,RealOrMissingMatrix}, y::Union{RealVector,RealOrMissingVector})
@@ -69,7 +63,6 @@ function corkendallthreads_v2(X::Union{RealMatrix,RealOrMissingMatrix})
     return C
 end
 
-#one task per column of the return
 function corkendallthreads_v2(X::Union{RealMatrix,RealOrMissingMatrix}, Y::Union{RealMatrix,RealOrMissingMatrix})
     nr = size(X, 2)
     nc = size(Y, 2)
