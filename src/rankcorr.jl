@@ -1,11 +1,12 @@
-# This file is intended to be a drop-in replacement for file rankcorr.jl in the StatsBase package,
-# except that this file does not contain the code for Spearman's correlation in the first 116 lines of that file.
+#= This file is intended to be a drop-in replacement for file rankcorr.jl in the StatsBase 
+package, except that this file does not contain the code for Spearman's correlation in the 
+first 116 lines of that file. =#
 
 
 #######################################
-#
+# 
 #   Kendall correlation
-#
+# 
 #######################################
 
 """
@@ -204,7 +205,8 @@ Mutates `v` by sorting elements `x[lo:hi]` using the merge sort algorithm.
 This method is a copy-paste-edit of sort! in base/sort.jl, amended to return the bubblesort
 distance.
 """
-function merge_sort!(v::AbstractVector, lo::Integer, hi::Integer, t::AbstractVector=similar(v, 0))
+function merge_sort!(v::AbstractVector, lo::Integer, hi::Integer, 
+                     t::AbstractVector=similar(v, 0))
     # Use of widen below prevents possible overflow errors when
     # length(v) exceeds 2^16 (32 bit) or 2^32 (64 bit)
     nswaps = widen(0)
@@ -296,11 +298,11 @@ function handlecompletemissings(x::AbstractArray, y::AbstractArray, skipmissing:
         end
     else
         if missing isa eltype(x) || missing isa eltype(y)
-            throw(ArgumentError("keyword argument skipmissing must be either `:pairwise` or `:complete`,"
-                * " but got `:$skipmissing`"))
+            throw(ArgumentError("keyword argument skipmissing must be either " *
+            "`:pairwise` or `:complete`, but got `:$skipmissing`"))
         else
-            throw(ArgumentError("keyword argument skipmissing must be either `:pairwise`, `:complete` or"
-                * " `:undefined`, but got `:$skipmissing`"))
+            throw(ArgumentError("keyword argument skipmissing must be either " *
+            "`:pairwise`, `:complete` or `:undefined` but got `:$skipmissing`"))
         end
     end
     return(x, y)
@@ -320,14 +322,12 @@ function handlecompletemissings(x::AbstractArray, skipmissing::Symbol)
         end
     else
         if missing isa eltype(x)
-            throw(ArgumentError("keyword argument skipmissing must be either `:pairwise` or `:complete`,
-                   but got `:$skipmissing`"))
+            throw(ArgumentError("keyword argument skipmissing must be either " *
+            "`:pairwise` or `:complete`, but got `:$skipmissing`"))
         else
-            throw(ArgumentError("keyword argument skipmissing must be either `:pairwise`, `:complete` or"
-                * " `:undefined`, but got `:$skipmissing`"))
+            throw(ArgumentError("keyword argument skipmissing must be either " *
+            "`:pairwise`, `:complete` or `:undefined` but got `:$skipmissing`"))
         end
     end
     return(x)
 end
-
-
