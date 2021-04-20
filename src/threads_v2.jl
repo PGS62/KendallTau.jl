@@ -75,7 +75,7 @@ function corkendallthreads_v2(X::Union{RealMatrix,RealOrMissingMatrix}, Y::Union
     for j = 1:nc
         C[:,j] = fetch(tasks[j])
     end
-    
+
     return C
 end
 

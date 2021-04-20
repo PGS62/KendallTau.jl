@@ -12,7 +12,7 @@ function the_mother_of_all_tests()
 	@time corkendall_fromfile(inputfile, outputfile, true, true, true, true)
 end
 
-function corkendall_fromfile(inputfile::String, outputfile::String, inputhasheaderrow::Bool, inputhasheadercol::Bool, 
+function corkendall_fromfile(inputfile::String, outputfile::String, inputhasheaderrow::Bool, inputhasheadercol::Bool,
 							outputhasheaderrow::Bool, outputhasheadercol::Bool)
 
 	header = inputhasheaderrow ? 1 : 0

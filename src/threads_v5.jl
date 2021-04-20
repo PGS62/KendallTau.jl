@@ -27,7 +27,7 @@ function corkendallthreads_v5(X::Union{RealMatrix,RealOrMissingMatrix})
 end
 
 #experiment with always having j-1 tasks for row j
-# seems slow for the_mother_of_all_tests(), was 25.8% completed after 1 hour 8 mins 
+# seems slow for the_mother_of_all_tests(), was 25.8% completed after 1 hour 8 mins
 function corkendallthreads_v7(X::Union{RealMatrix,RealOrMissingMatrix})
     n = size(X, 2)
     C = Matrix{Float64}(I, n, n)
@@ -80,7 +80,7 @@ function corkendallthreads_v8(X::Union{RealMatrix,RealOrMissingMatrix})
 				tasks[i,j] = @spawn corkendall(view(X,:,chunks[i]),view(X,:,chunks[j]))
 			end
 		end
-	end			
+	end
 
     for j = 1:nch
 		for i = 1:j
@@ -93,7 +93,7 @@ function corkendallthreads_v8(X::Union{RealMatrix,RealOrMissingMatrix})
 			end
 			println("$numdone/$numcorrels, $(numdone*100/numcorrels)%")
 		end
-	end			
+	end
 
 	return C
 end
@@ -111,13 +111,13 @@ function corkendallthreads_v9(X::Union{RealMatrix,RealOrMissingMatrix})
 
     for i = n:-1:2
 		tasks[i] = @spawn corkendall(view(X,:,i),view(X,:,1:(i-1)))
-	end			
+	end
 
     for i = n:-1:2
 		res = vec(fetch(tasks[i]))
 		C[i,1:(i-1)] .= res
 		C[1:(i-1),i] .= res
-	end			
+	end
 
 	return C
 end

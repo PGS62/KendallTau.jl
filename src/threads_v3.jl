@@ -21,6 +21,6 @@ function corkendallthreads_v3(X::Union{RealMatrix,RealOrMissingMatrix}, Y::Union
         tocol = min(fromcol + chunksize - 1, nc)
         C[:,fromcol:tocol] = fetch(tasks[j])
     end
-    
+
     return C
 end

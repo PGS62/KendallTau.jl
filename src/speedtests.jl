@@ -247,7 +247,7 @@ function testmissings()
     x = [missing;1:1000]
     y = [1:1000;missing]
     @benchmark skipmissingpairs($x, $y)
-end	
+end
 
 #= test different ways of "skipping missing pairs".
 julia> KendallTau.test_skipmissings(10000)

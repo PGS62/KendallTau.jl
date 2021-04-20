@@ -1,4 +1,4 @@
-# EXPERIMENTAL - Threaded version 
+# EXPERIMENTAL - Threaded version
 
 import Base.Threads.@spawn
 
@@ -8,7 +8,7 @@ corkendallthreads_v4(x::Union{RealVector,RealOrMissingVector}, y::Union{RealVect
 function corkendallthreads_v4(X::Union{RealMatrix,RealOrMissingMatrix}, Y::Union{RealMatrix,RealOrMissingMatrix})
     nr = size(X, 2)
     nc = size(Y, 2)
-    
+
     #speedup provided by threading is greater when the second argument has more columns, so switch.
     #TODO test that hypothesis more thoroughly!
     if nr > nc
@@ -45,7 +45,7 @@ function corkendallthreads_v4(X::Union{RealMatrix,RealOrMissingMatrix})
     for (c,t) in zip(chunks,tasks)
         C[:,c] = fetch(t)
     end
-    
+
     for j = 1:nr
         C[j,j] = 1.0
         for i = (1 + j):nr
@@ -97,7 +97,7 @@ end
 
 """
     partitioncols(nc::Int64, triangular::Bool)
-Auxiliary function for task load balancing. Returns a vector of `UnitRange`s, which partition the columns of the 
+Auxiliary function for task load balancing. Returns a vector of `UnitRange`s, which partition the columns of the
 correlation matrix to be calculated, one "chunk" per task.
 # Arguments
 - `nc::Int64`: the number of columns in the correlation matrix.
@@ -134,7 +134,7 @@ function partitioncols(nc::Int64, triangular::Bool, numtasks=Threads.nthreads())
         lastcol = nc
         numcorrels = nc * nc
     end
-    
+
     correlsdone = tasksdone = 0
     starttask = true
     chunkfirstcol = 0
@@ -174,7 +174,7 @@ function ck_belowdiagonal(X::Union{RealMatrix,RealOrMissingMatrix}, colnos::Unit
                 C[j,i] = ck_sorted!(sortedx, X[:,colnos[i]], permx)
             else
                 C[j,i] = NaN
-            end    
+            end
         end
     end
     return C

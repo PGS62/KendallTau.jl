@@ -1,7 +1,7 @@
-#= Test corkendall against corkendall_naive, a "reference implementation" defined in this file, that has the advantage of 
+#= Test corkendall against corkendall_naive, a "reference implementation" defined in this file, that has the advantage of
 simplicity.
 PGS The tests in this file are complicated, involving writing a different implementation of Kendall Correlation (corkendall_naive)
-=# 
+=#
 
 using KendallTau
 using Test
@@ -65,7 +65,7 @@ end
 
 function corkendall_naive(x::AbstractArray;skipmissing::Symbol)
     if skipmissing == :complete
-        x = skipmissingrows_naive(x)
+        x = skipmissingpairs_naive(x)
     end
     if skipmissing == :pairwise || skipmissing == :complete
         return(corkendall_naive(x))
@@ -79,7 +79,7 @@ end
 
 function corkendall_naive(x::AbstractArray,y::AbstractArray;skipmissing::Symbol)
     if skipmissing == :complete
-        x,y = skipmissingrows_naive(x,y)
+        x,y = skipmissingpairs_naive(x,y)
     end
     if skipmissing == :pairwise || skipmissing == :complete
         return(corkendall_naive(x,y))
@@ -103,27 +103,27 @@ function skipmissingpairs_naive(x::KendallTau.RealOrMissingVector,y::KendallTau.
 	x,y
 end
 
-#Alternative (simpler but slower) implementation of skipmissingrows
-function skipmissingrows_naive(X::AbstractMatrix)
+#Alternative (simpler but slower) implementation of skipmissingpairs
+function skipmissingpairs_naive(X::AbstractMatrix)
     choose = [!any(ismissing,X[i,:]) for i in 1:size(X,1)]
     X[choose,:]
 end
 
-function skipmissingrows_naive(X::AbstractMatrix,Y::AbstractMatrix)
+function skipmissingpairs_naive(X::AbstractMatrix,Y::AbstractMatrix)
     choose1 = [!any(ismissing,X[i,:]) for i in 1:size(X,1)]
     choose2 = [!any(ismissing,Y[i,:]) for i in 1:size(Y,1)]
     choose = choose1 .& choose2
     X[choose,:],Y[choose,:]
 end
 
-function skipmissingrows_naive(x::AbstractVector,Y::AbstractMatrix)
+function skipmissingpairs_naive(x::AbstractVector,Y::AbstractMatrix)
     choose1 = .!ismissing.(x)
     choose2 = [!any(ismissing,Y[i,:]) for i in 1:size(Y,1)]
     choose = choose1 .& choose2
     x[choose],Y[choose,:]
 end
 
-function skipmissingrows_naive(X::AbstractMatrix,y::AbstractVector)
+function skipmissingpairs_naive(X::AbstractMatrix,y::AbstractVector)
     choose1 = [!any(ismissing,X[i,:]) for i in 1:size(X,1)]
     choose2 = .!ismissing.(x)
     choose = choose1 .& choose2
@@ -131,65 +131,69 @@ function skipmissingrows_naive(X::AbstractMatrix,y::AbstractVector)
 end
 
 #= 20 April 2021
-julia> test_skipmissingrows(1000,10)
-  77.400 μs (1003 allocations: 225.95 KiB)
-  19.700 μs (3 allocations: 48.20 KiB)
+julia> test_skipmissingpairs(1000,10)
+  77.300 μs (1003 allocations: 226.39 KiB)
+  13.900 μs (3 allocations: 48.58 KiB)
 true
 =#
-function test_skipmissingrows(nr::Int64,nc::Int64)
+function test_skipmissingpairs(nr::Int64,nc::Int64)
     X = rand(nr,nc)
     X = KendallTau.sprinklemissings(X,.05)
-    res1, time1= KendallTau.@btimed skipmissingrows_naive($X)
-    res2, time2= KendallTau.@btimed KendallTau.skipmissingrows($X)
+    res1, time1= KendallTau.@btimed skipmissingpairs_naive($X)
+    res2, time2= KendallTau.@btimed KendallTau.skipmissingpairs($X)
     res1 == res2
 end
 
 #= 20 April 2021
-julia> test_skipmissingrows(1000,10,20)
-  147.300 μs (2009 allocations: 498.33 KiB)
-  59.000 μs (5 allocations: 49.34 KiB)
+julia> test_skipmissingpairs(1000,10,20)
+  149.200 μs (2009 allocations: 501.20 KiB)
+  28.700 μs (5 allocations: 51.84 KiB)
 true
 =#
-function test_skipmissingrows(nr::Int64,nc1::Int64,nc2::Int64)
+function test_skipmissingpairs(nr::Int64,nc1::Int64,nc2::Int64)
     X = rand(nr,nc1)
     X = KendallTau.sprinklemissings(X,.05)
     Y = rand(nr,nc2)
     Y = KendallTau.sprinklemissings(Y,.05)
-    res1, time1= KendallTau.@btimed skipmissingrows_naive($X,$Y)
-    res2, time2= KendallTau.@btimed KendallTau.skipmissingrows($X,$Y)
+    res1, time1= KendallTau.@btimed skipmissingpairs_naive($X,$Y)
+    res2, time2= KendallTau.@btimed KendallTau.skipmissingpairs($X,$Y)
     res1 == res2
 end
-
 
 """
     compare_implementations(fn1, fn2; abstol::Float64=1e-14, maxcols::Integer, maxrows::Integer, numtests::Integer)
 
-Tests two different implementations of Kendall Tau against one another. The two functions are called multiple
-times with random input data and the returns are tested for equality subject to an absolute tolerance of `abstol`.
+Tests two different implementations of Kendall Tau against one another. The two functions 
+are called multiple times with random input data and the returns are tested for equality 
+subject to an absolute tolerance of `abstol`.
 
-Return is `true` if no differences are detected. If differences are detected, the return is a tuple giving both outputs and the input(s)
+Return is `true` if no differences are detected. If differences are detected, the return is
+a tuple giving both outputs and the input(s)
 
 The function also checks that `fn1` and `fn2` never mutate their arguments.
 
 `fn1` First implementation of Kendall Tau.\n
-`fn2` Second implementation of Kendall Tau.\n 
+`fn2` Second implementation of Kendall Tau.\n
 `abstol` the absolute tolerance for difference in returns from the two functions.\n
 `maxcols` the maximum number of columns in the randomly-generated input matrices.\n
 `maxrows` the maximum number of rows in the randomly-generated input matrices, or elements in the input vectors\n
 `numtests` the functions are tested `numtests` times - for various combinations of matrix and vector input.\n
 """
-function compare_implementations(fn1=corkendall, fn2=corkendall_naive; abstol::Float64=1e-14, maxcols::Integer, maxrows::Integer, numtests::Integer)
-    
+function compare_implementations(fn1=corkendall, fn2=corkendall_naive; abstol::Float64=1e-14,
+                                 maxcols::Integer, maxrows::Integer, numtests::Integer)
+
     prob_missing = 0.05
     fn1name = string(Base.parentmodule(fn1)) * "." * string(fn1)
     fn2name = string(Base.parentmodule(fn2)) * "." * string(fn2)
 
     if abstol == 0
-        errormessage = "Found difference! Non-identical returns from `$fn1name` and a reference implementation `$fn2name`, see argument(s) and return values displayed below."
+        errormessage = "Found difference! Non-identical returns from `$fn1name` and a " *
+        "reference implementation `$fn2name`, see argument(s) and return values displayed below."
     else
-        errormessage = "Found difference! Non nearly-identical returns from `$fn1name` and a reference implementation `$fn2name`, see argument(s) and return values displayed below."
+        errormessage = "Found difference! Non nearly-identical returns from `$fn1name` and " *
+        "a reference implementation `$fn2name`, see argument(s) and return values displayed below."
     end
-    
+
     rng = MersenneTwister(1)# make this test code deterministic
 
     printevery = max(1, numtests ÷ 50)
@@ -310,7 +314,7 @@ function compare_implementations(fn1=corkendall, fn2=corkendall_naive; abstol::F
             if j > 3
                 if randn() < 0
                     arg2 = float(arg2)
-                end 
+                end
             end
 
             arg1_backup = copy(arg1)
@@ -325,20 +329,24 @@ function compare_implementations(fn1=corkendall, fn2=corkendall_naive; abstol::F
                 else
                     res1 = fn1(arg1)
                 end
-                myisequal(arg1, arg1_backup) || @error("Detected that function $fn1name mutated its argument, $casedesc")
+                myisequal(arg1, arg1_backup) || 
+                    @error("Detected that function $fn1name mutated its argument, $casedesc")
                 res2 = fn2(arg1)
-                myisequal(arg1, arg1_backup) || @error("Detected that function $fn2name mutated its argument, $casedesc")
+                myisequal(arg1, arg1_backup) ||
+                    @error("Detected that function $fn2name mutated its argument, $casedesc")
             else
                 arg2_backup = copy(arg2)
 
                 if missing isa eltype(arg1) || missing isa eltype(arg2)
                     res1 = fn1(arg1, arg2,skipmissing = :pairwise)
-                else    
+                else
                     res1 = fn1(arg1, arg2)
                 end
-                (myisequal(arg1, arg1_backup) && myisequal(arg2, arg2_backup)) ||  @error("Detected that function $fn1name mutated one of its argument, $casedesc")
+                (myisequal(arg1, arg1_backup) && myisequal(arg2, arg2_backup)) ||
+                  @error("Detected that function $fn1name mutated one of its argument, $casedesc")
                 res2 = fn2(arg1, arg2)
-                (myisequal(arg1, arg1_backup) && myisequal(arg2, arg2_backup)) ||   @error("Detected that function $fn2name mutated one of its argument, $casedesc")
+                (myisequal(arg1, arg1_backup) && myisequal(arg2, arg2_backup)) || 
+                @error("Detected that function $fn2name mutated one of its argument, $casedesc")
             end
 
             # test the test!
@@ -348,7 +356,7 @@ function compare_implementations(fn1=corkendall, fn2=corkendall_naive; abstol::F
 
             # test for equality, if that fails print to the screen the argument(s) and the two returns
             if !myisapprox(res1, res2, abstol)
-                if j == 1    
+                if j == 1
                     return(res1,res2,arg1)
                 else
                     return(res1,res2,arg1,arg2)
@@ -360,12 +368,12 @@ function compare_implementations(fn1=corkendall, fn2=corkendall_naive; abstol::F
 end
 
 # Custom isapprox function needed since when comparing returns from two implementations
-# of kendall tau we need myisapprox(NaN,NaN) to yield true. NaN values arise when all 
+# of kendall tau we need myisapprox(NaN,NaN) to yield true. NaN values arise when all
 # elements of a column are identical, e.g. corkendall([1,1],[2,3]) = NaN
 function myisapprox(x::AbstractArray, y::AbstractArray, abstol::Float64)
     if size(x) ≠ size(y)
         return(false)
-        elseif eltype(x) != eltype(y)
+    elseif eltype(x) != eltype(y)
         return(false)
     else
         return(all(myisapprox.(x, y, abstol)))
@@ -373,18 +381,10 @@ function myisapprox(x::AbstractArray, y::AbstractArray, abstol::Float64)
 end
 
 function myisapprox(x::Union{Float64,Int64,Missing}, y::Union{Float64,Int64,Missing}, abstol::Float64)
-    if ismissing(x) && ismissing(y)
-        return(true)
-    elseif ismissing(x) || ismissing(y)
-        return(false)
-    elseif isnan(x) && isnan(y)
-        return(true)
-    elseif isnan(x) || isnan(y)
-        return(false)
-    elseif ismissing(x) || ismissing(y)
-        return(false)
-    else
+    if x isa Real && y isa Real && !isnan(x) && !isnan(y)
         return(abs(x - y) <= abstol)
+    else
+        return isequal(x,y)
     end
 end
 
