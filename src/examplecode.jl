@@ -9,7 +9,7 @@ end
 function the_mother_of_all_tests()
 	inputfile = "c:/temp/1044rows11214cols.csv"
 	outputfile = "c:/temp/didthatwork.csv"
-	@time corkendall_fromfile(inputfile,outputfile, true, true, true, true)
+	@time corkendall_fromfile(inputfile, outputfile, true, true, true, true)
 end
 
 function corkendall_fromfile(inputfile::String, outputfile::String, inputhasheaderrow::Bool, inputhasheadercol::Bool, 
@@ -31,7 +31,8 @@ function corkendall_fromfile(inputfile::String, outputfile::String, inputhashead
 	GC.gc()
 	println("freed memory first time")
 
-	@time res = corkendallthreads_v8(data)
+	# @time res = corkendallthreads_v8(data)
+	@time res = corkendall(data, skipmissing=:pairwise)
 
 	datatowrite = DataFrame(res, names)
 	res = nothing

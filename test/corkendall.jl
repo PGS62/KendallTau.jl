@@ -1,26 +1,20 @@
-#= Test corkendall against corkendallnaive, a "reference implementation" defined in this file, that has the advantage of 
+#= Test corkendall against corkendall_naive, a "reference implementation" defined in this file, that has the advantage of 
 simplicity.
-PGS The tests in this file are complicated, involving writing a different implementation of Kendall Correlation (corkendallnaive)
+PGS The tests in this file are complicated, involving writing a different implementation of Kendall Correlation (corkendall_naive)
 =# 
 
 using KendallTau
 using Test
 using Random
 
-const RealVector{T <: Real} = AbstractArray{T,1}
-const RealMatrix{T <: Real} = AbstractArray{T,2}
-const RealOrMissingVector{T <: Real} = AbstractArray{<:Union{T, Missing},1}
-const RealOrMissingMatrix{T <: Real} = AbstractArray{<:Union{T, Missing},2}
-
-
 
 """
-    corkendallnaive(x::RealVector, y::RealVector)
+    corkendall_naive(x::RealVector, y::RealVector)
 
 Naive implementation of Kendall Tau. Slow O(n²) but simple, so good for testing against
 the more complex `corkendall`.
 """
-function corkendallnaive(x::RealVector, y::RealVector)
+function corkendall_naive(x::KendallTau.RealVector, y::KendallTau.RealVector)
     if any(isnan, x) || any(isnan, y) return NaN end
     n = length(x)
     if n <= 1
@@ -48,32 +42,59 @@ function corkendallnaive(x::RealVector, y::RealVector)
     numerator / denominator
 end
 
-function corkendallnaive(x::RealOrMissingVector, y::RealOrMissingVector)
+function corkendall_naive(x::KendallTau.RealOrMissingVector, y::KendallTau.RealOrMissingVector)
     a,b = skipmissingpairs_naive(x,y)
-    corkendallnaive(a,b)
+    corkendall_naive(a,b)
 end
 
-corkendallnaive(X::Union{RealMatrix,RealOrMissingMatrix}, y::Union{RealVector,RealOrMissingVector}) = Float64[corkendallnaive(float(X[:,i]), float(y)) for i = 1:size(X, 2)]
+corkendall_naive(X::Union{KendallTau.RealMatrix,KendallTau.RealOrMissingMatrix}, y::Union{KendallTau.RealVector,KendallTau.RealOrMissingVector}) = Float64[corkendall_naive(float(X[:,i]), float(y)) for i = 1:size(X, 2)]
 
-corkendallnaive(x::Union{RealVector,RealOrMissingVector}, Y::Union{RealMatrix,RealOrMissingMatrix}) = (n = size(Y, 2); reshape(Float64[corkendallnaive(float(x), float(Y[:,i])) for i = 1:n], 1, n))
+corkendall_naive(x::Union{KendallTau.RealVector,KendallTau.RealOrMissingVector}, Y::Union{KendallTau.RealMatrix,KendallTau.RealOrMissingMatrix}) = (n = size(Y, 2); reshape(Float64[corkendall_naive(float(x), float(Y[:,i])) for i = 1:n], 1, n))
 
-corkendallnaive(X::Union{RealMatrix,RealOrMissingMatrix}, Y::Union{RealMatrix,RealOrMissingMatrix}) = Float64[corkendallnaive(float(X[:,i]), float(Y[:,j])) for i = 1:size(X, 2), j = 1:size(Y, 2)]
+corkendall_naive(X::Union{KendallTau.RealMatrix,KendallTau.RealOrMissingMatrix}, Y::Union{KendallTau.RealMatrix,KendallTau.RealOrMissingMatrix}) = Float64[corkendall_naive(float(X[:,i]), float(Y[:,j])) for i = 1:size(X, 2), j = 1:size(Y, 2)]
 
-function corkendallnaive(X::Union{RealMatrix,RealOrMissingMatrix})
+function corkendall_naive(X::Union{KendallTau.RealMatrix,KendallTau.RealOrMissingMatrix})
     n = size(X, 2)
     C = ones(Float64, n, n)
     for j in 2:n, i in 1:j - 1
-        C[i,j] = corkendallnaive(X[:,i], X[:,j])
+        C[i,j] = corkendall_naive(X[:,i], X[:,j])
         C[j,i] = C[i,j]
     end
     return C
 end
 
+function corkendall_naive(x::AbstractArray;skipmissing::Symbol)
+    if skipmissing == :complete
+        x = skipmissingrows_naive(x)
+    end
+    if skipmissing == :pairwise || skipmissing == :complete
+        return(corkendall_naive(x))
+    elseif skipmissing == :undefined && !(missing isa eltype(x))
+        return(corkendall_naive(x))
+    else
+        throw("keyword argument skipmissing has unrecognised value `:$skipmissing`")
+    end
+end
+
+
+function corkendall_naive(x::AbstractArray,y::AbstractArray;skipmissing::Symbol)
+    if skipmissing == :complete
+        x,y = skipmissingrows_naive(x,y)
+    end
+    if skipmissing == :pairwise || skipmissing == :complete
+        return(corkendall_naive(x,y))
+    elseif skipmissing == :undefined && !(missing isa eltype(x)) & !(ismissing isa eltype(y))
+        return(corkendall_naive(x,y))
+    else
+        throw("keyword argument skipmissing has unrecognised value `:$skipmissing`")
+    end
+end
+
 """
-    skipmissingpairs_naive(x::RealOrMissingVector,y::RealOrMissingVector)
+    skipmissingpairs_naive(x::KendallTau.RealOrMissingVector,y::KendallTau.RealOrMissingVector)
 Simpler but slower version of skipmissingpairs    .
 """
-function skipmissingpairs_naive(x::RealOrMissingVector,y::RealOrMissingVector)
+function skipmissingpairs_naive(x::KendallTau.RealOrMissingVector,y::KendallTau.RealOrMissingVector)
 	keep = .!(ismissing.(x) .| ismissing.(y))
 	x = x[keep]
 	y = y[keep]
@@ -81,6 +102,64 @@ function skipmissingpairs_naive(x::RealOrMissingVector,y::RealOrMissingVector)
 	y = collect(skipmissing(y))
 	x,y
 end
+
+#Alternative (simpler but slower) implementation of skipmissingrows
+function skipmissingrows_naive(X::AbstractMatrix)
+    choose = [!any(ismissing,X[i,:]) for i in 1:size(X,1)]
+    X[choose,:]
+end
+
+function skipmissingrows_naive(X::AbstractMatrix,Y::AbstractMatrix)
+    choose1 = [!any(ismissing,X[i,:]) for i in 1:size(X,1)]
+    choose2 = [!any(ismissing,Y[i,:]) for i in 1:size(Y,1)]
+    choose = choose1 .& choose2
+    X[choose,:],Y[choose,:]
+end
+
+function skipmissingrows_naive(x::AbstractVector,Y::AbstractMatrix)
+    choose1 = .!ismissing.(x)
+    choose2 = [!any(ismissing,Y[i,:]) for i in 1:size(Y,1)]
+    choose = choose1 .& choose2
+    x[choose],Y[choose,:]
+end
+
+function skipmissingrows_naive(X::AbstractMatrix,y::AbstractVector)
+    choose1 = [!any(ismissing,X[i,:]) for i in 1:size(X,1)]
+    choose2 = .!ismissing.(x)
+    choose = choose1 .& choose2
+    X[choose,:],y[choose]
+end
+
+#= 20 April 2021
+julia> test_skipmissingrows(1000,10)
+  77.400 μs (1003 allocations: 225.95 KiB)
+  19.700 μs (3 allocations: 48.20 KiB)
+true
+=#
+function test_skipmissingrows(nr::Int64,nc::Int64)
+    X = rand(nr,nc)
+    X = KendallTau.sprinklemissings(X,.05)
+    res1, time1= KendallTau.@btimed skipmissingrows_naive($X)
+    res2, time2= KendallTau.@btimed KendallTau.skipmissingrows($X)
+    res1 == res2
+end
+
+#= 20 April 2021
+julia> test_skipmissingrows(1000,10,20)
+  147.300 μs (2009 allocations: 498.33 KiB)
+  59.000 μs (5 allocations: 49.34 KiB)
+true
+=#
+function test_skipmissingrows(nr::Int64,nc1::Int64,nc2::Int64)
+    X = rand(nr,nc1)
+    X = KendallTau.sprinklemissings(X,.05)
+    Y = rand(nr,nc2)
+    Y = KendallTau.sprinklemissings(Y,.05)
+    res1, time1= KendallTau.@btimed skipmissingrows_naive($X,$Y)
+    res2, time2= KendallTau.@btimed KendallTau.skipmissingrows($X,$Y)
+    res1 == res2
+end
+
 
 """
     compare_implementations(fn1, fn2; abstol::Float64=1e-14, maxcols::Integer, maxrows::Integer, numtests::Integer)
@@ -99,9 +178,9 @@ The function also checks that `fn1` and `fn2` never mutate their arguments.
 `maxrows` the maximum number of rows in the randomly-generated input matrices, or elements in the input vectors\n
 `numtests` the functions are tested `numtests` times - for various combinations of matrix and vector input.\n
 """
-function compare_implementations(fn1=corkendall, fn2=corkendallnaive; abstol::Float64=1e-14, maxcols::Integer, maxrows::Integer, numtests::Integer)
+function compare_implementations(fn1=corkendall, fn2=corkendall_naive; abstol::Float64=1e-14, maxcols::Integer, maxrows::Integer, numtests::Integer)
     
-    prob_missing = 0.1
+    prob_missing = 0.05
     fn1name = string(Base.parentmodule(fn1)) * "." * string(fn1)
     fn2name = string(Base.parentmodule(fn2)) * "." * string(fn2)
 
@@ -126,79 +205,137 @@ function compare_implementations(fn1=corkendall, fn2=corkendallnaive; abstol::Fl
 
         arg1 = [1.0]
         arg2 = [2.0]
+        skipmissing = :foo
 
-        for j = 1:10
+        for j = 1:15
             if j == 1
-                casedesc = "one matrix case"
+                casedesc = "one matrix case, no missings, skipmissing = :undefined"
                 # by restricting elements to 1:nrows, we can be sure repeats exist
                 arg1 = rand(rng, 1:nrows, nrows, ncols1)
-            elseif j == 1
-                casedesc = "one matrix case, with missings"
+                skipmissing = :undefined
+            elseif j == 2
+                casedesc = "one matrix case, with missings, skipmissing = :pairwise"
                 # by restricting elements to 1:nrows, we can be sure repeats exist
                 arg1 = rand(rng, 1:nrows, nrows, ncols1)
                 arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
+                skipmissing = :pairwise
             elseif j == 3
-                casedesc = "two matrix case"
+                casedesc = "one matrix case, with missings, skipmissing = :complete"
+                # by restricting elements to 1:nrows, we can be sure repeats exist
                 arg1 = rand(rng, 1:nrows, nrows, ncols1)
-                arg2 = rand(rng, 1:nrows, nrows, ncols2)
+                arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
+                skipmissing = :complete
             elseif j == 4
-                casedesc = "two matrix case, with missings"
+                casedesc = "two matrix case, no missings, skipmissing = :undefined"
                 arg1 = rand(rng, 1:nrows, nrows, ncols1)
                 arg2 = rand(rng, 1:nrows, nrows, ncols2)
-                arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
-                arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
+                skipmissing = :undefined
             elseif j == 5
-                casedesc = "vector-matrix case"
-                arg1 = rand(rng, 1:nrows, nrows)
+                casedesc = "two matrix case, with missings, skipmissing = :pairwise"
+                arg1 = rand(rng, 1:nrows, nrows, ncols1)
                 arg2 = rand(rng, 1:nrows, nrows, ncols2)
+                arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
+                arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
+                skipmissing = :pairwise
             elseif j == 6
-                casedesc = "vector-matrix case, with missings"
+                casedesc = "two matrix case, with missings, skipmissing = :complete"
+                arg1 = rand(rng, 1:nrows, nrows, ncols1)
+                arg2 = rand(rng, 1:nrows, nrows, ncols2)
+                arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
+                arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
+                skipmissing = :complete
+            elseif j == 7
+                casedesc = "vector-matrix case, no missings, skipmissing = :undefined"
+                arg1 = rand(rng, 1:nrows, nrows)
+                arg2 = rand(rng, 1:nrows, nrows, ncols2)
+                skipmissing = :undefined
+            elseif j == 8
+                casedesc = "vector-matrix case, with missings, skipmissings = :pairwise"
                 arg1 = rand(rng, 1:nrows, nrows)
                 arg2 = rand(rng, 1:nrows, nrows, ncols2)
                 arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
                 arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
-            elseif j == 7
-                casedesc = "matrix-vector case"
-                arg1 = rand(rng, 1:nrows, nrows, ncols1)
-                arg2 = randn(rng, nrows)
-            elseif j == 8
-                casedesc = "matrix-vector case, with missings"
-                arg1 = rand(rng, 1:nrows, nrows, ncols1)
-                arg2 = randn(rng, nrows)
-                arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
-                arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
+                skipmissing = :pairwise
             elseif j == 9
-                casedesc = "vector-vector case"
+                casedesc = "vector-matrix case, with missings, skipmissings = :complete"
+                arg1 = rand(rng, 1:nrows, nrows)
+                arg2 = rand(rng, 1:nrows, nrows, ncols2)
+                arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
+                arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
+                skipmissing = :complete
+            elseif j == 10
+                casedesc = "matrix-vector case, no missings, skipmissing = :undefined"
+                arg1 = rand(rng, 1:nrows, nrows, ncols1)
+                arg2 = randn(rng, nrows)
+                skipmissings = :undefined
+            elseif j == 11
+                casedesc = "matrix-vector case, with missings, skipmissings = :pairwise"
+                arg1 = rand(rng, 1:nrows, nrows, ncols1)
+                arg2 = randn(rng, nrows)
+                arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
+                arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
+                skipmissings = :pairwise
+            elseif j == 12
+                casedesc = "matrix-vector case, with missings, skipmissings = :complete"
+                arg1 = rand(rng, 1:nrows, nrows, ncols1)
+                arg2 = randn(rng, nrows)
+                arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
+                arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
+                skipmissings = :complete
+            elseif j == 13
+                casedesc = "vector-vector case, no missings, skipmissing = :undefined"
                 arg1 = rand(rng, 1:nrows, nrows)
                 arg2 = rand(rng, 1:nrows, nrows)
-            elseif j == 10
-                casedesc = "vector-vector case, with missings"
+                skipmissing = :undefined
+            elseif j == 14
+                casedesc = "vector-vector case, with missings, skipmissings = :pairwise"
                 arg1 = rand(rng, 1:nrows, nrows)
                 arg2 = rand(rng, 1:nrows, nrows)
                 arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
                 arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
+                skipmissing = :pairwise
+            elseif j == 15
+                casedesc = "vector-vector case, with missings, skipmissings = :complete"
+                arg1 = rand(rng, 1:nrows, nrows)
+                arg2 = rand(rng, 1:nrows, nrows)
+                arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
+                arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
+                skipmissing = :complete
             end
 
             # sometimes flip to floats
             if randn() < 0
                 arg1 = float(arg1)
             end
-            if j > 2
+            if j > 3
                 if randn() < 0
                     arg2 = float(arg2)
                 end 
             end
 
             arg1_backup = copy(arg1)
+            if j>3
+                arg2_backup = copy(arg2)
+            end
 
-            if j <= 2
-                res1 = fn1(arg1)
+
+            if j <= 3
+                if missing isa eltype(arg1)
+                    res1 = fn1(arg1,skipmissing = :pairwise)
+                else
+                    res1 = fn1(arg1)
+                end
                 myisequal(arg1, arg1_backup) || @error("Detected that function $fn1name mutated its argument, $casedesc")
                 res2 = fn2(arg1)
                 myisequal(arg1, arg1_backup) || @error("Detected that function $fn2name mutated its argument, $casedesc")
             else
                 arg2_backup = copy(arg2)
-                res1 = fn1(arg1, arg2)
+
+                if missing isa eltype(arg1) || missing isa eltype(arg2)
+                    res1 = fn1(arg1, arg2,skipmissing = :pairwise)
+                else    
+                    res1 = fn1(arg1, arg2)
+                end
                 (myisequal(arg1, arg1_backup) && myisequal(arg2, arg2_backup)) ||  @error("Detected that function $fn1name mutated one of its argument, $casedesc")
                 res2 = fn2(arg1, arg2)
                 (myisequal(arg1, arg1_backup) && myisequal(arg2, arg2_backup)) ||   @error("Detected that function $fn2name mutated one of its argument, $casedesc")
@@ -257,11 +394,12 @@ myisequal(x,y) = myisapprox(x,y,0.0)
 # Notice strict test with absolute tolerance of differences set to zero.
 # NB it is important that maxrows in the call below call below is greater than the SMALL_THRESHOLD value
 # otherwise the important function mergesort! never gets tested!
-@test compare_implementations(KendallTau.corkendall, corkendallnaive, abstol=0.0, maxcols=10, maxrows=10, numtests=500) == true
-@test compare_implementations(KendallTau.corkendall, corkendallnaive, abstol=0.0, maxcols=10, maxrows=100, numtests=500) == true
-@test compare_implementations(KendallTau.corkendall, corkendallnaive, abstol=1e14, maxcols=1, maxrows=50000, numtests=10) == true
-@test compare_implementations(KendallTau.corkendallthreads_v4, corkendallnaive, abstol=0.0, maxcols=10, maxrows=10, numtests=500) == true
-@test compare_implementations(KendallTau.corkendallthreads_v4, corkendallnaive, abstol=0.0, maxcols=10, maxrows=100, numtests=500) == true
-@test compare_implementations(KendallTau.corkendallthreads_v4, corkendallnaive, abstol=1e14, maxcols=1, maxrows=50000, numtests=10) == true
-@test compare_implementations(KendallTau.corkendallthreads_v1, corkendallnaive, abstol=0.0, maxcols=10, maxrows=100, numtests=50) == true
-@test compare_implementations(KendallTau.corkendallthreads_v2, corkendallnaive, abstol=0.0, maxcols=10, maxrows=100, numtests=50) == true
+@test compare_implementations(KendallTau.corkendall, corkendall_naive, abstol=0.0, maxcols=10, maxrows=10, numtests=500) == true
+@test compare_implementations(KendallTau.corkendall, corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=500) == true
+@test compare_implementations(KendallTau.corkendall, corkendall_naive, abstol=1e14, maxcols=1, maxrows=50000, numtests=10) == true
+
+#@test compare_implementations(KendallTau.corkendallthreads_v4, corkendall_naive, abstol=0.0, maxcols=10, maxrows=10, numtests=500) == true
+#@test compare_implementations(KendallTau.corkendallthreads_v4, corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=500) == true
+#@test compare_implementations(KendallTau.corkendallthreads_v4, corkendall_naive, abstol=1e14, maxcols=1, maxrows=50000, numtests=10) == true
+#@test compare_implementations(KendallTau.corkendallthreads_v1, corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=50) == true
+#@test compare_implementations(KendallTau.corkendallthreads_v2, corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=50) == true

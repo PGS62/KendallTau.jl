@@ -13,26 +13,38 @@
 Compute Kendall's rank correlation coefficient, τ. `x` and `y` must both be either
 matrices or vectors.
 """
-function corkendall(x::Union{RealVector,RealOrMissingVector}, y::Union{RealVector,RealOrMissingVector})
+function corkendall(x::Union{RealVector,RealOrMissingVector},
+                    y::Union{RealVector,RealOrMissingVector};
+                    skipmissing::Symbol=:undefined)
+    x, y = handlecomplete(x, y, skipmissing)
     ck!(copy(x), copy(y))
 end
 
-#= It is idiosyncratic that this method returns a vector, not a matrix, i.e. not consistent with Statistics.cor
- or corspearman. But fixing that is a breaking change. =#
-function corkendall(X::Union{RealMatrix,RealOrMissingMatrix}, y::Union{RealVector,RealOrMissingVector})
+#= It is idiosyncratic that this method returns a vector, not a matrix, i.e. not consistent
+with Statistics.cor or corspearman. But fixing that is a breaking change. =#
+function corkendall(X::Union{RealMatrix,RealOrMissingMatrix},
+                    y::Union{RealVector,RealOrMissingVector};
+                    skipmissing::Symbol=:undefined)
+    X, y = handlecomplete(X, y, skipmissing)
+    n = size(X, 2)
     permy = sortperm(y)
     sortedy = y[permy]
-    return([ck_sorted!(copy(sortedy), X[:,i], permy) for i in 1:size(X, 2)])
+    return([ck_sorted!(copy(sortedy), X[:,i], permy) for i in 1:n])
 end
 
-function corkendall(x::Union{RealVector,RealOrMissingVector}, Y::Union{RealMatrix,RealOrMissingMatrix})
+function corkendall(x::Union{RealVector,RealOrMissingVector},
+                    Y::Union{RealMatrix,RealOrMissingMatrix};
+                    skipmissing::Symbol=:undefined)
+    x, Y = handlecomplete(x, Y, skipmissing)
     n = size(Y, 2)
     permx = sortperm(x)
     sortedx = x[permx]
     return(reshape([ck_sorted!(copy(sortedx), Y[:,i], permx) for i in 1:n], 1, n))
 end
 
-function corkendall(X::Union{RealMatrix,RealOrMissingMatrix})
+function corkendall(X::Union{RealMatrix,RealOrMissingMatrix};
+                    skipmissing::Symbol=:undefined)
+    X = handlecomplete(X, skipmissing)
     n = size(X, 2)
     C = Matrix{Float64}(I, n, n)
     for j = 2:n
@@ -46,7 +58,10 @@ function corkendall(X::Union{RealMatrix,RealOrMissingMatrix})
     return C
 end
 
-function corkendall(X::Union{RealMatrix,RealOrMissingMatrix}, Y::Union{RealMatrix,RealOrMissingMatrix})
+function corkendall(X::Union{RealMatrix,RealOrMissingMatrix},
+                    Y::Union{RealMatrix,RealOrMissingMatrix};
+                    skipmissing::Symbol=:undefined)
+    X, Y = handlecomplete(X, Y, skipmissing)
     nr = size(X, 2)
     nc = size(Y, 2)
     C = Matrix{Float64}(undef, nr, nc)
@@ -60,15 +75,15 @@ function corkendall(X::Union{RealMatrix,RealOrMissingMatrix}, Y::Union{RealMatri
     return C
 end
 
-
 # Knight, William R. “A Computer Method for Calculating Kendall's Tau with Ungrouped Data.”
 # Journal of the American Statistical Association, vol. 61, no. 314, 1966, pp. 436–439.
 # JSTOR, www.jstor.org/stable/2282833.
 """
     ck_sortedshuffled!(x::RealVector, y::RealVector)
-Kendall correlation between two vectors but this function omits the initial sorting of arguments. So calculating
-Kendall correlation between `x` and `y` is a three stage process: a) sort `x` to get `sortedx`; b) apply the same 
-permutation to `y` to get `shuffledy`; c) call this function on `sortedx` and `shuffledy`.
+Kendall correlation between two vectors but this function omits the initial sorting of 
+arguments. So calculating Kendall correlation between `x` and `y` is a three stage process: 
+a) sort `x` to get `sortedx`; b) apply the same permutation to `y` to get `shuffledy`; 
+c) call this function on `sortedx` and `shuffledy`.
 """
 function ck_sortedshuffled!(x::RealVector, y::RealVector)
     if any(isnan, x) || any(isnan, y) return NaN end
@@ -111,8 +126,8 @@ end
 # Auxiliary functions for Kendall's rank correlation
 """
     ck!(x::RealVector, y::RealVector, permx::AbstractVector{<:Integer}=sortperm(x))
-Kendall correlation between two vectors `x` and `y`. Third argument `permx` is the permutation that must be applied to
-`x` to sort it.
+Kendall correlation between two vectors `x` and `y`. Third argument `permx` is the
+permutation that must be applied to `x` to sort it.
 """
 function ck!(x::RealVector, y::RealVector, permx::AbstractVector{<:Integer}=sortperm(x))
     length(x) == length(y) || error("Vectors must have same length")
@@ -121,7 +136,8 @@ function ck!(x::RealVector, y::RealVector, permx::AbstractVector{<:Integer}=sort
     ck_sortedshuffled!(x, y)
 end
 
-function ck!(x::RealOrMissingVector, y::RealOrMissingVector, permx::AbstractVector{<:Integer}=sortperm(x))
+function ck!(x::RealOrMissingVector, y::RealOrMissingVector, 
+            permx::AbstractVector{<:Integer}=sortperm(x))
     length(x) == length(y) || error("Vectors must have same length")
     permute!(x, permx)
     permute!(y, permx)
@@ -132,17 +148,19 @@ end
 
 """
     ck_sorted!(sortedx::RealVector, y::RealVector, permx::AbstractVector{<:Integer})
-Kendall correlation between two vectors but this function omits the initial sorting of the first argument. So 
-calculating Kendall correlation between `x` and `y` is a two stage process: a) sort `x` to get `sortedx`; b) call this
-function on `sortedx` and `y`, with the third argument being the permutation that achieved the sorting of `x`.
+Kendall correlation between two vectors but this function omits the initial sorting of the
+first argument. So calculating Kendall correlation between `x` and `y` is a two stage 
+process: a) sort `x` to get `sortedx`; b) call this function on `sortedx` and `y`, with the 
+third argument being the permutation that achieved the sorting of `x`.
 """
 function ck_sorted!(sortedx::RealVector, y::RealVector, permx::AbstractVector{<:Integer})
     length(sortedx) == length(y) || error("Vectors must have same length")
     permute!(y, permx)
     ck_sortedshuffled!(sortedx, y)
 end
-#method for when missings appear, so call skipmissingpairs.
-function ck_sorted!(sortedx::RealOrMissingVector, y::RealOrMissingVector, permx::AbstractVector{<:Integer})
+# method for when missings appear, so call skipmissingpairs.
+function ck_sorted!(sortedx::RealOrMissingVector, y::RealOrMissingVector, 
+                    permx::AbstractVector{<:Integer})
     length(sortedx) == length(y) || error("Vectors must have same length")
     permute!(y, permx)
 	sortedx, y = skipmissingpairs(sortedx, y)
@@ -183,7 +201,8 @@ const SMALL_THRESHOLD = 64
 """
     merge_sort!(v::AbstractVector, lo::Integer, hi::Integer, t::AbstractVector=similar(v, 0))    
 Mutates `v` by sorting elements `x[lo:hi]` using the merge sort algorithm. 
-This method is a copy-paste-edit of sort! in base/sort.jl, amended to return the bubblesort distance.
+This method is a copy-paste-edit of sort! in base/sort.jl, amended to return the bubblesort
+distance.
 """
 function merge_sort!(v::AbstractVector, lo::Integer, hi::Integer, t::AbstractVector=similar(v, 0))
     # Use of widen below prevents possible overflow errors when
@@ -234,7 +253,8 @@ midpoint(lo::Integer, hi::Integer) = midpoint(promote(lo, hi)...)
 """
     insertion_sort!(v::AbstractVector, lo::Integer, hi::Integer)
 Mutates `v` by sorting elements `x[lo:hi]` using the insertion sort algorithm. 
-This method is a copy-paste-edit of sort! in base/sort.jl, amended to return the bubblesort distance.
+This method is a copy-paste-edit of sort! in base/sort.jl, amended to return the bubblesort
+distance.
 """
 function insertion_sort!(v::AbstractVector, lo::Integer, hi::Integer)
     if lo == hi return widen(0) end
@@ -254,4 +274,58 @@ function insertion_sort!(v::AbstractVector, lo::Integer, hi::Integer)
         v[j] = x
     end
     return nswaps
+end
+
+"""
+    handlecomplete(x::AbstractArray,y::AbstractArray,skipmissing::Symbol)
+Handles the case of skipmissing = :complete. This is a simpler case than :pairwise, we 
+merely need to construct new argument(s) for corkendall by calling skipmissingrows. The
+function also validates skipmissing, throwing an error if invalid.
+"""
+function handlecomplete(x::AbstractArray, y::AbstractArray, skipmissing::Symbol)
+    if skipmissing == :complete
+        if x isa Matrix || y isa Matrix
+            return(skipmissingrows(x, y))
+        end    
+    elseif skipmissing == :pairwise
+    elseif skipmissing == :undefined
+        if missing isa eltype(x) || missing isa eltype(y)
+            throw("When element type of arguments to corkendall permit missing elements"
+                * " then keyword argument skipmissing must be provided as either"
+                * "`:pairwise` or `:complete`, but got $skipmissing")
+        end
+    else
+        if missing isa eltype(x) || missing isa eltype(y)    
+            throw("keyword argument skipmissing must be either `:pairwise` or `:complete`,"
+                * " but got `:$skipmissing`")
+        else
+            throw("keyword argument skipmissing must be either `:pairwise`, `:complete` or" 
+                * " `:undefined`, but got `:$skipmissing`")
+        end
+    end
+    return(x, y)
+end
+
+function handlecomplete(x::AbstractArray, skipmissing::Symbol)
+    if skipmissing == :complete
+        if x isa Matrix
+            return(skipmissingrows(x))
+        end    
+    elseif skipmissing == :pairwise
+    elseif skipmissing == :undefined
+        if missing isa eltype(x)
+            throw("When element type of arguments to corkendall permit missing elements"
+                * " then keyword argument skipmissing must be provided as either"
+                * "`:pairwise` or `:complete`, but got $skipmissing")
+        end
+    else    
+        if missing isa eltype(x)
+            throw("keyword argument skipmissing must be either `:pairwise` or `:complete`, 
+                   but got `:$skipmissing`")
+        else
+            throw("keyword argument skipmissing must be either `:pairwise`, `:complete` or" 
+                * " `:undefined`, but got `:$skipmissing`")
+        end
+    end
+    return(x)
 end
