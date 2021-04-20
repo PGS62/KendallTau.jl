@@ -109,18 +109,76 @@ Results from all 3 functions identical? true
 
 
 
-## Update 15 April 2021
+## Update 20 April 2021
 The code of `corkendall` from this package was incorporated in Julia StatsBase on 8 February 2021 (see [this](https://github.com/JuliaStats/StatsBase.jl/commit/11ac5b596405367b3217d3d962e22523fef9bb0d) commit).
 
-More recently I have made two further changes to `corkendall`:
+More recently I have made further changes to `corkendall`:
 
-1) Added methods to to handle missing values, equivalent to R's "pairwise.complete.obs" (see R documentation [here](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/cor)).
-At present, no other approaches to handling missing values (e.g. R's "complete.obs") are supported.
+1) Added methods to to handle missing values, equivalent to R's "pairwise.complete.obs" and "complete.obs" (see R documentation [here](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/cor)).
 
-2) Added a separate function `corkendallthreads`, a faster version that uses Julia's threading capabilities. The speedup that this provides is dependent on the size of the input matrices, but is by up to a factor of 3.8 on a four-core PC. See file speedtestresults.txt.
+2) Refactoring for minor further speedups relative to the version contributed to StatsBase in February
+<details><summary><ins>Test results here.</ins></summary>
+<p>
+julia> KendallTau.speedtest([StatsBase.corkendall,KendallTau.corkendall],1000,100)
+###################################################################
+Executing speedtest 2021-04-20T18:22:16.925
+--------------------------------------------------
+size(matrix1) = (1000, 100)  
+StatsBase.corkendall(matrix1)
+  365.080 ms (29999 allocations: 174.81 MiB)
+KendallTau.corkendall(matrix1)
+  330.481 ms (20297 allocations: 99.60 MiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 1.1046935253122119
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.569780058341287
+Results from both functions identical? true
+--------------------------------------------------
+size(matrix1) = (1000, 100)
+size(matrix2) = (1000, 100)
+StatsBase.corkendall(matrix1,matrix2)
+  739.426 ms (60302 allocations: 351.51 MiB)
+KendallTau.corkendall(matrix1,matrix2)
+  671.202 ms (40502 allocations: 198.03 MiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 1.1016444972386112
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.5633750573269919
+Results from both functions identical? true
+--------------------------------------------------
+size(vector1) = (1000,)
+size(matrix1) = (1000, 100)
+StatsBase.corkendall(vector1,matrix1)
+  6.345 ms (605 allocations: 3.51 MiB)
+KendallTau.corkendall(vector1,matrix1)
+  5.811 ms (506 allocations: 2.74 MiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 1.091852361696636
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.7812164213841677
+Results from both functions identical? true
+--------------------------------------------------
+size(matrix1) = (1000, 100)
+size(vector1) = (1000,)
+StatsBase.corkendall(matrix1,vector1)
+  6.262 ms (603 allocations: 3.51 MiB)
+KendallTau.corkendall(matrix1,vector1)
+  5.891 ms (504 allocations: 2.74 MiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 1.0630124429204366
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.7812107106345029
+Results from both functions identical? true
+--------------------------------------------------
+size(vector1) = (1000,)
+size(vector2) = (1000,)
+StatsBase.corkendall(vector1,vector2)
+  94.100 μs (8 allocations: 43.78 KiB)
+KendallTau.corkendall(vector1,vector2)
+  100.300 μs (8 allocations: 43.78 KiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 0.938185443668993
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 1.0
+Results from both functions identical? true
+###################################################################
+</p>
+</details>
 
 
 
+
+3) Worked on various approaches to multi-threading. My experience so far is that it's possible to get speedups by a factor of approx 3.8 on a four core PC, but that the relative performance of the multi-threaded versions degrades as the number of columns in the correlation matrix to be calculate increases, so this is still a work in progress. Target correlation matrix size: 11,000 x 11,000.
 
 Philip Swannell  
 18 Jan 2021
