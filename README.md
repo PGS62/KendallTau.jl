@@ -176,7 +176,7 @@ Results from both functions identical? true
 </details>
 
 
-3) Tried various approaches to multi-threading. My experience so far is that it's possible to get speedups by a factor of approx 3.8 on a four core PC, but that the relative performance of the multi-threaded versions degrades as the number of columns in the correlation matrix to be calculate increases, so this is still a work in progress. Target correlation matrix size: 11,000 x 11,000.
+3) Tried various approaches to multi-threading. My experience so far is that it's possible to get speedups by a factor of approx 3.8 on a four core PC, but that the relative performance of the multi-threaded versions degrades as the number of columns in the correlation matrix to be calculated increases, so this is still a work in progress. Target correlation matrix size: 11,000 x 11,000.
 
 Philip Swannell  
 18 Jan 2021
