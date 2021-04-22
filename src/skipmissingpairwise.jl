@@ -4,7 +4,7 @@ Given a function `fn` with a method `fn(x::RealVector,y::RealVector)::Float64` r
 function `fn_out(X,Y)` that calls `fn` iteratively on the columns of `X` and `Y` and where
 missing elements in those columns are pairwise skipped.
 
-`fn_out` has five methods to implement the single-matrix, two-matrix, matrix-vector,
+`fn_out` has five methods implementing the single-matrix, two-matrix, matrix-vector,
 vector-matrix and vector-vector cases.
     
 For example, if `X` is of type `Union{RealMatrix,RealOrMissingMatrix}` then `fn_out(X)`
