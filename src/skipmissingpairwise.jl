@@ -1,13 +1,13 @@
 """
     skipmissingpairwise(fn::Function)::Function
-Given a function `fn` with method `fn(x::RealVector,y::RealVector)::Float64` returns a 
+Given a function `fn` with method `fn(x::RealVector,y::RealVector)::Float64` returns a
 function `fn_out(X,Y)` that calls `fn` iteratively on the columns of `X` and `Y` and where
 missing elements in those columns are pairwise skipped.
 
 `fn_out` has five methods implementing the single-matrix, two-matrix, matrix-vector,
 vector-matrix and vector-vector cases.
-    
-For example, if `X` is of type `RealOrMissingMatrix` then `fn_out(X)` returns a matrix 
+
+For example, if `X` is of type `RealOrMissingMatrix` then `fn_out(X)` returns a matrix
 `C` where `C[i,j] == fn(skipmissingpairwise(X[:,i],X[:,j])...)`
 
 # Example
@@ -34,9 +34,9 @@ julia> StatsBase.corkendall([1;5;4],[3;2;3])
 """
 function skipmissingpairwise(fn::Function)::Function
 
-    function fn_out(X::RealOrMissingMatrix)        
+    function fn_out(X::RealOrMissingMatrix)
         n = size(X, 2)
-        #= TODO this hard-wires on diagonal elements to 1.0, 
+        #= TODO this hard-wires on diagonal elements to 1.0,
         OK for cor but wrong in general. =#
         C = Matrix{Float64}(I, n, n)
         for j = 2:n
@@ -59,20 +59,20 @@ function skipmissingpairwise(fn::Function)::Function
         return C
     end
 
-    function fn_out(x::RealOrMissingVector,Y::RealOrMissingMatrix)
-        size(Y, 1) == length(x) ||
-            throw(DimensionMismatch("x and Y have inconsistent dimensions"))    
-        n = size(Y, 2)
-        return(reshape([fn(skipmissingpairwise(x, Y[:,i])...) for i in 1:n], 1, n))
-    end
-
     #= Return matrix. Consistent with Statistics.cor and corspearman but not with corkendall,
     but maybe that doesn't matter? =#
-    function fn_out(X::RealOrMissingMatrix,y::RealOrMissingVector)   
-    size(X, 1) == length(y) ||
-            throw(DimensionMismatch("X and y have inconsistent dimensions"))
-        n = size(X, 2)
-        return(reshape([fn(skipmissingpairwise(X[:,i], y)...) for i in 1:n], n, 1))
+    function fn_out(X::RealOrMissingMatrix,y::RealOrMissingVector)
+        size(X, 1) == length(y) ||
+                throw(DimensionMismatch("X and y have inconsistent dimensions"))
+            n = size(X, 2)
+            return(reshape([fn(skipmissingpairwise(X[:,i], y)...) for i in 1:n], n, 1))
+        end
+
+    function fn_out(x::RealOrMissingVector,Y::RealOrMissingMatrix)
+        size(Y, 1) == length(x) ||
+            throw(DimensionMismatch("x and Y have inconsistent dimensions"))
+        n = size(Y, 2)
+        return(reshape([fn(skipmissingpairwise(x, Y[:,i])...) for i in 1:n], 1, n))
     end
 
     function fn_out(x::RealOrMissingVector,y::RealOrMissingVector)
@@ -98,7 +98,7 @@ function skipmissingpairwise(x::RealOrMissingVector{T}, y::RealOrMissingVector{U
 
     T2 = x isa Vector{Missing} ? Missing : T
     U2 = y isa Vector{Missing} ? Missing : U
-    
+
     nout::Int = 0
     @inbounds for i = 1:length(x)
         if !(ismissing(x[i]) || ismissing(y[i]))
