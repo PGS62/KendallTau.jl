@@ -1,14 +1,14 @@
 """
     skipmissingpairwise(fn::Function)::Function
-Given a function `fn` with a method `fn(x::RealVector,y::RealVector)::Float64` returns a 
+Given a function `fn` with method `fn(x::RealVector,y::RealVector)::Float64` returns a 
 function `fn_out(X,Y)` that calls `fn` iteratively on the columns of `X` and `Y` and where
 missing elements in those columns are pairwise skipped.
 
 `fn_out` has five methods implementing the single-matrix, two-matrix, matrix-vector,
 vector-matrix and vector-vector cases.
     
-For example, if `X` is of type `Union{RealMatrix,RealOrMissingMatrix}` then `fn_out(X)`
-returns a matrix `C` where `C[i,j] == fn(skipmissingpairwise(X[:,i],X[:,j])...)`
+For example, if `X` is of type `RealOrMissingMatrix` then `fn_out(X)` returns a matrix 
+`C` where `C[i,j] == fn(skipmissingpairwise(X[:,i],X[:,j])...)`
 
 # Example
 ```
@@ -65,7 +65,6 @@ function skipmissingpairwise(fn::Function)::Function
     but maybe that doesn't matter? =#
     function fn_out(X::Union{RealMatrix,RealOrMissingMatrix},
         y::Union{RealVector,RealOrMissingVector})
-        
         size(X, 1) == length(y) ||
             throw(DimensionMismatch("X and y have inconsistent dimensions"))
         n = size(X, 2)
@@ -84,9 +83,8 @@ function skipmissingpairwise(fn::Function)::Function
         end
         return C
     end
-
+    
     return(fn_out)
-
 end
 
 function skipmissingpairwise(x::RealVector, y::RealVector)
@@ -124,5 +122,5 @@ function skipmissingpairwise(x::RealOrMissingVector{T}, y::RealOrMissingVector{U
         end
     end
 
-    res1, res2
+    return(res1, res2)
 end
