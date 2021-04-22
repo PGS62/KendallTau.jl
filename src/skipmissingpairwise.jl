@@ -34,13 +34,7 @@ julia> StatsBase.corkendall([1;5;4],[3;2;3])
 """
 function skipmissingpairwise(fn::Function)::Function
 
-    function fn_out(x::Union{RealVector,RealOrMissingVector},
-        y::Union{RealVector,RealOrMissingVector})
-        length(x) == length(y) || throw(DimensionMismatch("Vectors must have same length"))
-        fn(skipmissingpairwise(x, y)...)
-    end
-
-    function fn_out(X::Union{RealMatrix,RealOrMissingMatrix})
+    function fn_out(X::RealOrMissingMatrix)        
         n = size(X, 2)
         #= TODO this hard-wires on diagonal elements to 1.0, 
         OK for cor but wrong in general. =#
@@ -53,26 +47,7 @@ function skipmissingpairwise(fn::Function)::Function
         return C
     end
 
-    function fn_out(x::Union{RealVector,RealOrMissingVector},
-                        Y::Union{RealMatrix,RealOrMissingMatrix})
-        size(Y, 1) == length(x) ||
-            throw(DimensionMismatch("x and Y have inconsistent dimensions"))    
-        n = size(Y, 2)
-        return(reshape([fn(skipmissingpairwise(x, Y[:,i])...) for i in 1:n], 1, n))
-    end
-
-    #= Return matrix. Consistent with Statistics.cor and corspearman but not with corkendall,
-    but maybe that doesn't matter? =#
-    function fn_out(X::Union{RealMatrix,RealOrMissingMatrix},
-        y::Union{RealVector,RealOrMissingVector})
-        size(X, 1) == length(y) ||
-            throw(DimensionMismatch("X and y have inconsistent dimensions"))
-        n = size(X, 2)
-        return(reshape([fn(skipmissingpairwise(X[:,i], y)...) for i in 1:n], n, 1))
-    end
-
-    function fn_out(X::Union{RealMatrix,RealOrMissingMatrix},
-                    Y::Union{RealMatrix,RealOrMissingMatrix})
+    function fn_out(X::RealOrMissingMatrix,Y::RealOrMissingMatrix)
         nr = size(X, 2)
         nc = size(Y, 2)
         C = Matrix{Float64}(undef, nr, nc)
@@ -83,7 +58,28 @@ function skipmissingpairwise(fn::Function)::Function
         end
         return C
     end
-    
+
+    function fn_out(x::RealOrMissingVector,Y::RealOrMissingMatrix)
+        size(Y, 1) == length(x) ||
+            throw(DimensionMismatch("x and Y have inconsistent dimensions"))    
+        n = size(Y, 2)
+        return(reshape([fn(skipmissingpairwise(x, Y[:,i])...) for i in 1:n], 1, n))
+    end
+
+    #= Return matrix. Consistent with Statistics.cor and corspearman but not with corkendall,
+    but maybe that doesn't matter? =#
+    function fn_out(X::RealOrMissingMatrix,y::RealOrMissingVector)   
+    size(X, 1) == length(y) ||
+            throw(DimensionMismatch("X and y have inconsistent dimensions"))
+        n = size(X, 2)
+        return(reshape([fn(skipmissingpairwise(X[:,i], y)...) for i in 1:n], n, 1))
+    end
+
+    function fn_out(x::RealOrMissingVector,y::RealOrMissingVector)
+        length(x) == length(y) || throw(DimensionMismatch("Vectors must have same length"))
+        fn(skipmissingpairwise(x, y)...)
+    end
+
     return(fn_out)
 end
 
