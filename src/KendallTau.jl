@@ -10,7 +10,8 @@ const RealOrMissingVector{T <: Real} = AbstractArray{<:Union{T, Missing},1}
 const RealOrMissingMatrix{T <: Real} = AbstractArray{<:Union{T, Missing},2}
 
 include("rankcorr.jl")
-include("skipmissingpairs.jl")
+include("skipmissingpairs.jl")#old approach
+include("skipmissingpairwise.jl")#new approach
 if VERSION >= v"1.5" #@spawn not available on 1.0
     include("threads_v1.jl")
     include("threads_v2.jl")
