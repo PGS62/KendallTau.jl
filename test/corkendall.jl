@@ -95,12 +95,12 @@ end
 Simpler but slower version of skipmissingpairs    .
 """
 function skipmissingpairs_naive(x::KendallTau.RealOrMissingVector,y::KendallTau.RealOrMissingVector)
-	keep = .!(ismissing.(x) .| ismissing.(y))
-	x = x[keep]
-	y = y[keep]
-	x = collect(skipmissing(x))
-	y = collect(skipmissing(y))
-	x,y
+    keep = .!(ismissing.(x) .| ismissing.(y))
+    x = x[keep]
+    y = y[keep]
+    x = collect(skipmissing(x))
+    y = collect(skipmissing(y))
+    x,y
 end
 
 #Alternative (simpler but slower) implementation of skipmissingpairs

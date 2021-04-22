@@ -144,9 +144,9 @@ function ck!(x::RealOrMissingVector, y::RealOrMissingVector,
             permx::AbstractVector{<:Integer}=sortperm(x))
     permute!(x, permx)
     permute!(y, permx)
-	x, y = skipmissingpairs(x, y)
+    x, y = skipmissingpairs(x, y)
     length(x) >= 2 || return(NaN)
-	ck_sortedshuffled!(x, y)
+    ck_sortedshuffled!(x, y)
 end
 
 """
@@ -164,9 +164,9 @@ end
 function ck_sorted!(sortedx::RealOrMissingVector, y::RealOrMissingVector,
                     permx::AbstractVector{<:Integer})
     permute!(y, permx)
-	sortedx, y = skipmissingpairs(sortedx, y)
+    sortedx, y = skipmissingpairs(sortedx, y)
     length(sortedx) >= 2 || return(NaN)
-	ck_sortedshuffled!(sortedx, y)
+    ck_sortedshuffled!(sortedx, y)
 end
 
 """

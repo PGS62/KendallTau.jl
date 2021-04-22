@@ -1,7 +1,7 @@
 
 """
     skipmissingpairs(x::RealOrMissingVector, y::RealOrMissingVector)
-Returns	a pair `(a,b)`, filtered copies of `x` and `y`, in which elements `x[i]` and `y[i]`
+Returns a pair `(a,b)`, filtered copies of `x` and `y`, in which elements `x[i]` and `y[i]`
 are "skipped" (filtered out) if either `ismissing(x[i])` or `ismissing(y[i])`.
 """
 function skipmissingpairs(x::RealOrMissingVector{T}, y::RealOrMissingVector{U}) where T where U
@@ -35,7 +35,7 @@ end
 
 """
     skipmissingpairs(X::RealOrMissingMatrix)
-Returns	`A`, a filtered copy of `X`, in which the row `X[i,:]` is "skipped" (filtered out)
+Returns `A`, a filtered copy of `X`, in which the row `X[i,:]` is "skipped" (filtered out)
 if `any(ismissing,X[i,:])`.
 """
 function skipmissingpairs(X::RealOrMissingMatrix{T}) where T
@@ -70,7 +70,7 @@ end
 
 """
     skipmissingpairs(X::RealOrMissingMatrix,Y::RealOrMissingMatrix)
-Returns	a pair `(A,B)`, filtered copies of `X` and `Y`, in which the rows `X[i,:]` and
+Returns a pair `(A,B)`, filtered copies of `X` and `Y`, in which the rows `X[i,:]` and
 `Y[i,:]` are "skipped" (filtered out) if either `any(ismissing,X[i,:])`  or
 `any(ismissing,Y[i,:])`.
 """
@@ -135,7 +135,7 @@ end
 
 """
     skipmissingpairs(x::RealOrMissingVector,Y::RealOrMissingMatrix)
-Returns	a pair `(a,B)`, filtered copies of `x` and `Y`, in which the elements `x[i]` and
+Returns a pair `(a,B)`, filtered copies of `x` and `Y`, in which the elements `x[i]` and
 rows `Y[i,:]` are "skipped" (filtered out) if either `ismissing(x[i])` or
 `any(ismissing,Y[i,:])`.
 """

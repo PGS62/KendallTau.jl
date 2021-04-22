@@ -6,14 +6,14 @@ v = [3,4,missing,missing]
 
 X = [1  2;
      missing  3;
-	 4 missing;
-	 missing missing;
-	 5 6]
+     4 missing;
+     missing missing;
+     5 6]
 Y = [1  2;
-	missing  3;
-	4 missing;
-	missing missing;
-	5 6]
+    missing  3;
+    4 missing;
+    missing missing;
+    5 6]
 
 
 @test KendallTau.skipmissingpairs(x,y) == ([2, 3, 4], [1, 2, 4])

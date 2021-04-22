@@ -156,14 +156,14 @@ end
 
 # Code to investigate performance impact of the presence of missings in the arguments passed to corkendall
 function sprinklemissings(x, proportionmissing, rng=MersenneTwister())
-	randoms = rand(rng, size(x)...)
-	ifelse.(randoms .< proportionmissing, missing, x)
+    randoms = rand(rng, size(x)...)
+    ifelse.(randoms .< proportionmissing, missing, x)
 end
 
 function impactofmissings(nr::Int, nc::Int, proportionmissing::Float64=0.1)
 
-	fn1 = KendallTau.corkendall
-	fn2 = KendallTau.corkendall# BaseStats.corkendall
+    fn1 = KendallTau.corkendall
+    fn2 = KendallTau.corkendall# BaseStats.corkendall
 
     rng = MersenneTwister(1)# make the contents of matrix1 etc. deterministic so successive calls with fixed nc & nr are fully comparable
     results = Array{Any}(undef, 2)
@@ -198,17 +198,17 @@ function impactofmissings(nr::Int, nc::Int, proportionmissing::Float64=0.1)
             @show(size(vector2))
         end
         i = 0
-		functions = [fn1,fn2]
+        functions = [fn1,fn2]
         for fn in functions
             i += 1
-			message = " no missings in argument(s)"
-			if i == 2
-				message = " argument(s) amended to contain $(100proportionmissing)% missings"
-				matrix1 = sprinklemissings(matrix1, proportionmissing, rng)
-				matrix2 = sprinklemissings(matrix2, proportionmissing, rng)
-				vector1 = sprinklemissings(vector1, proportionmissing, rng)
-				vector2 = sprinklemissings(vector2, proportionmissing, rng)
-			end
+            message = " no missings in argument(s)"
+            if i == 2
+                message = " argument(s) amended to contain $(100proportionmissing)% missings"
+                matrix1 = sprinklemissings(matrix1, proportionmissing, rng)
+                matrix2 = sprinklemissings(matrix2, proportionmissing, rng)
+                vector1 = sprinklemissings(vector1, proportionmissing, rng)
+                vector2 = sprinklemissings(vector2, proportionmissing, rng)
+            end
 
             if k == 1
                 println("$(fname(fn))(matrix1)$message")
@@ -239,8 +239,8 @@ end
 using Missings
 
 function sm1(x, y)
-	mx, my = Missings.skipmissings(x, y)
-	collect(mx), collect(my)
+    mx, my = Missings.skipmissings(x, y)
+    collect(mx), collect(my)
 end
 
 function testmissings()
