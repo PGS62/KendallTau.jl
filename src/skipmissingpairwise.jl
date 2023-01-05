@@ -32,17 +32,18 @@ julia> StatsBase.corkendall([1;5;4],[3;2;3])
 -0.8164965809277261
 ```
 """
-function skipmissingpairwise(fn::Function)::Function
+function skipmissingpairwise(fn::Function, fn_ondiagonal::Function = fn)::Function
 
     function fn_out(X::RealOrMissingMatrix)
         n = size(X, 2)
-        #= TODO this hard-wires on diagonal elements to 1.0,
-        OK for cor but wrong in general. =#
         C = Matrix{Float64}(I, n, n)
         for j = 2:n
             for i = 1:j - 1
                 C[i,j] = C[j,i] = fn(skipmissingpairwise(X[:,j], X[:,i])...)
             end
+        end
+        for j = 1:n
+            C[j,j] = fn_ondiagonal(skipmissingpairwise(X[:,j], X[:,j])...)
         end
         return C
     end
@@ -83,6 +84,11 @@ function skipmissingpairwise(fn::Function)::Function
     return(fn_out)
 end
 
+function skipmissingpairwise(fn::Function, ondiagonal:: Float64)
+    function g(x,y);ondiagonal;end
+    skipmissingpairwise(fn,g)
+end
+
 function skipmissingpairwise(x::RealVector, y::RealVector)
     x, y
 end
@@ -100,7 +106,7 @@ function skipmissingpairwise(x::RealOrMissingVector{T}, y::RealOrMissingVector{U
     U2 = y isa Vector{Missing} ? Missing : U
 
     nout::Int = 0
-    @inbounds for i = 1:length(x)
+    @inbounds for i in eachindex(x)
         if !(ismissing(x[i]) || ismissing(y[i]))
             nout += 1
         end
@@ -110,7 +116,7 @@ function skipmissingpairwise(x::RealOrMissingVector{T}, y::RealOrMissingVector{U
     res2 = Vector{U2}(undef, nout)
     j::Int = 0
 
-    @inbounds for i = 1:length(x)
+    @inbounds for i in eachindex(x)
         if !(ismissing(x[i]) || ismissing(y[i]))
             j += 1
             res1[j] = x[i]

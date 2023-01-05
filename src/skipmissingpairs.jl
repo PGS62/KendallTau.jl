@@ -12,7 +12,7 @@ function skipmissingpairs(x::RealOrMissingVector{T}, y::RealOrMissingVector{U}) 
     U2 = y isa Vector{Missing} ? Missing : U
 
     nout::Int = 0
-    @inbounds for i = 1:length(x)
+    @inbounds for i in eachindex(x)
         if !(ismissing(x[i]) || ismissing(y[i]))
             nout += 1
         end
@@ -22,7 +22,7 @@ function skipmissingpairs(x::RealOrMissingVector{T}, y::RealOrMissingVector{U}) 
     res2 = Vector{U2}(undef, nout)
     j::Int = 0
 
-    @inbounds for i = 1:length(x)
+    @inbounds for i in eachindex(x)
         if !(ismissing(x[i]) || ismissing(y[i]))
             j += 1
             res1[j] = x[i]

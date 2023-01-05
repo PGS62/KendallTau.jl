@@ -47,11 +47,11 @@ function corkendall_naive(x::KendallTau.RealOrMissingVector, y::KendallTau.RealO
     corkendall_naive(a,b)
 end
 
-corkendall_naive(X::Union{KendallTau.RealMatrix,KendallTau.RealOrMissingMatrix}, y::Union{KendallTau.RealVector,KendallTau.RealOrMissingVector}) = Float64[corkendall_naive(float(X[:,i]), float(y)) for i = 1:size(X, 2)]
+corkendall_naive(X::Union{KendallTau.RealMatrix,KendallTau.RealOrMissingMatrix}, y::Union{KendallTau.RealVector,KendallTau.RealOrMissingVector}) = Float64[corkendall_naive(float(X[:,i]), float(y)) for i in axes(X, 2)]
 
 corkendall_naive(x::Union{KendallTau.RealVector,KendallTau.RealOrMissingVector}, Y::Union{KendallTau.RealMatrix,KendallTau.RealOrMissingMatrix}) = (n = size(Y, 2); reshape(Float64[corkendall_naive(float(x), float(Y[:,i])) for i = 1:n], 1, n))
 
-corkendall_naive(X::Union{KendallTau.RealMatrix,KendallTau.RealOrMissingMatrix}, Y::Union{KendallTau.RealMatrix,KendallTau.RealOrMissingMatrix}) = Float64[corkendall_naive(float(X[:,i]), float(Y[:,j])) for i = 1:size(X, 2), j = 1:size(Y, 2)]
+corkendall_naive(X::Union{KendallTau.RealMatrix,KendallTau.RealOrMissingMatrix}, Y::Union{KendallTau.RealMatrix,KendallTau.RealOrMissingMatrix}) = Float64[corkendall_naive(float(X[:,i]), float(Y[:,j])) for i in axes(X, 2), j in axes(Y, 2)]
 
 function corkendall_naive(X::Union{KendallTau.RealMatrix,KendallTau.RealOrMissingMatrix})
     n = size(X, 2)
@@ -105,26 +105,26 @@ end
 
 #Alternative (simpler but slower) implementation of skipmissingpairs
 function skipmissingpairs_naive(X::AbstractMatrix)
-    choose = [!any(ismissing,X[i,:]) for i in 1:size(X,1)]
+    choose = [!any(ismissing,X[i,:]) for i in axes(X,1)]
     X[choose,:]
 end
 
 function skipmissingpairs_naive(X::AbstractMatrix,Y::AbstractMatrix)
-    choose1 = [!any(ismissing,X[i,:]) for i in 1:size(X,1)]
-    choose2 = [!any(ismissing,Y[i,:]) for i in 1:size(Y,1)]
+    choose1 = [!any(ismissing,X[i,:]) for i in axes(X,1)]
+    choose2 = [!any(ismissing,Y[i,:]) for i in axes(Y,1)]
     choose = choose1 .& choose2
     X[choose,:],Y[choose,:]
 end
 
 function skipmissingpairs_naive(x::AbstractVector,Y::AbstractMatrix)
     choose1 = .!ismissing.(x)
-    choose2 = [!any(ismissing,Y[i,:]) for i in 1:size(Y,1)]
+    choose2 = [!any(ismissing,Y[i,:]) for i in axes(Y,1)]
     choose = choose1 .& choose2
     x[choose],Y[choose,:]
 end
 
 function skipmissingpairs_naive(X::AbstractMatrix,y::AbstractVector)
-    choose1 = [!any(ismissing,X[i,:]) for i in 1:size(X,1)]
+    choose1 = [!any(ismissing,X[i,:]) for i in axes(X,1)]
     choose2 = .!ismissing.(x)
     choose = choose1 .& choose2
     X[choose,:],y[choose]
