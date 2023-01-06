@@ -32,18 +32,17 @@ julia> StatsBase.corkendall([1;5;4],[3;2;3])
 -0.8164965809277261
 ```
 """
-function skipmissingpairwise(fn::Function, fn_ondiagonal::Function = fn)::Function
+function skipmissingpairwise(fn::Function)::Function
 
     function fn_out(X::RealOrMissingMatrix)
         n = size(X, 2)
+        #= TODO this hard-wires on diagonal elements to 1.0,
+        OK for cor but wrong in general. =#
         C = Matrix{Float64}(I, n, n)
         for j = 2:n
             for i = 1:j - 1
                 C[i,j] = C[j,i] = fn(skipmissingpairwise(X[:,j], X[:,i])...)
             end
-        end
-        for j = 1:n
-            C[j,j] = fn_ondiagonal(skipmissingpairwise(X[:,j], X[:,j])...)
         end
         return C
     end
@@ -60,8 +59,8 @@ function skipmissingpairwise(fn::Function, fn_ondiagonal::Function = fn)::Functi
         return C
     end
 
-    #= Return matrix. Consistent with Statistics.cor and corspearman but not with corkendall,
-    but maybe that doesn't matter? =#
+    #= Return matrix. Consistent with Statistics.cor and StatsBase.corspearman but not with 
+    StatsBase.corkendall =#
     function fn_out(X::RealOrMissingMatrix,y::RealOrMissingVector)
         size(X, 1) == length(y) ||
                 throw(DimensionMismatch("X and y have inconsistent dimensions"))
@@ -82,11 +81,6 @@ function skipmissingpairwise(fn::Function, fn_ondiagonal::Function = fn)::Functi
     end
 
     return(fn_out)
-end
-
-function skipmissingpairwise(fn::Function, ondiagonal:: Float64)
-    function g(x,y);ondiagonal;end
-    skipmissingpairwise(fn,g)
 end
 
 function skipmissingpairwise(x::RealVector, y::RealVector)

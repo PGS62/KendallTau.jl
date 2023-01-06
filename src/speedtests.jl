@@ -22,10 +22,10 @@ macro btimed(args...)
         local $trialmin = $BenchmarkTools.minimum($trial)
         local $trialallocs = $BenchmarkTools.allocs($trialmin)
         println("  ",
-                $BenchmarkTools.prettytime($BenchmarkTools.time($trialmin)),
-                " (", $trialallocs , " allocation",
-                $trialallocs == 1 ? "" : "s", ": ",
-                $BenchmarkTools.prettymemory($BenchmarkTools.memory($trialmin)), ")")
+            $BenchmarkTools.prettytime($BenchmarkTools.time($trialmin)),
+            " (", $trialallocs, " allocation",
+            $trialallocs == 1 ? "" : "s", ": ",
+            $BenchmarkTools.prettymemory($BenchmarkTools.memory($trialmin)), ")")
         $result, $trialmin, $BenchmarkTools.memory($trialmin)
     end)
 end
@@ -51,10 +51,10 @@ KendallTau.corkendall(matrix1)
   6.172 ms (1918 allocations: 7.82 MiB)
 Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 5.428169574078446
 Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 1.4125820189187552
-KendallTau.corkendallthreads_v2(matrix1)
+KendallTau.corkendall_threads_d(matrix1)
   1.878 ms (2234 allocations: 7.86 MiB)
-Speed ratio KendallTau.corkendallthreads_v2 vs StatsBase.corkendall: 17.83603066439523
-Ratio of memory allocated KendallTau.corkendallthreads_v2 vs StatsBase.corkendall: 1.4198018874681153
+Speed ratio KendallTau.corkendall_threads_d vs StatsBase.corkendall: 17.83603066439523
+Ratio of memory allocated KendallTau.corkendall_threads_d vs StatsBase.corkendall: 1.4198018874681153
 Results from all 3 functions identical? true
 --------------------------------------------------
 ```
@@ -76,8 +76,11 @@ function speedtest(functions, nr::Int, nc::Int)
 
     println("#"^67)
     println("Executing speedtest $(now())")
+    println("ComputerName = $(ENV["COMPUTERNAME"])")
+    @show Threads.nthreads()
 
-    for k = 1:5
+    #for k = 1:5
+     for k = 1:1   
         println("-"^50)
         if k == 1
             @show(size(matrix1))
@@ -99,19 +102,19 @@ function speedtest(functions, nr::Int, nc::Int)
             i += 1
             if k == 1
                 println("$(fname(fn))(matrix1)")
-                tmp =  @btimed $fn($matrix1)
+                tmp = @btimed $fn($matrix1)
             elseif k == 2
                 println("$(fname(fn))(matrix1,matrix2)")
-                tmp =  @btimed $fn($matrix1, $matrix2)
+                tmp = @btimed $fn($matrix1, $matrix2)
             elseif k == 3
                 println("$(fname(fn))(vector1,matrix1)")
-                tmp =  @btimed $fn($vector1, $matrix1)
+                tmp = @btimed $fn($vector1, $matrix1)
             elseif k == 4
                 println("$(fname(fn))(matrix1,vector1)")
-                tmp =  @btimed $fn($matrix1, $vector1)
+                tmp = @btimed $fn($matrix1, $vector1)
             elseif k == 5
                 println("$(fname(fn))(vector1,vector2)")
-                tmp =  @btimed $fn($vector1, $vector2)
+                tmp = @btimed $fn($vector1, $vector2)
             end
             results[i], times[i], allocations[i] = tmp[1], tmp[2].time, tmp[3]
             if i > 1
@@ -120,8 +123,8 @@ function speedtest(functions, nr::Int, nc::Int)
             end
         end
         if length(functions) > 1
-          nfns = length(functions)
-            resultsidentical = all(myapprox.(results[2:end], results[1:(end - 1)], 1e-14))
+            nfns = length(functions)
+            resultsidentical = all(myapprox.(results[2:end], results[1:(end-1)], 1e-14))
             if !resultsidentical
                 @warn "Results from $(nfns ==2 ? "both" : "all $nfns") functions identical? $resultsidentical"
             else
@@ -135,21 +138,21 @@ end
 # Test for equality with absolute tolerance of `abstol` and NaN being equal to NaN (different to Julia's isapprox)
 function myapprox(x::AbstractArray, y::AbstractArray, abstol::Float64)
     if size(x) ≠ size(y)
-        return(false)
+        return (false)
     else
-        return(all(myapprox.(x, y, abstol)))
+        return (all(myapprox.(x, y, abstol)))
     end
 end
 
 function myapprox(x::Float64, y::Float64, abstol::Float64)
     if isnan(x) && isnan(y)
-        return(true)
+        return (true)
     elseif isnan(x)
-        return(false)
+        return (false)
     elseif isnan(y)
-        return(false)
+        return (false)
     else
-        return(abs(x - y) <= abstol)
+        return (abs(x - y) <= abstol)
     end
 end
 
@@ -198,7 +201,7 @@ function impactofmissings(nr::Int, nc::Int, proportionmissing::Float64=0.1)
             @show(size(vector2))
         end
         i = 0
-        functions = [fn1,fn2]
+        functions = [fn1, fn2]
         for fn in functions
             i += 1
             message = " no missings in argument(s)"
@@ -212,19 +215,19 @@ function impactofmissings(nr::Int, nc::Int, proportionmissing::Float64=0.1)
 
             if k == 1
                 println("$(fname(fn))(matrix1)$message")
-                tmp =  @btimed $fn($matrix1)
+                tmp = @btimed $fn($matrix1)
             elseif k == 2
                 println("$(fname(fn))(matrix1,matrix2)$message")
-                tmp =  @btimed $fn($matrix1, $matrix2)
+                tmp = @btimed $fn($matrix1, $matrix2)
             elseif k == 3
                 println("$(fname(fn))(vector1,matrix1)$message")
-                tmp =  @btimed $fn($vector1, $matrix1)
+                tmp = @btimed $fn($vector1, $matrix1)
             elseif k == 4
                 println("$(fname(fn))(matrix1,vector1)$message")
-                tmp =  @btimed $fn($matrix1, $vector1)
+                tmp = @btimed $fn($matrix1, $vector1)
             elseif k == 5
                 println("$(fname(fn))(vector1,vector2)$message")
-                tmp =  @btimed $fn($vector1, $vector2)
+                tmp = @btimed $fn($vector1, $vector2)
             end
             results[i], times[i], allocations[i] = tmp[1], tmp[2].time, tmp[3]
             if i > 1
@@ -244,8 +247,8 @@ function sm1(x, y)
 end
 
 function testmissings()
-    x = [missing;1:1000]
-    y = [1:1000;missing]
+    x = [missing; 1:1000]
+    y = [1:1000; missing]
     @benchmark skipmissingpairs($x, $y)
 end
 
@@ -256,8 +259,8 @@ julia> KendallTau.test_skipmissings(10000)
   25.400 μs (4 allocations: 156.41 KiB) =#
 function test_skipmissings(n=10000)
 
-    x = [missing;1:n]
-    y = [1:n;missing]
+    x = [missing; 1:n]
+    y = [1:n; missing]
 
     # simplest approach I could think of
     @btime begin

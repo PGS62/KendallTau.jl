@@ -7,140 +7,17 @@ using KendallTau
 using Test
 using Random
 
-
-"""
-    corkendall_naive(x::RealVector, y::RealVector)
-
-Naive implementation of Kendall Tau. Slow O(n²) but simple, so good for testing against
-the more complex `corkendall`.
-"""
-function corkendall_naive(x::KendallTau.RealVector, y::KendallTau.RealVector)
-    if any(isnan, x) || any(isnan, y) return NaN end
-    n = length(x)
-    if n <= 1
-        return(NaN)
-    end
-    npairs = div(n * (n - 1), 2)
-    if length(y) ≠ n error("Vectors must have same length") end
-
-    numerator, tiesx, tiesy = 0, 0, 0
-     for i in 2:n, j in 1:(i - 1)
-        k = sign(x[i] - x[j]) * sign(y[i] - y[j])
-        if k == 0
-            if x[i] == x[j]
-                tiesx += 1
-            end
-            if y[i] == y[j]
-                tiesy += 1
-            end
-        else
-            numerator += k
-        end
-    end
-    # avoid overflow errors on 32 bit
-    denominator = sqrt(float(npairs - tiesx) * float(npairs - tiesy))
-    numerator / denominator
-end
-
-function corkendall_naive(x::KendallTau.RealOrMissingVector, y::KendallTau.RealOrMissingVector)
-    a,b = skipmissingpairs_naive(x,y)
-    corkendall_naive(a,b)
-end
-
-corkendall_naive(X::Union{KendallTau.RealMatrix,KendallTau.RealOrMissingMatrix}, y::Union{KendallTau.RealVector,KendallTau.RealOrMissingVector}) = Float64[corkendall_naive(float(X[:,i]), float(y)) for i in axes(X, 2)]
-
-corkendall_naive(x::Union{KendallTau.RealVector,KendallTau.RealOrMissingVector}, Y::Union{KendallTau.RealMatrix,KendallTau.RealOrMissingMatrix}) = (n = size(Y, 2); reshape(Float64[corkendall_naive(float(x), float(Y[:,i])) for i = 1:n], 1, n))
-
-corkendall_naive(X::Union{KendallTau.RealMatrix,KendallTau.RealOrMissingMatrix}, Y::Union{KendallTau.RealMatrix,KendallTau.RealOrMissingMatrix}) = Float64[corkendall_naive(float(X[:,i]), float(Y[:,j])) for i in axes(X, 2), j in axes(Y, 2)]
-
-function corkendall_naive(X::Union{KendallTau.RealMatrix,KendallTau.RealOrMissingMatrix})
-    n = size(X, 2)
-    C = ones(Float64, n, n)
-    for j in 2:n, i in 1:j - 1
-        C[i,j] = corkendall_naive(X[:,i], X[:,j])
-        C[j,i] = C[i,j]
-    end
-    return C
-end
-
-function corkendall_naive(x::AbstractArray;skipmissing::Symbol)
-    if skipmissing == :complete
-        x = skipmissingpairs_naive(x)
-    end
-    if skipmissing == :pairwise || skipmissing == :complete
-        return(corkendall_naive(x))
-    elseif skipmissing == :undefined && !(missing isa eltype(x))
-        return(corkendall_naive(x))
-    else
-        throw("keyword argument skipmissing has unrecognised value `:$skipmissing`")
-    end
-end
-
-
-function corkendall_naive(x::AbstractArray,y::AbstractArray;skipmissing::Symbol)
-    if skipmissing == :complete
-        x,y = skipmissingpairs_naive(x,y)
-    end
-    if skipmissing == :pairwise || skipmissing == :complete
-        return(corkendall_naive(x,y))
-    elseif skipmissing == :undefined && !(missing isa eltype(x)) & !(ismissing isa eltype(y))
-        return(corkendall_naive(x,y))
-    else
-        throw("keyword argument skipmissing has unrecognised value `:$skipmissing`")
-    end
-end
-
-"""
-    skipmissingpairs_naive(x::KendallTau.RealOrMissingVector,y::KendallTau.RealOrMissingVector)
-Simpler but slower version of skipmissingpairs    .
-"""
-function skipmissingpairs_naive(x::KendallTau.RealOrMissingVector,y::KendallTau.RealOrMissingVector)
-    keep = .!(ismissing.(x) .| ismissing.(y))
-    x = x[keep]
-    y = y[keep]
-    x = collect(skipmissing(x))
-    y = collect(skipmissing(y))
-    x,y
-end
-
-#Alternative (simpler but slower) implementation of skipmissingpairs
-function skipmissingpairs_naive(X::AbstractMatrix)
-    choose = [!any(ismissing,X[i,:]) for i in axes(X,1)]
-    X[choose,:]
-end
-
-function skipmissingpairs_naive(X::AbstractMatrix,Y::AbstractMatrix)
-    choose1 = [!any(ismissing,X[i,:]) for i in axes(X,1)]
-    choose2 = [!any(ismissing,Y[i,:]) for i in axes(Y,1)]
-    choose = choose1 .& choose2
-    X[choose,:],Y[choose,:]
-end
-
-function skipmissingpairs_naive(x::AbstractVector,Y::AbstractMatrix)
-    choose1 = .!ismissing.(x)
-    choose2 = [!any(ismissing,Y[i,:]) for i in axes(Y,1)]
-    choose = choose1 .& choose2
-    x[choose],Y[choose,:]
-end
-
-function skipmissingpairs_naive(X::AbstractMatrix,y::AbstractVector)
-    choose1 = [!any(ismissing,X[i,:]) for i in axes(X,1)]
-    choose2 = .!ismissing.(x)
-    choose = choose1 .& choose2
-    X[choose,:],y[choose]
-end
-
 #= 20 April 2021
 julia> test_skipmissingpairs(1000,10)
   77.300 μs (1003 allocations: 226.39 KiB)
   13.900 μs (3 allocations: 48.58 KiB)
 true
 =#
-function test_skipmissingpairs(nr::Int64,nc::Int64)
-    X = rand(nr,nc)
-    X = KendallTau.sprinklemissings(X,.05)
-    res1, time1= KendallTau.@btimed skipmissingpairs_naive($X)
-    res2, time2= KendallTau.@btimed KendallTau.skipmissingpairs($X)
+function test_skipmissingpairs(nr::Int64, nc::Int64)
+    X = rand(nr, nc)
+    X = KendallTau.sprinklemissings(X, 0.05)
+    res1, time1 = KendallTau.@btimed skipmissingpairs_naive($X)
+    res2, time2 = KendallTau.@btimed KendallTau.skipmissingpairs($X)
     res1 == res2
 end
 
@@ -150,13 +27,13 @@ julia> test_skipmissingpairs(1000,10,20)
   28.700 μs (5 allocations: 51.84 KiB)
 true
 =#
-function test_skipmissingpairs(nr::Int64,nc1::Int64,nc2::Int64)
-    X = rand(nr,nc1)
-    X = KendallTau.sprinklemissings(X,.05)
-    Y = rand(nr,nc2)
-    Y = KendallTau.sprinklemissings(Y,.05)
-    res1, time1= KendallTau.@btimed skipmissingpairs_naive($X,$Y)
-    res2, time2= KendallTau.@btimed KendallTau.skipmissingpairs($X,$Y)
+function test_skipmissingpairs(nr::Int64, nc1::Int64, nc2::Int64)
+    X = rand(nr, nc1)
+    X = KendallTau.sprinklemissings(X, 0.05)
+    Y = rand(nr, nc2)
+    Y = KendallTau.sprinklemissings(Y, 0.05)
+    res1, time1 = KendallTau.@btimed skipmissingpairs_naive($X, $Y)
+    res2, time2 = KendallTau.@btimed KendallTau.skipmissingpairs($X, $Y)
     res1 == res2
 end
 
@@ -180,7 +57,8 @@ The function also checks that `fn1` and `fn2` never mutate their arguments.
 `numtests` the functions are tested `numtests` times - for various combinations of matrix and vector input.\n
 """
 function compare_implementations(fn1=corkendall, fn2=corkendall_naive; abstol::Float64=1e-14,
-                                 maxcols::Integer, maxrows::Integer, numtests::Integer)
+    maxcols::Integer, maxrows::Integer, numtests::Integer,
+    fns_handle_missings::Bool)
 
     prob_missing = 0.05
     fn1name = string(Base.parentmodule(fn1)) * "." * string(fn1)
@@ -188,16 +66,16 @@ function compare_implementations(fn1=corkendall, fn2=corkendall_naive; abstol::F
 
     if abstol == 0
         errormessage = "Found difference! Non-identical returns from `$fn1name` and a " *
-        "reference implementation `$fn2name`, see argument(s) and return values displayed below."
+                       "reference implementation `$fn2name`, see argument(s) and return values displayed below."
     else
         errormessage = "Found difference! Non nearly-identical returns from `$fn1name` and " *
-        "a reference implementation `$fn2name`, see argument(s) and return values displayed below."
+                       "a reference implementation `$fn2name`, see argument(s) and return values displayed below."
     end
 
     rng = MersenneTwister(1)# make this test code deterministic
 
     printevery = max(1, numtests ÷ 50)
-    for i = 1:numtests ÷ 5
+    for i = 1:numtests÷5
 
         if mod(i, printevery) == 0
             println("Testing $fn1name vs $fn2name $(5i)/$numtests")
@@ -211,7 +89,13 @@ function compare_implementations(fn1=corkendall, fn2=corkendall_naive; abstol::F
         arg2 = [2.0]
         skipmissing = :foo
 
-        for j = 1:15
+        if fns_handle_missings
+            cases = 1:15
+        else
+            cases = [1, 4, 7, 10, 13]
+        end
+
+        for j in cases
             if j == 1
                 casedesc = "one matrix case, no missings, skipmissing = :undefined"
                 # by restricting elements to 1:nrows, we can be sure repeats exist
@@ -318,18 +202,18 @@ function compare_implementations(fn1=corkendall, fn2=corkendall_naive; abstol::F
             end
 
             arg1_backup = copy(arg1)
-            if j>3
+            if j > 3
                 arg2_backup = copy(arg2)
             end
 
 
             if j <= 3
                 if missing isa eltype(arg1)
-                    res1 = fn1(arg1,skipmissing = :pairwise)
+                    res1 = fn1(arg1, skipmissing=:pairwise)
                 else
                     res1 = fn1(arg1)
                 end
-                myisequal(arg1, arg1_backup) || 
+                myisequal(arg1, arg1_backup) ||
                     @error("Detected that function $fn1name mutated its argument, $casedesc")
                 res2 = fn2(arg1)
                 myisequal(arg1, arg1_backup) ||
@@ -338,15 +222,15 @@ function compare_implementations(fn1=corkendall, fn2=corkendall_naive; abstol::F
                 arg2_backup = copy(arg2)
 
                 if missing isa eltype(arg1) || missing isa eltype(arg2)
-                    res1 = fn1(arg1, arg2,skipmissing = :pairwise)
+                    res1 = fn1(arg1, arg2, skipmissing=:pairwise)
                 else
                     res1 = fn1(arg1, arg2)
                 end
                 (myisequal(arg1, arg1_backup) && myisequal(arg2, arg2_backup)) ||
-                  @error("Detected that function $fn1name mutated one of its argument, $casedesc")
+                    @error("Detected that function $fn1name mutated one of its argument, $casedesc")
                 res2 = fn2(arg1, arg2)
-                (myisequal(arg1, arg1_backup) && myisequal(arg2, arg2_backup)) || 
-                @error("Detected that function $fn2name mutated one of its argument, $casedesc")
+                (myisequal(arg1, arg1_backup) && myisequal(arg2, arg2_backup)) ||
+                    @error("Detected that function $fn2name mutated one of its argument, $casedesc")
             end
 
             # test the test!
@@ -357,14 +241,14 @@ function compare_implementations(fn1=corkendall, fn2=corkendall_naive; abstol::F
             # test for equality, if that fails print to the screen the argument(s) and the two returns
             if !myisapprox(res1, res2, abstol)
                 if j == 1
-                    return(res1,res2,arg1)
+                    return (res1, res2, arg1)
                 else
-                    return(res1,res2,arg1,arg2)
+                    return (res1, res2, arg1, arg2)
                 end
             end
         end
     end
-    return(true)
+    return (true)
 end
 
 # Custom isapprox function needed since when comparing returns from two implementations
@@ -372,34 +256,35 @@ end
 # elements of a column are identical, e.g. corkendall([1,1],[2,3]) = NaN
 function myisapprox(x::AbstractArray, y::AbstractArray, abstol::Float64)
     if size(x) ≠ size(y)
-        return(false)
+        return (false)
     elseif eltype(x) != eltype(y)
-        return(false)
+        return (false)
     else
-        return(all(myisapprox.(x, y, abstol)))
+        return (all(myisapprox.(x, y, abstol)))
     end
 end
 
 function myisapprox(x::Union{Float64,Int64,Missing}, y::Union{Float64,Int64,Missing}, abstol::Float64)
     if x isa Real && y isa Real && !isnan(x) && !isnan(y)
-        return(abs(x - y) <= abstol)
+        return (abs(x - y) <= abstol)
     else
-        return isequal(x,y)
+        return isequal(x, y)
     end
 end
 
-myisequal(x,y) = myisapprox(x,y,0.0)
+myisequal(x, y) = myisapprox(x, y, 0.0)
 
 
 # Notice strict test with absolute tolerance of differences set to zero.
 # NB it is important that maxrows in the call below call below is greater than the SMALL_THRESHOLD value
 # otherwise the important function mergesort! never gets tested!
-@test compare_implementations(KendallTau.corkendall, corkendall_naive, abstol=0.0, maxcols=10, maxrows=10, numtests=500) == true
-@test compare_implementations(KendallTau.corkendall, corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=500) == true
-@test compare_implementations(KendallTau.corkendall, corkendall_naive, abstol=1e14, maxcols=1, maxrows=50000, numtests=10) == true
+@test compare_implementations(KendallTau.corkendall, KendallTau.corkendall_naive, abstol=0.0, maxcols=10, maxrows=10, numtests=500, fns_handle_missings=true) == true
+@test compare_implementations(KendallTau.corkendall, KendallTau.corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=500, fns_handle_missings=true) == true
+@test compare_implementations(KendallTau.corkendall, KendallTau.corkendall_naive, abstol=1e14, maxcols=1, maxrows=50000, numtests=10, fns_handle_missings=true) == true
 
-#@test compare_implementations(KendallTau.corkendallthreads_v4, corkendall_naive, abstol=0.0, maxcols=10, maxrows=10, numtests=500) == true
-#@test compare_implementations(KendallTau.corkendallthreads_v4, corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=500) == true
-#@test compare_implementations(KendallTau.corkendallthreads_v4, corkendall_naive, abstol=1e14, maxcols=1, maxrows=50000, numtests=10) == true
-#@test compare_implementations(KendallTau.corkendallthreads_v1, corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=50) == true
-#@test compare_implementations(KendallTau.corkendallthreads_v2, corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=50) == true
+#@test compare_implementations(KendallTau.corkendall_threads_f, KendallTau.corkendall_naive, abstol=0.0, maxcols=10, maxrows=10, numtests=500) == true
+#@test compare_implementations(KendallTau.corkendall_threads_f, KendallTau.corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=500) == true
+#@test compare_implementations(KendallTau.corkendall_threads_f, KendallTau.corkendall_naive, abstol=1e14, maxcols=1, maxrows=50000, numtests=10) == true
+@test compare_implementations(KendallTau.corkendall_threads_b, KendallTau.corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=50, fns_handle_missings=false) == true
+@test compare_implementations(KendallTau.corkendall_threads_c, KendallTau.corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=50, fns_handle_missings=false) == true
+#@test compare_implementations(KendallTau.corkendall_threads_d, KendallTau.corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=50) == true

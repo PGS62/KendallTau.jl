@@ -3,16 +3,16 @@
 import Base.Threads.@spawn
 
 # Threading not possible in this case
-corkendallthreads_v4(x::Union{RealVector,RealOrMissingVector}, y::Union{RealVector,RealOrMissingVector}) = corkendall(x, y)
+corkendall_threads_f(x::Union{RealVector,RealOrMissingVector}, y::Union{RealVector,RealOrMissingVector}) = corkendall(x, y)
 
-function corkendallthreads_v4(X::Union{RealMatrix,RealOrMissingMatrix}, Y::Union{RealMatrix,RealOrMissingMatrix})
+function corkendall_threads_f(X::Union{RealMatrix,RealOrMissingMatrix}, Y::Union{RealMatrix,RealOrMissingMatrix})
     nr = size(X, 2)
     nc = size(Y, 2)
 
     #speedup provided by threading is greater when the second argument has more columns, so switch.
     #TODO test that hypothesis more thoroughly!
     if nr > nc
-        return(convert(RealMatrix, transpose(corkendallthreads_v4(Y, X))))
+        return (convert(RealMatrix, transpose(corkendall_threads_f(Y, X))))
     end
 
     C = zeros(Float64, nr, nc)
@@ -21,62 +21,62 @@ function corkendallthreads_v4(X::Union{RealMatrix,RealOrMissingMatrix}, Y::Union
     tasks = Array{Task,1}(undef, length(chunks))
 
     for j = 1:length(chunks)
-        tasks[j] = @spawn corkendall(X, Y[:,chunks[j]])
+        tasks[j] = @spawn corkendall(X, Y[:, chunks[j]])
     end
 
-    for (c,t) in zip(chunks,tasks)
-        C[:,c] = fetch(t)
+    for (c, t) in zip(chunks, tasks)
+        C[:, c] = fetch(t)
     end
 
     return C
 end
 
-function corkendallthreads_v4(X::Union{RealMatrix,RealOrMissingMatrix})
+function corkendall_threads_f(X::Union{RealMatrix,RealOrMissingMatrix})
     nr = nc = size(X, 2)
     C = zeros(Float64, nr, nc)
 
-    chunks = partitioncols(nc, true,max(Threads.nthreads(),nc/100))
+    chunks = partitioncols(nc, true, max(Threads.nthreads(), nc / 100))
 
     tasks = Array{Task,1}(undef, length(chunks))
     for j = 1:length(chunks)
         tasks[j] = @spawn ck_belowdiagonal(X, chunks[j])
     end
 
-    for (c,t) in zip(chunks,tasks)
-        C[:,c] = fetch(t)
+    for (c, t) in zip(chunks, tasks)
+        C[:, c] = fetch(t)
     end
 
     for j = 1:nr
-        C[j,j] = 1.0
-        for i = (1 + j):nr
-            C[j,i] = C[i,j]
+        C[j, j] = 1.0
+        for i = (1+j):nr
+            C[j, i] = C[i, j]
         end
     end
 
     return C
 end
 
-function corkendallthreads_v4(x::Union{RealVector,RealOrMissingVector}, Y::Union{RealMatrix,RealOrMissingMatrix})
+function corkendall_threads_f(x::Union{RealVector,RealOrMissingVector}, Y::Union{RealMatrix,RealOrMissingMatrix})
     nr = 1
     nc = size(Y, 2)
 
     C = zeros(Float64, nr, nc)
 
-    chunks = partitioncols(nc, false,max(8,nc/20))
+    chunks = partitioncols(nc, false, max(8, nc / 20))
 
     tasks = Array{Task,1}(undef, length(chunks))
     for j = 1:length(chunks)
-        tasks[j] = @spawn corkendall(x, view(Y,:,chunks[j]))
+        tasks[j] = @spawn corkendall(x, view(Y, :, chunks[j]))
     end
 
-    for (c,t) in zip(chunks,tasks)
-        C[:,c] = fetch(t)
+    for (c, t) in zip(chunks, tasks)
+        C[:, c] = fetch(t)
     end
 
     return C
 end
 
-function corkendallthreads_v4(X::Union{RealMatrix,RealOrMissingMatrix}, y::Union{RealVector,RealOrMissingVector})
+function corkendall_threads_f(X::Union{RealMatrix,RealOrMissingMatrix}, y::Union{RealVector,RealOrMissingVector})
     l = size(X, 2)
     #it is idiosyncratic that this method returns a vector, not a matrix.
     C = zeros(Float64, l)
@@ -85,10 +85,10 @@ function corkendallthreads_v4(X::Union{RealMatrix,RealOrMissingMatrix}, y::Union
 
     tasks = Array{Task,1}(undef, length(chunks))
     for j = 1:length(chunks)
-        tasks[j] = @spawn corkendall(X[:,chunks[j]], y)
+        tasks[j] = @spawn corkendall(X[:, chunks[j]], y)
     end
 
-    for (c,t) in zip(chunks,tasks)
+    for (c, t) in zip(chunks, tasks)
         C[c] = fetch(t)
     end
 
@@ -154,7 +154,7 @@ function partitioncols(nc::Int64, triangular::Bool, numtasks=Threads.nthreads())
         end
     end
 
-    return(chunks)
+    return (chunks)
 end
 
 """
@@ -167,13 +167,13 @@ function ck_belowdiagonal(X::Union{RealMatrix,RealOrMissingMatrix}, colnos::Unit
     nc = length(colnos)
     C = Matrix{Float64}(undef, nr, nc)
     for j = 1:nr
-        permx = sortperm(X[:,j])
-        sortedx = X[:,j][permx]
+        permx = sortperm(X[:, j])
+        sortedx = X[:, j][permx]
         for i = 1:nc
             if j > i + colnos[1] - 1
-                C[j,i] = ck_sorted!(sortedx, X[:,colnos[i]], permx)
+                C[j, i] = ck_sorted!(sortedx, X[:, colnos[i]], permx)
             else
-                C[j,i] = NaN
+                C[j, i] = NaN
             end
         end
     end

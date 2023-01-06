@@ -13,12 +13,12 @@ function the_mother_of_all_tests()
 end
 
 function corkendall_fromfile(inputfile::String, outputfile::String, inputhasheaderrow::Bool, inputhasheadercol::Bool,
-                            outputhasheaderrow::Bool, outputhasheadercol::Bool)
+    outputhasheaderrow::Bool, outputhasheadercol::Bool)
 
     header = inputhasheaderrow ? 1 : 0
     drop = inputhasheadercol ? [1] : [0]
 
-    filedata = CSV.File(inputfile;header=header,drop=drop)
+    filedata = CSV.File(inputfile; header=header, drop=drop)
 
     println("file '$inputfile' read into memory")
     names = CSV.getnames(filedata)
@@ -31,7 +31,7 @@ function corkendall_fromfile(inputfile::String, outputfile::String, inputhashead
     GC.gc()
     println("freed memory first time")
 
-    # @time res = corkendallthreads_v8(data)
+    # @time res = corkendall_threads_v8(data)
     @time res = corkendall(data, skipmissing=:pairwise)
 
     datatowrite = DataFrame(res, names)
