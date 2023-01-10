@@ -11,6 +11,7 @@ const RealOrMissingMatrix{T<:Real} = AbstractArray{<:Union{T,Missing},2}
 
 include("rankcorr.jl")
 include("naive.jl")
+include("usingstatsbase.jl")
 include("skipmissingpairs.jl")#old approach
 include("skipmissingpairwise.jl")#new approach
 if VERSION >= v"1.5" #@spawn not available on 1.0
@@ -22,6 +23,7 @@ if VERSION >= v"1.5" #@spawn not available on 1.0
 end
 include("speedtests.jl")
 include("examplecode.jl")
+include("sortperm.jl")
 
 export corkendall
 

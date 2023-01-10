@@ -159,8 +159,14 @@ end
 
 # Code to investigate performance impact of the presence of missings in the arguments passed to corkendall
 function sprinklemissings(x, proportionmissing, rng=MersenneTwister())
-    randoms = rand(rng, size(x)...)
-    ifelse.(randoms .< proportionmissing, missing, x)
+    if proportionmissing <= 0
+        return(x)
+    end
+    while true
+        randoms = rand(rng, size(x)...)
+        x = ifelse.(randoms .< proportionmissing, missing, x)
+        any(ismissing,x) && return x
+    end
 end
 
 function impactofmissings(nr::Int, nc::Int, proportionmissing::Float64=0.1)
