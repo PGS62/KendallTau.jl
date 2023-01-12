@@ -1,3 +1,4 @@
+
 function _pairwise!(::Val{:none}, f, dest::AbstractMatrix, x, y, symmetric::Bool)
     @inbounds for (i, xi) in enumerate(x), (j, yj) in enumerate(y)
         symmetric && i > j && continue

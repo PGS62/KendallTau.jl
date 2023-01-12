@@ -177,50 +177,50 @@ ComputerName = DESKTOP-HSGAM5S
 size(matrix1) = (1000, 100)
 StatsBase.corkendall(matrix1)
   185.011 ms (29999 allocations: 174.73 MiB)
-KendallTau.corkendall_threads_b(matrix1)
+KendallTau.corkendall_threads(matrix1)
   43.889 ms (30050 allocations: 174.73 MiB)
-Speed ratio KendallTau.corkendall_threads_b vs StatsBase.corkendall: 4.215412903402203
-Ratio of memory allocated KendallTau.corkendall_threads_b vs StatsBase.corkendall: 1.0000296041790273
+Speed ratio KendallTau.corkendall_threads vs StatsBase.corkendall: 4.215412903402203
+Ratio of memory allocated KendallTau.corkendall_threads vs StatsBase.corkendall: 1.0000296041790273
 Results from both functions identical? true
 --------------------------------------------------
 size(matrix1) = (1000, 100)
 size(matrix2) = (1000, 100)
 StatsBase.corkendall(matrix1,matrix2)
   370.338 ms (60302 allocations: 351.36 MiB)
-KendallTau.corkendall_threads_b(matrix1,matrix2)
+KendallTau.corkendall_threads(matrix1,matrix2)
   58.522 ms (60351 allocations: 351.36 MiB)
-Speed ratio KendallTau.corkendall_threads_b vs StatsBase.corkendall: 6.328155250220856
-Ratio of memory allocated KendallTau.corkendall_threads_b vs StatsBase.corkendall: 1.000014895749513
+Speed ratio KendallTau.corkendall_threads vs StatsBase.corkendall: 6.328155250220856
+Ratio of memory allocated KendallTau.corkendall_threads vs StatsBase.corkendall: 1.000014895749513
 Results from both functions identical? true
 --------------------------------------------------
 size(vector1) = (1000,)
 size(matrix1) = (1000, 100)
 StatsBase.corkendall(vector1,matrix1)
   3.397 ms (605 allocations: 3.51 MiB)
-KendallTau.corkendall_threads_b(vector1,matrix1)
+KendallTau.corkendall_threads(vector1,matrix1)
   508.600 μs (652 allocations: 3.51 MiB)
-Speed ratio KendallTau.corkendall_threads_b vs StatsBase.corkendall: 6.679119150609516
-Ratio of memory allocated KendallTau.corkendall_threads_b vs StatsBase.corkendall: 1.001466677692137
+Speed ratio KendallTau.corkendall_threads vs StatsBase.corkendall: 6.679119150609516
+Ratio of memory allocated KendallTau.corkendall_threads vs StatsBase.corkendall: 1.001466677692137
 Results from both functions identical? true
 --------------------------------------------------
 size(matrix1) = (1000, 100)
 size(vector1) = (1000,)
 StatsBase.corkendall(matrix1,vector1)
   3.362 ms (603 allocations: 3.51 MiB)
-KendallTau.corkendall_threads_b(matrix1,vector1)
+KendallTau.corkendall_threads(matrix1,vector1)
   515.100 μs (652 allocations: 3.51 MiB)
-Speed ratio KendallTau.corkendall_threads_b vs StatsBase.corkendall: 6.526111434672879
-Ratio of memory allocated KendallTau.corkendall_threads_b vs StatsBase.corkendall: 1.0014928296302743
+Speed ratio KendallTau.corkendall_threads vs StatsBase.corkendall: 6.526111434672879
+Ratio of memory allocated KendallTau.corkendall_threads vs StatsBase.corkendall: 1.0014928296302743
 Results from both functions identical? true
 --------------------------------------------------
 size(vector1) = (1000,)
 size(vector2) = (1000,)
 StatsBase.corkendall(vector1,vector2)
   29.500 μs (8 allocations: 43.77 KiB)
-KendallTau.corkendall_threads_b(vector1,vector2)
+KendallTau.corkendall_threads(vector1,vector2)
   28.100 μs (10 allocations: 59.64 KiB)
-Speed ratio KendallTau.corkendall_threads_b vs StatsBase.corkendall: 1.0498220640569396
-Ratio of memory allocated KendallTau.corkendall_threads_b vs StatsBase.corkendall: 1.3627275972866832
+Speed ratio KendallTau.corkendall_threads vs StatsBase.corkendall: 1.0498220640569396
+Ratio of memory allocated KendallTau.corkendall_threads vs StatsBase.corkendall: 1.3627275972866832
 Results from both functions identical? true
 ###################################################################
 
@@ -232,67 +232,67 @@ Threads.nthreads() = 20
 size(matrix1) = (1000, 100)
 StatsBase.corkendall(matrix1)
   199.949 ms (29999 allocations: 174.73 MiB)
-KendallTau.corkendall_threads_b(matrix1)
+KendallTau.corkendall_threads(matrix1)
   20.428 ms (30120 allocations: 174.74 MiB)
-Speed ratio KendallTau.corkendall_threads_b vs StatsBase.corkendall: 9.788082906627244
-Ratio of memory allocated KendallTau.corkendall_threads_b vs StatsBase.corkendall: 1.0000727441921229
+Speed ratio KendallTau.corkendall_threads vs StatsBase.corkendall: 9.788082906627244
+Ratio of memory allocated KendallTau.corkendall_threads vs StatsBase.corkendall: 1.0000727441921229
 Results from both functions identical? true
 --------------------------------------------------
 size(matrix1) = (1000, 100)
 size(matrix2) = (1000, 100)
 StatsBase.corkendall(matrix1,matrix2)
   367.298 ms (60302 allocations: 351.36 MiB)
-KendallTau.corkendall_threads_b(matrix1,matrix2)
+KendallTau.corkendall_threads(matrix1,matrix2)
   47.178 ms (60423 allocations: 351.37 MiB)
-Speed ratio KendallTau.corkendall_threads_b vs StatsBase.corkendall: 7.785444332573791
-Ratio of memory allocated KendallTau.corkendall_threads_b vs StatsBase.corkendall: 1.0000370439484976
+Speed ratio KendallTau.corkendall_threads vs StatsBase.corkendall: 7.785444332573791
+Ratio of memory allocated KendallTau.corkendall_threads vs StatsBase.corkendall: 1.0000370439484976
 Results from both functions identical? true
 --------------------------------------------------
 size(vector1) = (1000,)
 size(matrix1) = (1000, 100)
 StatsBase.corkendall(vector1,matrix1)
   3.364 ms (605 allocations: 3.51 MiB)
-KendallTau.corkendall_threads_b(vector1,matrix1)
+KendallTau.corkendall_threads(vector1,matrix1)
   348.600 μs (724 allocations: 3.52 MiB)
-Speed ratio KendallTau.corkendall_threads_b vs StatsBase.corkendall: 9.650028686173265
-Ratio of memory allocated KendallTau.corkendall_threads_b vs StatsBase.corkendall: 1.0036862789472998
+Speed ratio KendallTau.corkendall_threads vs StatsBase.corkendall: 9.650028686173265
+Ratio of memory allocated KendallTau.corkendall_threads vs StatsBase.corkendall: 1.0036862789472998
 Results from both functions identical? true
 --------------------------------------------------
 size(matrix1) = (1000, 100)
 size(vector1) = (1000,)
 StatsBase.corkendall(matrix1,vector1)
   3.301 ms (603 allocations: 3.51 MiB)
-KendallTau.corkendall_threads_b(matrix1,vector1)
+KendallTau.corkendall_threads(matrix1,vector1)
   350.700 μs (724 allocations: 3.52 MiB)
-Speed ratio KendallTau.corkendall_threads_b vs StatsBase.corkendall: 9.412318220701454
-Ratio of memory allocated KendallTau.corkendall_threads_b vs StatsBase.corkendall: 1.0037124888473006
+Speed ratio KendallTau.corkendall_threads vs StatsBase.corkendall: 9.412318220701454
+Ratio of memory allocated KendallTau.corkendall_threads vs StatsBase.corkendall: 1.0037124888473006
 Results from both functions identical? true
 --------------------------------------------------
 size(vector1) = (1000,)
 size(vector2) = (1000,)
 StatsBase.corkendall(vector1,vector2)
   33.600 μs (8 allocations: 43.77 KiB)
-KendallTau.corkendall_threads_b(vector1,vector2)
+KendallTau.corkendall_threads(vector1,vector2)
   26.300 μs (10 allocations: 59.64 KiB)
-Speed ratio KendallTau.corkendall_threads_b vs StatsBase.corkendall: 1.2775665399239544
-Ratio of memory allocated KendallTau.corkendall_threads_b vs StatsBase.corkendall: 1.3627275972866832
+Speed ratio KendallTau.corkendall_threads vs StatsBase.corkendall: 1.2775665399239544
+Ratio of memory allocated KendallTau.corkendall_threads vs StatsBase.corkendall: 1.3627275972866832
 Results from both functions identical? true
 ###################################################################
 
 Below looks very ominous! slower each time I call the same method!
 PGS 6 Jan 2023
 
-julia> @time KendallTau.corkendall_threads_b(rand(MersenneTwister(0),1000,2000));
+julia> @time KendallTau.corkendall_threads(rand(MersenneTwister(0),1000,2000));
  39.454754 seconds (12.00 M allocations: 68.348 GiB, 43.58% gc time)
 
-julia> @time KendallTau.corkendall_threads_b(rand(MersenneTwister(0),1000,2000));
+julia> @time KendallTau.corkendall_threads(rand(MersenneTwister(0),1000,2000));
  46.008928 seconds (12.00 M allocations: 68.348 GiB, 45.41% gc time)
 
-julia> @time KendallTau.corkendall_threads_b(rand(MersenneTwister(0),1000,2000));
+julia> @time KendallTau.corkendall_threads(rand(MersenneTwister(0),1000,2000));
  55.722049 seconds (12.00 M allocations: 68.348 GiB, 47.18% gc time)
 
-julia> @time KendallTau.corkendall_threads_b(rand(MersenneTwister(0),1000,2000));
+julia> @time KendallTau.corkendall_threads(rand(MersenneTwister(0),1000,2000));
  66.046658 seconds (12.00 M allocations: 68.348 GiB, 48.95% gc time)
 
-julia> @time KendallTau.corkendall_threads_b(rand(MersenneTwister(0),1000,2000));
+julia> @time KendallTau.corkendall_threads(rand(MersenneTwister(0),1000,2000));
  83.809118 seconds (12.00 M allocations: 68.348 GiB, 52.15% gc time)
