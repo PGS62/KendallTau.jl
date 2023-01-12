@@ -284,12 +284,12 @@ end
 
 """
     handlecompletemissings(x::AbstractArray,y::AbstractArray,skipmissing::Symbol)
-Handles the case of skipmissing = :complete. This is a simpler case than :pairwise, we
+Handles the case of skipmissing = :listwise. This is a simpler case than :pairwise, we
 merely need to construct new argument(s) for corkendall by calling skipmissingpairs. The
 function also validates skipmissing, throwing an error if invalid.
 """
 function handlecompletemissings(x::AbstractArray, y::AbstractArray, skipmissing::Symbol)
-    if skipmissing == :complete
+    if skipmissing == :listwise
         if x isa Matrix || y isa Matrix
             return (skipmissingpairs(x, y))
         end
@@ -298,22 +298,22 @@ function handlecompletemissings(x::AbstractArray, y::AbstractArray, skipmissing:
         if missing isa eltype(x) || missing isa eltype(y)
             throw(ArgumentError("When Missing is an allowed element type"
                                 * " then keyword argument skipmissing must be either "
-                                * "`:pairwise` or `:complete`, but got `:$skipmissing`"))
+                                * "`:pairwise` or `:listwise`, but got `:$skipmissing`"))
         end
     else
         if missing isa eltype(x) || missing isa eltype(y)
             throw(ArgumentError("keyword argument skipmissing must be either " *
-                                "`:pairwise` or `:complete`, but got `:$skipmissing`"))
+                                "`:pairwise` or `:listwise`, but got `:$skipmissing`"))
         else
             throw(ArgumentError("keyword argument skipmissing must be either " *
-                                "`:pairwise`, `:complete` or `:none` but got `:$skipmissing`"))
+                                "`:pairwise`, `:listwise` or `:none` but got `:$skipmissing`"))
         end
     end
     return (x, y)
 end
 
 function handlecompletemissings(x::AbstractArray, skipmissing::Symbol)
-    if skipmissing == :complete
+    if skipmissing == :listwise
         if x isa Matrix
             return (skipmissingpairs(x))
         end
@@ -322,15 +322,15 @@ function handlecompletemissings(x::AbstractArray, skipmissing::Symbol)
         if missing isa eltype(x)
             throw(ArgumentError("When Missing is an allowed element type"
                                 * " then keyword argument skipmissing must be either "
-                                * "`:pairwise` or `:complete`, but got `:$skipmissing`"))
+                                * "`:pairwise` or `:listwise`, but got `:$skipmissing`"))
         end
     else
         if missing isa eltype(x)
             throw(ArgumentError("keyword argument skipmissing must be either " *
-                                "`:pairwise` or `:complete`, but got `:$skipmissing`"))
+                                "`:pairwise` or `:listwise`, but got `:$skipmissing`"))
         else
             throw(ArgumentError("keyword argument skipmissing must be either " *
-                                "`:pairwise`, `:complete` or `:none` but got `:$skipmissing`"))
+                                "`:pairwise`, `:listwise` or `:none` but got `:$skipmissing`"))
         end
     end
     return (x)

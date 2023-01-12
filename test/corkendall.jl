@@ -108,11 +108,11 @@ function compare_implementations(fn1=corkendall, fn2=corkendall_naive; abstol::F
                 arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
                 skipmissing = :pairwise
             elseif j == 3
-                casedesc = "one matrix case, with missings, skipmissing = :complete"
+                casedesc = "one matrix case, with missings, skipmissing = :listwise"
                 # by restricting elements to 1:nrows, we can be sure repeats exist
                 arg1 = rand(rng, 1:nrows, nrows, ncols1)
                 arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
-                skipmissing = :complete
+                skipmissing = :listwise
             elseif j == 4
                 casedesc = "two matrix case, no missings, skipmissing = :none"
                 arg1 = rand(rng, 1:nrows, nrows, ncols1)
@@ -126,12 +126,12 @@ function compare_implementations(fn1=corkendall, fn2=corkendall_naive; abstol::F
                 arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
                 skipmissing = :pairwise
             elseif j == 6
-                casedesc = "two matrix case, with missings, skipmissing = :complete"
+                casedesc = "two matrix case, with missings, skipmissing = :listwise"
                 arg1 = rand(rng, 1:nrows, nrows, ncols1)
                 arg2 = rand(rng, 1:nrows, nrows, ncols2)
                 arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
                 arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
-                skipmissing = :complete
+                skipmissing = :listwise
             elseif j == 7
                 casedesc = "vector-matrix case, no missings, skipmissing = :none"
                 arg1 = rand(rng, 1:nrows, nrows)
@@ -145,12 +145,12 @@ function compare_implementations(fn1=corkendall, fn2=corkendall_naive; abstol::F
                 arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
                 skipmissing = :pairwise
             elseif j == 9
-                casedesc = "vector-matrix case, with missings, skipmissings = :complete"
+                casedesc = "vector-matrix case, with missings, skipmissings = :listwise"
                 arg1 = rand(rng, 1:nrows, nrows)
                 arg2 = rand(rng, 1:nrows, nrows, ncols2)
                 arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
                 arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
-                skipmissing = :complete
+                skipmissing = :listwise
             elseif j == 10
                 casedesc = "matrix-vector case, no missings, skipmissing = :none"
                 arg1 = rand(rng, 1:nrows, nrows, ncols1)
@@ -164,12 +164,12 @@ function compare_implementations(fn1=corkendall, fn2=corkendall_naive; abstol::F
                 arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
                 skipmissings = :pairwise
             elseif j == 12
-                casedesc = "matrix-vector case, with missings, skipmissings = :complete"
+                casedesc = "matrix-vector case, with missings, skipmissings = :listwise"
                 arg1 = rand(rng, 1:nrows, nrows, ncols1)
                 arg2 = randn(rng, nrows)
                 arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
                 arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
-                skipmissings = :complete
+                skipmissings = :listwise
             elseif j == 13
                 casedesc = "vector-vector case, no missings, skipmissing = :none"
                 arg1 = rand(rng, 1:nrows, nrows)
@@ -183,12 +183,12 @@ function compare_implementations(fn1=corkendall, fn2=corkendall_naive; abstol::F
                 arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
                 skipmissing = :pairwise
             elseif j == 15
-                casedesc = "vector-vector case, with missings, skipmissings = :complete"
+                casedesc = "vector-vector case, with missings, skipmissings = :listwise"
                 arg1 = rand(rng, 1:nrows, nrows)
                 arg2 = rand(rng, 1:nrows, nrows)
                 arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
                 arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
-                skipmissing = :complete
+                skipmissing = :listwise
             end
 
             # sometimes flip to floats
@@ -286,5 +286,6 @@ myisequal(x, y) = myisapprox(x, y, 0.0)
 #@test compare_implementations(KendallTau.corkendall_threads_f, KendallTau.corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=500) == true
 #@test compare_implementations(KendallTau.corkendall_threads_f, KendallTau.corkendall_naive, abstol=1e14, maxcols=1, maxrows=50000, numtests=10) == true
 @test compare_implementations(KendallTau.corkendall_threads_b, KendallTau.corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=50, fns_handle_missings=false) == true
+@test compare_implementations(KendallTau.corkendall_usb, KendallTau.corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=50, fns_handle_missings=true) == true
 #@test compare_implementations(KendallTau.corkendall_threads_c, KendallTau.corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=50, fns_handle_missings=false) == true
 #@test compare_implementations(KendallTau.corkendall_threads_d, KendallTau.corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=50) == true

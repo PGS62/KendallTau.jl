@@ -57,10 +57,10 @@ function corkendall_naive(X::Union{RealMatrix,RealOrMissingMatrix})
 end
 
 function corkendall_naive(x::AbstractArray; skipmissing::Symbol)
-    if skipmissing == :complete
+    if skipmissing == :listwise
         x = skipmissingpairs_naive(x)
     end
-    if skipmissing == :pairwise || skipmissing == :complete
+    if skipmissing == :pairwise || skipmissing == :listwise
         return (corkendall_naive(x))
     elseif skipmissing == :none && !(missing isa eltype(x))
         return (corkendall_naive(x))
@@ -70,10 +70,10 @@ function corkendall_naive(x::AbstractArray; skipmissing::Symbol)
 end
 
 function corkendall_naive(x::AbstractArray, y::AbstractArray; skipmissing::Symbol)
-    if skipmissing == :complete
+    if skipmissing == :listwise
         x, y = skipmissingpairs_naive(x, y)
     end
-    if skipmissing == :pairwise || skipmissing == :complete
+    if skipmissing == :pairwise || skipmissing == :listwise
         return (corkendall_naive(x, y))
     elseif skipmissing == :none && !(missing isa eltype(x)) & !(ismissing isa eltype(y))
         return (corkendall_naive(x, y))
