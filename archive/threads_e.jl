@@ -1,9 +1,9 @@
 # EXPERIMENTAL - Threaded version 3. Max number of tasks = 5 * Threads.nthreads()
 
-function corkendall_threads_e(X::Union{RealMatrix,RealOrMissingMatrix}, Y::Union{RealMatrix,RealOrMissingMatrix})
-    nr = size(X, 2)
-    nc = size(Y, 2)
-    C = zeros(float(eltype(X)), nr, nc)
+function corkendall_threads_e(x::RealOrMissingMatrix, y::RealOrMissingMatrix)
+    nr = size(x, 2)
+    nc = size(y, 2)
+    C = zeros(float(eltype(x)), nr, nc)
 
     numtasks = min(nc, 10 * Threads.nthreads())
     chunksize = Int(max(1, round(nc / numtasks)))
@@ -13,7 +13,7 @@ function corkendall_threads_e(X::Union{RealMatrix,RealOrMissingMatrix}, Y::Union
     for j = 1:numtasks
         fromcol = (j - 1) * chunksize + 1
         tocol = min(fromcol + chunksize - 1, nc)
-        tasks[j] = @spawn corkendall(X, Y[:, fromcol:tocol])
+        tasks[j] = @spawn corkendall(x, y[:, fromcol:tocol])
     end
 
     for j = 1:numtasks

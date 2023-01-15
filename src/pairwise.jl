@@ -1,15 +1,16 @@
+#COPIED FROM StatsBase 14 Jan 2023, commit c19bff4c65b16e2fec5bd7bf801b61433abd76e9
 
 function _pairwise!(::Val{:none}, f, dest::AbstractMatrix, x, y, symmetric::Bool)
     @inbounds for (i, xi) in enumerate(x), (j, yj) in enumerate(y)
         symmetric && i > j && continue
 
         # For performance, diagonal is special-cased
-        if f === cor && eltype(dest) !== Union{} && i == j && xi === yj
-            # TODO: float() will not be needed after JuliaLang/Statistics.jl#61
-            dest[i, j] = float(cor(xi))
-        else
+    #    if f === cor && eltype(dest) !== Union{} && i == j && xi === yj
+    #        # TODO: float() will not be needed after JuliaLang/Statistics.jl#61
+    #        dest[i, j] = float(cor(xi))
+    #    else
             dest[i, j] = f(xi, yj)
-        end
+    #    end
     end
     if symmetric
         m, n = size(dest)
@@ -57,12 +58,12 @@ function _pairwise!(::Val{:pairwise}, f, dest::AbstractMatrix, x, y, symmetric::
             if xi === yj
                 ynm = view(yj, ynminds)
                 # For performance, diagonal is special-cased
-                if f === cor && eltype(dest) !== Union{} && i == j
-                    # TODO: float() will not be needed after JuliaLang/Statistics.jl#61
-                    dest[i, j] = float(cor(xi))
-                else
+            #    if f === cor && eltype(dest) !== Union{} && i == j
+            #        # TODO: float() will not be needed after JuliaLang/Statistics.jl#61
+            #        dest[i, j] = float(cor(xi))
+            #    else
                     dest[i, j] = f(ynm, ynm)
-                end
+            #    end
             else
                 nminds = .!ismissing.(xi) .& ynminds
                 xnm = view(xi, nminds)
@@ -297,6 +298,7 @@ function pairwise(f, x, y=x; symmetric::Bool=false, skipmissing::Symbol=:none)
     return _pairwise(Val(skipmissing), f, x, y, symmetric)
 end
 
+#=
 # cov(x) is faster than cov(x, x)
 _cov(x, y) = x === y ? cov(x) : cov(x, y)
 
@@ -320,3 +322,4 @@ pairwise!(::typeof(cor), dest::AbstractMatrix, x;
 
 pairwise(::typeof(cor), x; symmetric::Bool=true, skipmissing::Symbol=:none) =
     pairwise(cor, x, x, symmetric=symmetric, skipmissing=skipmissing)
+=#

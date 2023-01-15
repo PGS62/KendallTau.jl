@@ -9,55 +9,55 @@ import Base.Threads.@spawn
 Compute Kendall's rank correlation coefficient, τ. `x` and `y` must both be either
 matrices or vectors. Uses threads when either `x` or `y` is a matrix.
 """
-corkendall_threads(x::Union{RealVector,RealOrMissingVector}, y::Union{RealVector,RealOrMissingVector}) = corkendall(float(copy(x)), float(copy(y)))# threads not used in this case
+corkendall_threads(x::RealOrMissingVector, y::RealOrMissingVector) = corkendall(float(copy(x)), float(copy(y)))# threads not used in this case
 
-function corkendall_threads(X::Union{RealMatrix,RealOrMissingMatrix}, y::Union{RealVector,RealOrMissingVector})
-    n = size(X, 2)
-    C = ones(float(eltype(X)), n)
+function corkendall_threads(x::RealOrMissingMatrix, y::RealOrMissingVector)
+    n = size(x, 2)
+    C = ones(float(eltype(x)), n)
 
     permy = sortperm(y)
     Threads.@threads for i = 1:n
-        C[i] = ck!(float(copy(y)), float(X[:, i]), permy)
+        C[i] = ck!(float(copy(y)), float(x[:, i]), permy)
     end
 
     return C
 end
 
-function corkendall_threads(x::Union{RealVector,RealOrMissingVector}, Y::Union{RealMatrix,RealOrMissingMatrix})
-    n = size(Y, 2)
-    C = ones(float(eltype(Y)), 1, n)
+function corkendall_threads(x::RealOrMissingVector, y::RealOrMissingMatrix)
+    n = size(y, 2)
+    C = ones(float(eltype(y)), 1, n)
 
     permx = sortperm(x)
     Threads.@threads for i = 1:n
-        C[1, i] = ck!(float(copy(x)), float(Y[:, i]), permx)
+        C[1, i] = ck!(float(copy(x)), float(y[:, i]), permx)
     end
 
     return C
 end
 
-function corkendall_threads(X::Union{RealMatrix,RealOrMissingMatrix})
-    n = size(X, 2)
-    C = ones(float(eltype(X)), n, n)# avoids dependency on LinearAlgebra
+function corkendall_threads(x::RealOrMissingMatrix)
+    n = size(x, 2)
+    C = ones(float(eltype(x)), n, n)# avoids dependency on LinearAlgebra
 
     Threads.@threads for j = 2:n
-        permx = sortperm(X[:, j])
+        permx = sortperm(x[:, j])
         for i = 1:j-1
-            C[i, j] = C[j, i] = ck!(X[:, j], X[:, i], permx)
+            C[i, j] = C[j, i] = ck!(x[:, j], x[:, i], permx)
         end
     end
 
     return C
 end
 
-function corkendall_threads(X::Union{RealMatrix,RealOrMissingMatrix}, Y::Union{RealMatrix,RealOrMissingMatrix})
-    nr = size(X, 2)
-    nc = size(Y, 2)
-    C = zeros(float(eltype(X)), nr, nc)
+function corkendall_threads(x::RealOrMissingMatrix, y::RealOrMissingMatrix)
+    nr = size(x, 2)
+    nc = size(y, 2)
+    C = zeros(float(eltype(x)), nr, nc)
 
     Threads.@threads for j = 1:nr
-        permx = sortperm(X[:, j])
+        permx = sortperm(x[:, j])
         for i = 1:nc
-            C[j, i] = ck!(X[:, j], Y[:, i], permx)
+            C[j, i] = ck!(x[:, j], y[:, i], permx)
         end
     end
 

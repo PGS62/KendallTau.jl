@@ -1,8 +1,8 @@
 #Testing recent (when?) changes in StasBase that implement skipmissing via function pairwise
-import StatsBase # NB version from https:/github.com/PGS62/StatsBase.jl
+import StatsBase # NB version from https://github.com/PGS62/StatsBase.jl
 
-pw = StatsBase.pairwise
-f = StatsBase.corkendall
+pw = pairwise
+f = corkendall_sb
 
 function corkendall_usb(x::AbstractVector, y::AbstractVector=x; skipmissing::Symbol=:none)
     if skipmissing == :none

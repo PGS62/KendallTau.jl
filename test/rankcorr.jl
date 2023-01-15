@@ -1,13 +1,13 @@
 using KendallTau
 using Test
 
-X = Float64[1 0; 2 1; 3 0; 4 1; 5 10]
+x = Float64[1 0; 2 1; 3 0; 4 1; 5 10]
 Y = Float64[5 5 6; 3 4 1; 4 0 4; 2 6 1; 5 7 10]
 Xm = [1 0; missing 1; 2 1; 3 0; 4 1; 5 10]
 Ym = [5 5 6; 1 2 3; 3 4 1; 4 0 4; 2 6 1; 5 7 10]
 
-x1 = X[:, 1]
-x2 = X[:, 2]
+x1 = x[:, 1]
+x2 = x[:, 2]
 y = Y[:, 1]
 
 #= corspearman
@@ -15,19 +15,19 @@ y = Y[:, 1]
 @test corspearman(x1, y) ≈ -0.102597835208515
 @test corspearman(x2, y) ≈ -0.081110710565381
 
-@test corspearman(X, y) ≈ [-0.102597835208515, -0.081110710565381]
-@test corspearman(y, X) ≈ [-0.102597835208515 -0.081110710565381]
+@test corspearman(x, y) ≈ [-0.102597835208515, -0.081110710565381]
+@test corspearman(y, x) ≈ [-0.102597835208515 -0.081110710565381]
 
 c11 = corspearman(x1, x1)
 c12 = corspearman(x1, x2)
 c22 = corspearman(x2, x2)
 @test c11 ≈ 1.0
 @test c22 ≈ 1.0
-@test corspearman(X, X) ≈ [c11 c12; c12 c22]
-@test corspearman(X)    ≈ [c11 c12; c12 c22]
+@test corspearman(x, x) ≈ [c11 c12; c12 c22]
+@test corspearman(x)    ≈ [c11 c12; c12 c22]
 
-@test corspearman(X, Y) ==
-     [corspearman(X[:,i], Y[:,j]) for i in axes(X, 2), j in axes(Y, 2)] =#
+@test corspearman(x, Y) ==
+     [corspearman(x[:,i], Y[:,j]) for i in axes(x, 2), j in axes(Y, 2)] =#
 
 # corkendall
 
@@ -42,9 +42,9 @@ c22 = corspearman(x2, x2)
 @test corkendall(x1, y) == -1 / sqrt(90)
 @test corkendall(x2, y) == -1 / sqrt(72)
 # RealMatrix, RealVector
-@test corkendall(X, y) == [-1 / sqrt(90), -1 / sqrt(72)]
+@test corkendall(x, y) == [-1 / sqrt(90), -1 / sqrt(72)]
 # RealVector, RealMatrix
-@test corkendall(y, X) == [-1 / sqrt(90) -1 / sqrt(72)]
+@test corkendall(y, x) == [-1 / sqrt(90) -1 / sqrt(72)]
 
 # n = 78_000 tests for overflow errors on 32 bit
 # Testing for overflow errors on 64bit would require n be too large for practicality
@@ -53,8 +53,8 @@ n = 78_000
 # Test with many repeats
 @test corkendall(repeat(x1, n), repeat(y, n)) ≈ -1 / sqrt(90)
 @test corkendall(repeat(x2, n), repeat(y, n)) ≈ -1 / sqrt(72)
-@test corkendall(repeat(X, n), repeat(y, n)) ≈ [-1 / sqrt(90), -1 / sqrt(72)]
-@test corkendall(repeat(y, n), repeat(X, n)) ≈ [-1 / sqrt(90) -1 / sqrt(72)]
+@test corkendall(repeat(x, n), repeat(y, n)) ≈ [-1 / sqrt(90), -1 / sqrt(72)]
+@test corkendall(repeat(y, n), repeat(x, n)) ≈ [-1 / sqrt(90) -1 / sqrt(72)]
 @test corkendall(repeat([0, 1, 1, 0], n), repeat([1, 0, 1, 0], n)) == 0.0
 
 # Test with no repeats, note testing for exact equality
@@ -65,24 +65,24 @@ n = 78_000
 @test isnan(corkendall(repeat([1], n), collect(1:n)))
 
 # Test handling of missings
-@test corkendall(Xm, Xm, skipmissing=:pairwise) == corkendall(X, X)
-@test corkendall(Xm, Xm, skipmissing=:listwise) == corkendall(X, X)
-@test corkendall(Xm, Ym, skipmissing=:listwise) == corkendall(X, Y)
+@test corkendall(Xm, Xm, skipmissing=:pairwise) == corkendall(x, x)
+@test corkendall(Xm, Xm, skipmissing=:listwise) == corkendall(x, x)
+@test corkendall(Xm, Ym, skipmissing=:listwise) == corkendall(x, Y)
 @test corkendall(Xm, Ym, skipmissing=:pairwise) ≈ [-1/√90 0.4 1/√90
     -2/√154 7/√165 -1/√154]
 
 # Test not-correct values of skipmissing
 @test_throws ArgumentError corkendall(Xm)
-@test_throws ArgumentError corkendall(X, skipmissing=:foo)
+@test_throws ArgumentError corkendall(x, skipmissing=:foo)
 
 c11 = corkendall(x1, x1)
 c12 = corkendall(x1, x2)
 c22 = corkendall(x2, x2)
 
 # RealMatrix, RealMatrix
-@test corkendall(X, X) ≈ [c11 c12; c12 c22]
+@test corkendall(x, x) ≈ [c11 c12; c12 c22]
 # RealMatrix
-@test corkendall(X) ≈ [c11 c12; c12 c22]
+@test corkendall(x) ≈ [c11 c12; c12 c22]
 
 @test c11 == 1.0
 @test c22 == 1.0
@@ -91,8 +91,8 @@ c22 = corkendall(x2, x2)
 # Finished testing for overflow, so redefine n for speedier tests
 n = 100
 
-@test corkendall(repeat(X, n), repeat(X, n)) ≈ [c11 c12; c12 c22]
-@test corkendall(repeat(X, n)) ≈ [c11 c12; c12 c22]
+@test corkendall(repeat(x, n), repeat(x, n)) ≈ [c11 c12; c12 c22]
+@test corkendall(repeat(x, n)) ≈ [c11 c12; c12 c22]
 
 # All eight three-element permutations
 z = [1 1 1
@@ -127,7 +127,7 @@ KendallTau.midpoint(1, widen(10)) == 5
 
 # NaN handling
 
-Xnan = copy(X)
+Xnan = copy(x)
 Xnan[1, 1] = NaN
 Ynan = copy(Y)
 Ynan[2, 1] = NaN

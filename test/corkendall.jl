@@ -14,10 +14,10 @@ julia> test_skipmissingpairs(1000,10)
 true
 =#
 function test_skipmissingpairs(nr::Int64, nc::Int64)
-    X = rand(nr, nc)
-    X = KendallTau.sprinklemissings(X, 0.05)
-    res1, time1 = KendallTau.@btimed skipmissingpairs_naive($X)
-    res2, time2 = KendallTau.@btimed KendallTau.skipmissingpairs($X)
+    x = rand(nr, nc)
+    x = KendallTau.sprinklemissings(x, 0.05)
+    res1, time1 = KendallTau.@btimed skipmissingpairs_naive($x)
+    res2, time2 = KendallTau.@btimed KendallTau.skipmissingpairs($x)
     res1 == res2
 end
 
@@ -28,12 +28,12 @@ julia> test_skipmissingpairs(1000,10,20)
 true
 =#
 function test_skipmissingpairs(nr::Int64, nc1::Int64, nc2::Int64)
-    X = rand(nr, nc1)
-    X = KendallTau.sprinklemissings(X, 0.05)
-    Y = rand(nr, nc2)
-    Y = KendallTau.sprinklemissings(Y, 0.05)
-    res1, time1 = KendallTau.@btimed skipmissingpairs_naive($X, $Y)
-    res2, time2 = KendallTau.@btimed KendallTau.skipmissingpairs($X, $Y)
+    x = rand(nr, nc1)
+    x = KendallTau.sprinklemissings(x, 0.05)
+    y = rand(nr, nc2)
+    y = KendallTau.sprinklemissings(y, 0.05)
+    res1, time1 = KendallTau.@btimed skipmissingpairs_naive($x, $y)
+    res2, time2 = KendallTau.@btimed KendallTau.skipmissingpairs($x, $y)
     res1 == res2
 end
 

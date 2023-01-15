@@ -41,17 +41,17 @@ function corkendall_naive(x::RealOrMissingVector, y::RealOrMissingVector)
     corkendall_naive(a, b)
 end
 
-corkendall_naive(X::Union{RealMatrix,RealOrMissingMatrix}, y::Union{RealVector,RealOrMissingVector}) = Float64[corkendall_naive(float(X[:, i]), float(y)) for i in axes(X, 2)]
+corkendall_naive(x::RealOrMissingMatrix, y::RealOrMissingVector) = Float64[corkendall_naive(float(x[:, i]), float(y)) for i in axes(x, 2)]
 
-corkendall_naive(x::Union{RealVector,RealOrMissingVector}, Y::Union{RealMatrix,RealOrMissingMatrix}) = (n = size(Y, 2); reshape(Float64[corkendall_naive(float(x), float(Y[:, i])) for i = 1:n], 1, n))
+corkendall_naive(x::RealOrMissingVector, y::RealOrMissingMatrix) = (n = size(y, 2); reshape(Float64[corkendall_naive(float(x), float(y[:, i])) for i = 1:n], 1, n))
 
-corkendall_naive(X::Union{RealMatrix,RealOrMissingMatrix}, Y::Union{RealMatrix,RealOrMissingMatrix}) = Float64[corkendall_naive(float(X[:, i]), float(Y[:, j])) for i in axes(X, 2), j in axes(Y, 2)]
+corkendall_naive(x::RealOrMissingMatrix, y::RealOrMissingMatrix) = Float64[corkendall_naive(float(x[:, i]), float(y[:, j])) for i in axes(x, 2), j in axes(y, 2)]
 
-function corkendall_naive(X::Union{RealMatrix,RealOrMissingMatrix})
-    n = size(X, 2)
+function corkendall_naive(x::RealOrMissingMatrix)
+    n = size(x, 2)
     C = ones(Float64, n, n)
     for j in 2:n, i in 1:j-1
-        C[j, i] = C[i, j] = corkendall_naive(X[:, i], X[:, j])
+        C[j, i] = C[i, j] = corkendall_naive(x[:, i], x[:, j])
     end
     return C
 end
@@ -96,28 +96,28 @@ function skipmissingpairs_naive(x::RealOrMissingVector, y::RealOrMissingVector)
 end
 
 #Alternative (simpler but slower) implementation of skipmissingpairs
-function skipmissingpairs_naive(X::AbstractMatrix)
-    choose = [!any(ismissing, X[i, :]) for i in axes(X, 1)]
-    X[choose, :]
+function skipmissingpairs_naive(x::AbstractMatrix)
+    choose = [!any(ismissing, x[i, :]) for i in axes(x, 1)]
+    x[choose, :]
 end
 
-function skipmissingpairs_naive(X::AbstractMatrix, Y::AbstractMatrix)
-    choose1 = [!any(ismissing, X[i, :]) for i in axes(X, 1)]
-    choose2 = [!any(ismissing, Y[i, :]) for i in axes(Y, 1)]
+function skipmissingpairs_naive(x::AbstractMatrix, y::AbstractMatrix)
+    choose1 = [!any(ismissing, x[i, :]) for i in axes(x, 1)]
+    choose2 = [!any(ismissing, y[i, :]) for i in axes(y, 1)]
     choose = choose1 .& choose2
-    X[choose, :], Y[choose, :]
+    x[choose, :], y[choose, :]
 end
 
-function skipmissingpairs_naive(x::AbstractVector, Y::AbstractMatrix)
+function skipmissingpairs_naive(x::AbstractVector, y::AbstractMatrix)
     choose1 = .!ismissing.(x)
-    choose2 = [!any(ismissing, Y[i, :]) for i in axes(Y, 1)]
+    choose2 = [!any(ismissing, y[i, :]) for i in axes(y, 1)]
     choose = choose1 .& choose2
-    x[choose], Y[choose, :]
+    x[choose], y[choose, :]
 end
 
-function skipmissingpairs_naive(X::AbstractMatrix, y::AbstractVector)
-    choose1 = [!any(ismissing, X[i, :]) for i in axes(X, 1)]
+function skipmissingpairs_naive(x::AbstractMatrix, y::AbstractVector)
+    choose1 = [!any(ismissing, x[i, :]) for i in axes(x, 1)]
     choose2 = .!ismissing.(x)
     choose = choose1 .& choose2
-    X[choose, :], y[choose]
+    x[choose, :], y[choose]
 end

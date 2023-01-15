@@ -1,9 +1,8 @@
-
-"""include
-    filtersortperm(x::AbstractVector, include::AbstractVector{Bool},
+"""
+    filtersortperm_v1(x::AbstractVector, include::AbstractVector{Bool},
     sortpermx::AbstractVector{<:Integer})
 
-Assuming argument `sortpermx`` is passed in as the return from `sortperm(x)` then the
+Assuming argument `sortpermx` is passed in as the return from `sortperm(x)` then the
 function returns `sortperm(x[include])` but is designed to be faster
 """
 function filtersortperm_v1(x::AbstractVector, include::AbstractVector{Bool},
@@ -43,8 +42,8 @@ function filtersortperm_v2(x::AbstractVector, include::AbstractVector{Bool},
     return(out)
 end
 
-function filtersortperm_v3(x::AbstractVector, include::AbstractVector{Bool},
-    sortpermx::AbstractVector{T}) where {T <: Integer}
+function filtersortperm_v3(x::AbstractVector{T}, include::AbstractVector{Bool},
+    sortpermx::AbstractVector{<:Integer}) where {T <: Integer}
 
     length(x) == length(sortpermx) == length(include) || throw("Vectors must have the same length")
     n = length(x)
@@ -69,40 +68,44 @@ function filtersortperm_v3(x::AbstractVector, include::AbstractVector{Bool},
     out
 end
 
+function filtersortperm_v4(x::AbstractVector, include::AbstractVector{Bool},
+    sortpermx::AbstractVector{<:Integer})
 
+    length(x) == length(sortpermx) == length(include) || throw("Vectors must have the same length")
+    n = length(x)
 
-
-
-
-
-
-
-#=
-function filter(f, a::Array{T, N}) where {T, N}
     j = 1
-    b = Vector{T}(undef, length(a))
-    for ai in a
-        @inbounds b[j] = ai
-        j = ifelse(f(ai), j+1, j)
+    out = similar(sortpermx)
+    for p in sortpermx
+        out[j] = p
+        j = ifelse(include[p], j+1, j)
     end
-    resize!(b, j-1)
-    sizehint!(b, length(b))
-    b
+    resize!(out, j - 1)
+
+    adjust = similar(sortpermx)
+    adjust[1] = 0
+    for i in 2:n
+        adjust[i] = adjust[i-1] + ifelse(include[i-1], 0, 1)
+    end
+
+    for i in eachindex(out)
+        out[i] -= adjust[out[i]]
+    end
+    adjust
 end
-=#
 
 
 
 
 
-function testfiltersortperm_v1()
+function testfiltersortperm_v4()
 
     rng = MersenneTwister(0)
     x = rand(rng, 1000)
     sortpermx = sortperm(x)
     include = rand(rng, 1000) .> 0.05
 
-    res1 = filtersortperm_v1(x, include, sortpermx)
+    res1 = filtersortperm_v4(x, include, sortpermx)
     res2 = sortperm(x[include])
     res1 == res2
 
