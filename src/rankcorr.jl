@@ -16,7 +16,7 @@ matrices or vectors.
 """
 function corkendall(x::RealOrMissingVector, y::RealOrMissingVector; skipmissing::Symbol=:none)
     length(x) == length(y) || throw(DimensionMismatch("Vectors must have same length"))
-    x, y = handlecompletemissings(x, y, skipmissing)
+    x, y = handlelistwise(x, y, skipmissing)
     ck!(copy(x), copy(y))
 end
 
@@ -27,7 +27,7 @@ function corkendall(x::RealOrMissingMatrix,
     skipmissing::Symbol=:none)
     size(x, 1) == length(y) ||
         throw(DimensionMismatch("x and y have inconsistent dimensions"))
-    x, y = handlecompletemissings(x, y, skipmissing)
+    x, y = handlelistwise(x, y, skipmissing)
     n = size(x, 2)
     permy = sortperm(y)
     sortedy = y[permy]
@@ -39,7 +39,7 @@ function corkendall(x::RealOrMissingVector,
     skipmissing::Symbol=:none)
     size(y, 1) == length(x) ||
         throw(DimensionMismatch("x and y have inconsistent dimensions"))
-    x, y = handlecompletemissings(x, y, skipmissing)
+    x, y = handlelistwise(x, y, skipmissing)
     n = size(y, 2)
     permx = sortperm(x)
     sortedx = x[permx]
@@ -48,7 +48,7 @@ end
 
 function corkendall(x::RealOrMissingMatrix;
     skipmissing::Symbol=:none)
-    x = handlecompletemissings(x, skipmissing)
+    x = handlelistwise(x, skipmissing)
     n = size(x, 2)
     C = Matrix{Float64}(I, n, n)
     for j = 2:n
@@ -64,7 +64,7 @@ end
 function corkendall(x::RealOrMissingMatrix,
     y::RealOrMissingMatrix;
     skipmissing::Symbol=:none)
-    x, y = handlecompletemissings(x, y, skipmissing)
+    x, y = handlelistwise(x, y, skipmissing)
     nr = size(x, 2)
     nc = size(y, 2)
     C = Matrix{Float64}(undef, nr, nc)
@@ -281,12 +281,12 @@ function insertion_sort!(v::AbstractVector, lo::Integer, hi::Integer)
 end
 
 """
-    handlecompletemissings(x::AbstractArray,y::AbstractArray,skipmissing::Symbol)
+    handlelistwise(x::AbstractArray,y::AbstractArray,skipmissing::Symbol)
 Handles the case of skipmissing = :listwise. This is a simpler case than :pairwise, we
 merely need to construct new argument(s) for corkendall by calling skipmissingpairs. The
 function also validates skipmissing, throwing an error if invalid.
 """
-function handlecompletemissings(x::AbstractArray, y::AbstractArray, skipmissing::Symbol)
+function handlelistwise(x::AbstractArray, y::AbstractArray, skipmissing::Symbol)
     if skipmissing == :listwise
         if x isa Matrix || y isa Matrix
             return (skipmissingpairs(x, y))
@@ -310,7 +310,7 @@ function handlecompletemissings(x::AbstractArray, y::AbstractArray, skipmissing:
     return (x, y)
 end
 
-function handlecompletemissings(x::AbstractArray, skipmissing::Symbol)
+function handlelistwise(x::AbstractArray, skipmissing::Symbol)
     if skipmissing == :listwise
         if x isa Matrix
             return (skipmissingpairs(x))

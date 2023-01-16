@@ -2,7 +2,7 @@
     corkendall_naive(x::RealVector, y::RealVector)
 
 Naive implementation of Kendall Tau. Slow O(n²) but simple, so good for testing against
-the more complex `corkendall`.
+implementations that use Knight's algorithm.
 """
 function corkendall_naive(x::RealVector, y::RealVector)
     if any(isnan, x) || any(isnan, y)

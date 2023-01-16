@@ -1,11 +1,8 @@
 #=COPIED FROM StatsBase 14 Jan 2023, commit 0b64a9c8a16355da16469d0fe5016e0fdf099af5
 Changes:
-1) Renamed corkendall to corkendall_sb
-2) For compatibility with function pairwise, changed argument declarations in corkendall_sb 
-and corkendall_sb! to AbstractMatrix and AbstractVector (was previously 
+1) For compatibility with function pairwise, changed argument declarations in corkendall 
+and corkendall! to AbstractMatrix and AbstractVector (was previously 
 AbstractMatrix{<:Real} and AbstractVecor{<:Real}).
-3) Commented out definitions of SMALL_THRESHOLD, merge_sort and insertion_sort since they 
-duplicate definitions in rankcorr.jl.
 =#
 
 # Rank-based correlations
@@ -134,7 +131,7 @@ end
 # Knight, William R. “A Computer Method for Calculating Kendall's Tau with Ungrouped Data.”
 # Journal of the American Statistical Association, vol. 61, no. 314, 1966, pp. 436–439.
 # JSTOR, www.jstor.org/stable/2282833.
-function corkendall_sb!(x::AbstractVector, y::AbstractVector, permx::AbstractArray{<:Integer}=sortperm(x))
+function corkendall!(x::AbstractVector, y::AbstractVector, permx::AbstractArray{<:Integer}=sortperm(x))
     if any(isnan, x) || any(isnan, y) return NaN end
     n = length(x)
     if n != length(y) error("Vectors must have same length") end
@@ -177,50 +174,52 @@ function corkendall_sb!(x::AbstractVector, y::AbstractVector, permx::AbstractArr
 end
 
 """
-    corkendall_sb(x, y=x)
+    corkendall(x, y=x)
 Compute Kendall's rank correlation coefficient, τ. `x` and `y` must both be either
 matrices or vectors.
 """
-corkendall_sb(x::AbstractVector, y::AbstractVector) = corkendall_sb!(copy(x), copy(y))
+corkendall(x::AbstractVector, y::AbstractVector) = corkendall!(copy(x), copy(y))
 
-function corkendall_sb(X::AbstractMatrix, y::AbstractVector)
+function corkendall(X::AbstractMatrix, y::AbstractVector)
     permy = sortperm(y)
-    return([corkendall_sb!(copy(y), X[:,i], permy) for i in 1:size(X, 2)])
+    return([corkendall!(copy(y), X[:,i], permy) for i in 1:size(X, 2)])
 end
 
-function corkendall_sb(x::AbstractVector, Y::AbstractMatrix)
+function corkendall(x::AbstractVector, Y::AbstractMatrix)
     n = size(Y, 2)
     permx = sortperm(x)
-    return(reshape([corkendall_sb!(copy(x), Y[:,i], permx) for i in 1:n], 1, n))
+    return(reshape([corkendall!(copy(x), Y[:,i], permx) for i in 1:n], 1, n))
 end
 
-function corkendall_sb(X::AbstractMatrix)
+function corkendall(X::AbstractMatrix)
     n = size(X, 2)
     C = Matrix{Float64}(I, n, n)
     for j = 2:n
         permx = sortperm(X[:,j])
         for i = 1:j - 1
-            C[j,i] = corkendall_sb!(X[:,j], X[:,i], permx)
+            C[j,i] = corkendall!(X[:,j], X[:,i], permx)
             C[i,j] = C[j,i]
         end
     end
     return C
 end
 
-function corkendall_sb(X::AbstractMatrix, Y::AbstractMatrix)
+function corkendall(X::AbstractMatrix, Y::AbstractMatrix)
     nr = size(X, 2)
     nc = size(Y, 2)
     C = Matrix{Float64}(undef, nr, nc)
     for j = 1:nr
         permx = sortperm(X[:,j])
         for i = 1:nc
-            C[j,i] = corkendall_sb!(X[:,j], Y[:,i], permx)
+            C[j,i] = corkendall!(X[:,j], Y[:,i], permx)
         end
     end
     return C
 end
 
 # Auxilliary functions for Kendall's rank correlation
+
+
 
 """
     countties(x::AbstractVector, lo::Integer, hi::Integer)
@@ -246,7 +245,7 @@ function countties(x::AbstractVector, lo::Integer, hi::Integer)
     result
 end
 
-#=
+
 
 # Tests appear to show that a value of 64 is optimal,
 # but note that the equivalent constant in base/sort.jl is 20.
@@ -330,4 +329,3 @@ function insertion_sort!(v::AbstractVector, lo::Integer, hi::Integer)
     return nswaps
 end
 
-=#

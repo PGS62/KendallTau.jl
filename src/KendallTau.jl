@@ -12,18 +12,20 @@ const RealOrMissingMatrix{T<:Real} = AbstractArray{<:Union{T,Missing},2}
 include("rankcorr.jl")
 
 include("naive.jl")
-include("rankcor_sb.jl")
-include("pairwise.jl")
-include("usingstatsbase.jl")
+
 include("skipmissingpairs.jl")#old approach
-#include("skipmissingpairwise.jl")#new approach
-if VERSION >= v"1.5" #@spawn not available on 1.0
-    include("threads.jl")
-end
+include("threads.jl")
 include("speedtests.jl")
-include("examplecode.jl")
-include("filtersortperm.jl")
 include("handlemissing.jl")
+include("compare_implementations.jl")
+
+module FromStatsBase
+using LinearAlgebra
+include("from_statsbase/rankcor.jl")
+include("from_statsbase/pairwise.jl")
+include("from_statsbase/rankcor_pw.jl")
+end #module
+
 
 
 
