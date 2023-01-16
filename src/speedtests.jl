@@ -69,8 +69,6 @@ function speedtest(functions, nr::Int, nc::Int)
     matrix2 = randn(rng, Float64, nr, nc)
     vector1 = randn(rng, nr)
     vector2 = randn(rng, nr)
-    manyrepeats1 = rand(rng, 1:2, nr)
-    manyrepeats2 = rand(rng, 1:2, nr)
 
     fname = f -> string(Base.parentmodule(f)) * "." * string(f)
 
@@ -80,7 +78,7 @@ function speedtest(functions, nr::Int, nc::Int)
     @show Threads.nthreads()
 
     for k = 1:5
-    # for k = 1:1   
+        # for k = 1:1   
         println("-"^50)
         if k == 1
             @show(size(matrix1))
@@ -156,16 +154,15 @@ function myapprox(x::Float64, y::Float64, abstol::Float64)
     end
 end
 
-
 # Code to investigate performance impact of the presence of missings in the arguments passed to corkendall
 function sprinklemissings(x, proportionmissing, rng=MersenneTwister())
     if proportionmissing <= 0
-        return(x)
+        return (x)
     end
     while true
         randoms = rand(rng, size(x)...)
         x = ifelse.(randoms .< proportionmissing, missing, x)
-        any(ismissing,x) && return x
+        any(ismissing, x) && return x
     end
 end
 
@@ -182,7 +179,6 @@ function impactofmissings(nr::Int, nc::Int, proportionmissing::Float64=0.1)
     matrix2 = randn(rng, Float64, nr, nc)
     vector1 = randn(rng, nr)
     vector2 = randn(rng, nr)
-
 
     fname = f -> string(Base.parentmodule(f)) * "." * string(f)
 
@@ -221,19 +217,19 @@ function impactofmissings(nr::Int, nc::Int, proportionmissing::Float64=0.1)
 
             if k == 1
                 println("$(fname(fn))(matrix1)$message")
-                tmp = @btimed $fn($matrix1)
+                tmp = @btimed $fn($matrix1; skipmissing=:pairwise)
             elseif k == 2
                 println("$(fname(fn))(matrix1,matrix2)$message")
-                tmp = @btimed $fn($matrix1, $matrix2)
+                tmp = @btimed $fn($matrix1, $matrix2; skipmissing=:pairwise)
             elseif k == 3
                 println("$(fname(fn))(vector1,matrix1)$message")
-                tmp = @btimed $fn($vector1, $matrix1)
+                tmp = @btimed $fn($vector1, $matrix1; skipmissing=:pairwise)
             elseif k == 4
                 println("$(fname(fn))(matrix1,vector1)$message")
-                tmp = @btimed $fn($matrix1, $vector1)
+                tmp = @btimed $fn($matrix1, $vector1; skipmissing=:pairwise)
             elseif k == 5
                 println("$(fname(fn))(vector1,vector2)$message")
-                tmp = @btimed $fn($vector1, $vector2)
+                tmp = @btimed $fn($vector1, $vector2; skipmissing=:pairwise)
             end
             results[i], times[i], allocations[i] = tmp[1], tmp[2].time, tmp[3]
             if i > 1

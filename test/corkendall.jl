@@ -1,6 +1,5 @@
-#= Test corkendall against corkendall_naive, a "reference implementation" defined in this file, that has the advantage of
-simplicity.
-PGS The tests in this file are complicated, involving writing a different implementation of Kendall Correlation (corkendall_naive)
+#= Test corkendall against corkendall_naive, a "reference implementation" that has the 
+advantage of simplicity.
 =#
 
 using KendallTau
@@ -16,7 +15,7 @@ true
 function test_skipmissingpairs(nr::Int64, nc::Int64)
     x = rand(nr, nc)
     x = KendallTau.sprinklemissings(x, 0.05)
-    res1, time1 = KendallTau.@btimed skipmissingpairs_naive($x)
+    res1, time1 = KendallTau.@btimed KendallTau.skipmissingpairs_naive($x)
     res2, time2 = KendallTau.@btimed KendallTau.skipmissingpairs($x)
     res1 == res2
 end
@@ -32,13 +31,10 @@ function test_skipmissingpairs(nr::Int64, nc1::Int64, nc2::Int64)
     x = KendallTau.sprinklemissings(x, 0.05)
     y = rand(nr, nc2)
     y = KendallTau.sprinklemissings(y, 0.05)
-    res1, time1 = KendallTau.@btimed skipmissingpairs_naive($x, $y)
+    res1, time1 = KendallTau.@btimed KendallTau.skipmissingpairs_naive($x, $y)
     res2, time2 = KendallTau.@btimed KendallTau.skipmissingpairs($x, $y)
     res1 == res2
 end
-
-
-
 
 # Notice strict test with absolute tolerance of differences set to zero.
 # NB it is important that maxrows in the call below call below is greater than the SMALL_THRESHOLD value
@@ -48,10 +44,3 @@ end
 @test KendallTau.compare_implementations(KendallTau.corkendall, KendallTau.corkendall_naive, abstol=1e14, maxcols=1, maxrows=50000, numtests=10, fns_handle_missings=true) == true
 @test KendallTau.compare_implementations(KendallTau.corkendall_threads, KendallTau.corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=50, fns_handle_missings=false) == true
 @test KendallTau.compare_implementations(KendallTau.FromStatsBase.corkendall_pw, KendallTau.corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=50, fns_handle_missings=true) == true
-
-
-#@test KendallTau.compare_implementations(KendallTau.corkendall_threads_c, KendallTau.corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=50, fns_handle_missings=false) == true
-#@test KendallTau.compare_implementations(KendallTau.corkendall_threads_d, KendallTau.corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=50) == true
-#@test KendallTau.compare_implementations(KendallTau.corkendall_threads_f, KendallTau.corkendall_naive, abstol=0.0, maxcols=10, maxrows=10, numtests=500) == true
-#@test KendallTau.compare_implementations(KendallTau.corkendall_threads_f, KendallTau.corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=500) == true
-#@test KendallTau.compare_implementations(KendallTau.corkendall_threads_f, KendallTau.corkendall_naive, abstol=1e14, maxcols=1, maxrows=50000, numtests=10) == true

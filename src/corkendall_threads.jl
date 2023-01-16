@@ -1,8 +1,6 @@
-#= EXPERIMENTAL - Threaded version... this version 1 uses one thread per element of the returned matrix, which
-turns out to scale poorly.=#
+# Threaded version... this version uses one thread per element of the returned matrix.
 
-import Base.Threads.@spawn
-
+#TODO re-write code in this file to have skipmissing argument
 """
     corkendall_threads(x, y=x)
 
@@ -17,7 +15,7 @@ function corkendall_threads(x::RoMMatrix, y::RoMVector)
 
     permy = sortperm(y)
     Threads.@threads for i = 1:n
-        C[i] = ck!(float(copy(y)), float(x[:, i]), permy)
+        C[i] = corkendall!(float(copy(y)), float(x[:, i]), permy)
     end
 
     return C
@@ -29,7 +27,7 @@ function corkendall_threads(x::RoMVector, y::RoMMatrix)
 
     permx = sortperm(x)
     Threads.@threads for i = 1:n
-        C[1, i] = ck!(float(copy(x)), float(y[:, i]), permx)
+        C[1, i] = corkendall!(float(copy(x)), float(y[:, i]), permx)
     end
 
     return C
@@ -42,7 +40,7 @@ function corkendall_threads(x::RoMMatrix)
     Threads.@threads for j = 2:n
         permx = sortperm(x[:, j])
         for i = 1:j-1
-            C[i, j] = C[j, i] = ck!(x[:, j], x[:, i], permx)
+            C[i, j] = C[j, i] = corkendall!(x[:, j], x[:, i], permx)
         end
     end
 
@@ -57,12 +55,9 @@ function corkendall_threads(x::RoMMatrix, y::RoMMatrix)
     Threads.@threads for j = 1:nr
         permx = sortperm(x[:, j])
         for i = 1:nc
-            C[j, i] = ck!(x[:, j], y[:, i], permx)
+            C[j, i] = corkendall!(x[:, j], y[:, i], permx)
         end
     end
 
     return C
 end
-
-
-

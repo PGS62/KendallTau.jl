@@ -12,7 +12,7 @@ function corkendall_threads_d(x::RoMMatrix, y::RoMVector)
 
     permy = sortperm(y)
     for i = 1:n
-        tasks[i] = @spawn ck!(float(copy(y)), float(x[:, i]), permy)
+        tasks[i] = @spawn corkendall!(float(copy(y)), float(x[:, i]), permy)
     end
 
     for i = 1:n
@@ -30,7 +30,7 @@ function corkendall_threads_d(x::RoMVector, y::RoMMatrix)
 
     permx = sortperm(x)
     for i = 1:n
-        tasks[i] = @spawn ck!(float(copy(x)), float(y[:, i]), permx)
+        tasks[i] = @spawn corkendall!(float(copy(x)), float(y[:, i]), permx)
     end
 
     for i = 1:n
@@ -49,7 +49,7 @@ function corkendall_threads_d(x::RoMMatrix)
     for j = 2:n
         permx = sortperm(x[:, j])
         for i = 1:j-1
-            tasks[j, i] = @spawn ck!(x[:, j], x[:, i], permx)
+            tasks[j, i] = @spawn corkendall!(x[:, j], x[:, i], permx)
         end
     end
 

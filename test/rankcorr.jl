@@ -124,7 +124,6 @@ w = repeat(z, n)
 KendallTau.midpoint(1, 10) == 5
 KendallTau.midpoint(1, widen(10)) == 5
 
-
 # NaN handling
 
 Xnan = copy(x)

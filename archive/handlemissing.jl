@@ -5,7 +5,7 @@ function corkendall_hm(x::AbstractMatrix)
         permx = sortperm(view(x, :, j))
         for i = 1:j-1
             x′, y′, permx′ = handlemissing(view(x, :, j), view(x, :, i), permx)
-            C[j, i] = C[j, i] = ck!(x′, y′, permx′)
+            C[j, i] = C[j, i] = corkendall!(x′, y′, permx′)
             C[i, j] = C[j, i]
         end
     end
@@ -73,7 +73,6 @@ function handlemissing_naive(x::RoMVector, y::RoMVector)
 
     x′, y′, sortperm(x′)
 end
-
 
 function testhandlemissing()
     n = 10

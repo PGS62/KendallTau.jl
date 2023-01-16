@@ -2,7 +2,6 @@
 package, except that this file does not contain the code for Spearman's correlation in the 
 first 116 lines of that file. =#
 
-
 #######################################
 # 
 #   Kendall correlation
@@ -17,7 +16,7 @@ matrices or vectors.
 function corkendall(x::RoMVector, y::RoMVector; skipmissing::Symbol=:none)
     length(x) == length(y) || throw(DimensionMismatch("Vectors must have same length"))
     x, y = handlelistwise(x, y, skipmissing)
-    ck!(copy(x), copy(y))
+    corkendall!(copy(x), copy(y))
 end
 
 #= It is idiosyncratic that this method returns a vector, not a matrix, i.e. not consistent
@@ -29,7 +28,7 @@ function corkendall(x::RoMMatrix, y::RoMVector; skipmissing::Symbol=:none)
     n = size(x, 2)
     permy = sortperm(y)
     sortedy = y[permy]
-    return ([ck_sorted!(copy(sortedy), x[:, i], permy) for i in 1:n])
+    return ([corkendall_sorted!(copy(sortedy), x[:, i], permy) for i in 1:n])
 end
 
 function corkendall(x::RoMVector, y::RoMMatrix; skipmissing::Symbol=:none)
@@ -39,7 +38,7 @@ function corkendall(x::RoMVector, y::RoMMatrix; skipmissing::Symbol=:none)
     n = size(y, 2)
     permx = sortperm(x)
     sortedx = x[permx]
-    return (reshape([ck_sorted!(copy(sortedx), y[:, i], permx) for i in 1:n], 1, n))
+    return (reshape([corkendall_sorted!(copy(sortedx), y[:, i], permx) for i in 1:n], 1, n))
 end
 
 function corkendall(x::RoMMatrix; skipmissing::Symbol=:none)
@@ -50,7 +49,7 @@ function corkendall(x::RoMMatrix; skipmissing::Symbol=:none)
         permx = sortperm(x[:, j])
         sortedx = x[:, j][permx]
         for i = 1:j-1
-            C[i, j] = C[j, i] = ck_sorted!(sortedx, x[:, i], permx)
+            C[i, j] = C[j, i] = corkendall_sorted!(sortedx, x[:, i], permx)
         end
     end
     return C
@@ -65,7 +64,7 @@ function corkendall(x::RoMMatrix, y::RoMMatrix; skipmissing::Symbol=:none)
         permx = sortperm(x[:, j])
         sortedx = x[:, j][permx]
         for i = 1:nc
-            C[j, i] = ck_sorted!(sortedx, y[:, i], permx)
+            C[j, i] = corkendall_sorted!(sortedx, y[:, i], permx)
         end
     end
     return C
@@ -75,19 +74,19 @@ end
 # Journal of the American Statistical Association, vol. 61, no. 314, 1966, pp. 436–439.
 # JSTOR, www.jstor.org/stable/2282833.
 """
-    ck_sortedshuffled!(sortedx::AbstractVector{<:Real}, shuffledy::AbstractVector{<:Real})
+    corkendall_sortedshuffled!(sortedx::AbstractVector{<:Real}, shuffledy::AbstractVector{<:Real})
 
 Kendall correlation between two vectors but this function omits the initial sorting and 
 permuting of arguments. So calculating Kendall correlation between `x` and `y` is a three
-stage process (as implemented by function `ck!`).
+stage process (as implemented by function `corkendall!`).
 
 a) Sort `x` to get `sortedx`;
 
 b) Apply the same permutation to `y` to get `shuffledy`;
 
-c) Call `ck_sortedshuffled!` on `sortedx` and `shuffledy`.
+c) Call `corkendall_sortedshuffled!` on `sortedx` and `shuffledy`.
 """
-function ck_sortedshuffled!(sortedx::AbstractVector{<:Real}, shuffledy::AbstractVector{<:Real})
+function corkendall_sortedshuffled!(sortedx::AbstractVector{<:Real}, shuffledy::AbstractVector{<:Real})
     if any(isnan, sortedx) || any(isnan, shuffledy)
         return NaN
     end
@@ -131,41 +130,41 @@ end
 
 # Auxiliary functions for Kendall's rank correlation
 """
-    ck!(x::AbstractVector{<:Real}, y::AbstractVector{<:Real}, permx::AbstractVector{<:Integer}=sortperm(x))
+    corkendall!(x::AbstractVector{<:Real}, y::AbstractVector{<:Real}, permx::AbstractVector{<:Integer}=sortperm(x))
 Kendall correlation between two vectors `x` and `y`. Third argument `permx` is the
 permutation that must be applied to `x` to sort it.
 """
-function ck!(x::AbstractVector{<:Real}, y::AbstractVector{<:Real}, permx::AbstractVector{<:Integer}=sortperm(x))
+function corkendall!(x::AbstractVector{<:Real}, y::AbstractVector{<:Real}, permx::AbstractVector{<:Integer}=sortperm(x))
     permute!(x, permx)
     permute!(y, permx)
-    ck_sortedshuffled!(x, y)
+    corkendall_sortedshuffled!(x, y)
 end
 
-function ck!(x::RoMVector, y::RoMVector, permx::AbstractVector{<:Integer}=sortperm(x))
+function corkendall!(x::RoMVector, y::RoMVector, permx::AbstractVector{<:Integer}=sortperm(x))
     permute!(x, permx)
     permute!(y, permx)
     x, y = skipmissingpairs(x, y)
-    ck_sortedshuffled!(x, y)
+    corkendall_sortedshuffled!(x, y)
 end
 
 """
-    ck_sorted!(sortedx::AbstractVector{<:Real}, y::AbstractVector{<:Real}, permx::AbstractVector{<:Integer})
+    corkendall_sorted!(sortedx::AbstractVector{<:Real}, y::AbstractVector{<:Real}, permx::AbstractVector{<:Integer})
 Kendall correlation between two vectors but this function omits the initial sorting of the
 first argument. So calculating Kendall correlation between `x` and `y` is a two stage
 process: a) sort `x` to get `sortedx`; b) call this function on `sortedx` and `y`, with the
 third argument being the permutation that achieved the sorting of `x`.
 """
-function ck_sorted!(sortedx::AbstractVector{<:Real}, y::AbstractVector{<:Real}, permx::AbstractVector{<:Integer})
+function corkendall_sorted!(sortedx::AbstractVector{<:Real}, y::AbstractVector{<:Real}, permx::AbstractVector{<:Integer})
     permute!(y, permx)
-    ck_sortedshuffled!(sortedx, y)
+    corkendall_sortedshuffled!(sortedx, y)
 end
 # method for when missings appear, so call skipmissingpairs.
-function ck_sorted!(sortedx::RoMVector, y::RoMVector,
+function corkendall_sorted!(sortedx::RoMVector, y::RoMVector,
     permx::AbstractVector{<:Integer})
     permute!(y, permx)
     sortedx, y = skipmissingpairs(sortedx, y)
     length(sortedx) >= 2 || return (NaN)
-    ck_sortedshuffled!(sortedx, y)
+    corkendall_sortedshuffled!(sortedx, y)
 end
 
 """

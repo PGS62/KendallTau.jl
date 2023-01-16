@@ -169,7 +169,6 @@ function compare_implementations(fn1=corkendall, fn2=corkendall_naive; abstol::F
                 arg2_backup = copy(arg2)
             end
 
-
             if j <= 3
                 if missing isa eltype(arg1)
                     res1 = fn1(arg1, skipmissing=:pairwise)

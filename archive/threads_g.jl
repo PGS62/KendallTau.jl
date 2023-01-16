@@ -15,7 +15,7 @@ function corkendall_threads_g(x::RoMMatrix)
             i_s = k:min(k + chunksize - 1, j - 1)
             h_s = 1:length(i_s)
             for (h, i) in zip(h_s, i_s)
-                tasks[h] = @spawn ck_sorted!(sortedx, x[:, i], permx)
+                tasks[h] = @spawn corkendall_sorted!(sortedx, x[:, i], permx)
             end
             for (h, i) in zip(h_s, i_s)
                 C[i, j] = fetch(tasks[h])
@@ -43,7 +43,7 @@ function corkendall_threads_v7(x::RoMMatrix)
         permx = sortperm(sortedx)
         permute!(sortedx, permx)
         for i = 1:(j-1)
-            tasks[i] = @spawn ck_sorted!(sortedx, x[:, i], permx)
+            tasks[i] = @spawn corkendall_sorted!(sortedx, x[:, i], permx)
         end
         for i = 1:(j-1)
             C[i, j] = fetch(tasks[i])
@@ -120,26 +120,6 @@ function corkendall_threads_v9(x::RoMMatrix)
     return C
 end
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #each task calculates one row of the matrix
 function corkendall_threads_v10(x::RoMMatrix)
     n = size(x, 2)
@@ -162,33 +142,6 @@ function corkendall_threads_v10(x::RoMMatrix)
 
     return C
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 function corkendall_threads_v6(x::RoMMatrix)
     n = size(x, 2)

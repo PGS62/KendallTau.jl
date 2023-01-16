@@ -15,7 +15,6 @@ my = [1  2;
     missing missing;
     5 6]
 
-
 @test KendallTau.skipmissingpairs(x,y) == ([2, 3, 4], [1, 2, 4])
 @test KendallTau.skipmissingpairs(float.(x),y) == ([2.0, 3.0, 4.0], [1, 2,4])
 @test KendallTau.skipmissingpairs(x,float.(y)) == ([2, 3, 4], [1.0, 2.0, 4.0])

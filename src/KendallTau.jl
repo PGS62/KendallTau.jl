@@ -7,10 +7,10 @@ using LinearAlgebra # so that identity matrix I is available.
 const RoMVector{T<:Real} = AbstractVector{<:Union{T,Missing}}
 const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
 
-include("rankcorr.jl")
-include("naive.jl")
+include("corkendall.jl")
+include("corkendall_naive.jl")
 include("skipmissingpairs.jl")
-include("threads.jl")
+include("corkendall_threads.jl")
 include("speedtests.jl")
 include("compare_implementations.jl")
 

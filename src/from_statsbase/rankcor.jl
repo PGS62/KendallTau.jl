@@ -121,7 +121,6 @@ function corspearman(X::AbstractMatrix{<:Real}, Y::AbstractMatrix{<:Real})
     return C
 end
 
-
 #######################################
 #
 #   Kendall correlation
@@ -219,8 +218,6 @@ end
 
 # Auxilliary functions for Kendall's rank correlation
 
-
-
 """
     countties(x::AbstractVector, lo::Integer, hi::Integer)
 Return the number of ties within `x[lo:hi]`. Assumes `x` is sorted.
@@ -244,8 +241,6 @@ function countties(x::AbstractVector, lo::Integer, hi::Integer)
     end
     result
 end
-
-
 
 # Tests appear to show that a value of 64 is optimal,
 # but note that the equivalent constant in base/sort.jl is 20.

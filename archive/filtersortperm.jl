@@ -94,12 +94,7 @@ function filtersortperm_v4(x::AbstractVector, include::AbstractVector{Bool},
     adjust
 end
 
-
-
-
-
 function testfiltersortperm_v4()
-
     rng = MersenneTwister(0)
     x = rand(rng, 1000)
     sortpermx = sortperm(x)
@@ -108,34 +103,4 @@ function testfiltersortperm_v4()
     res1 = filtersortperm_v4(x, include, sortpermx)
     res2 = sortperm(x[include])
     res1 == res2
-
 end
-
-
-
-
-
-
-
-
-#=
-I have a vector `x` and I have previously calculated `sortpermx = sortperm(x)`, now I filter 'x`
-to get a vector `y = x[include]`. I wish to calculate sortperm(y) as fast as possible.
-
-For context, length(x) is about 1000, the elements of include are mostly (>95%) true and 
-the calculation is performed a few hundred million times for each "run" of the code I'm 
-working on.
-
-This was my first attempt:
-
-
-
-
-=#
-
-
-
-
-
-
-

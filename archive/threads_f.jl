@@ -171,7 +171,7 @@ function ck_belowdiagonal(x::RoMMatrix, colnos::UnitRange{Int64})
         sortedx = x[:, j][permx]
         for i = 1:nc
             if j > i + colnos[1] - 1
-                C[j, i] = ck_sorted!(sortedx, x[:, colnos[i]], permx)
+                C[j, i] = corkendall_sorted!(sortedx, x[:, colnos[i]], permx)
             else
                 C[j, i] = NaN
             end
