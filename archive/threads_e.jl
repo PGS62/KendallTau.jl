@@ -1,6 +1,6 @@
 # EXPERIMENTAL - Threaded version 3. Max number of tasks = 5 * Threads.nthreads()
 
-function corkendall_threads_e(x::RealOrMissingMatrix, y::RealOrMissingMatrix)
+function corkendall_threads_e(x::RoMMatrix, y::RoMMatrix)
     nr = size(x, 2)
     nc = size(y, 2)
     C = zeros(float(eltype(x)), nr, nc)

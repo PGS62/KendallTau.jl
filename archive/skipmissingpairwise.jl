@@ -1,13 +1,13 @@
 """
     skipmissingpairwise(fn::Function)::Function
-Given a function `fn` with method `fn(x::RealVector,y::RealVector)::Float64` returns a
+Given a function `fn` with method `fn(x::AbstractVector{<:Real},y::AbstractVector{<:Real})::Float64` returns a
 function `fn_out(x,y)` that calls `fn` iteratively on the columns of `x` and `y` and where
 missing elements in those columns are pairwise skipped.
 
 `fn_out` has five methods implementing the single-matrix, two-matrix, matrix-vector,
 vector-matrix and vector-vector cases.
 
-For example, if `x` is of type `RealOrMissingMatrix` then `fn_out(x)` returns a matrix
+For example, if `x` is of type `RoMMatrix` then `fn_out(x)` returns a matrix
 `C` where `C[i,j] == fn(skipmissingpairwise(x[:,i],x[:,j])...)`
 
 # Example
@@ -34,7 +34,7 @@ julia> StatsBase.corkendall([1;5;4],[3;2;3])
 """
 function skipmissingpairwise(fn::Function)::Function
 
-    function fn_out(x::RealOrMissingMatrix)
+    function fn_out(x::RoMMatrix)
         n = size(x, 2)
         #= TODO this hard-wires on diagonal elements to 1.0,
         OK for cor but wrong in general. =#
@@ -47,7 +47,7 @@ function skipmissingpairwise(fn::Function)::Function
         return C
     end
 
-    function fn_out(x::RealOrMissingMatrix, y::RealOrMissingMatrix)
+    function fn_out(x::RoMMatrix, y::RoMMatrix)
         nr = size(x, 2)
         nc = size(y, 2)
         C = Matrix{Float64}(undef, nr, nc)
@@ -61,21 +61,21 @@ function skipmissingpairwise(fn::Function)::Function
 
     #= Return matrix. Consistent with Statistics.cor and StatsBase.corspearman but not with 
     StatsBase.corkendall =#
-    function fn_out(x::RealOrMissingMatrix, y::RealOrMissingVector)
+    function fn_out(x::RoMMatrix, y::RoMVector)
         size(x, 1) == length(y) ||
             throw(DimensionMismatch("x and y have inconsistent dimensions"))
         n = size(x, 2)
         return (reshape([fn(skipmissingpairwise(x[:, i], y)...) for i in 1:n], n, 1))
     end
 
-    function fn_out(x::RealOrMissingVector, y::RealOrMissingMatrix)
+    function fn_out(x::RoMVector, y::RoMMatrix)
         size(y, 1) == length(x) ||
             throw(DimensionMismatch("x and y have inconsistent dimensions"))
         n = size(y, 2)
         return (reshape([fn(skipmissingpairwise(x, y[:, i])...) for i in 1:n], 1, n))
     end
 
-    function fn_out(x::RealOrMissingVector, y::RealOrMissingVector)
+    function fn_out(x::RoMVector, y::RoMVector)
         length(x) == length(y) || throw(DimensionMismatch("Vectors must have same length"))
         fn(skipmissingpairwise(x, y)...)
     end
@@ -83,16 +83,16 @@ function skipmissingpairwise(fn::Function)::Function
     return (fn_out)
 end
 
-function skipmissingpairwise(x::RealVector, y::RealVector)
+function skipmissingpairwise(x::AbstractVector{<:Real}, y::AbstractVector{<:Real})
     x, y
 end
 
 """
-    skipmissingpairwise(x::RealOrMissingVector, y::RealOrMissingVector)
+    skipmissingpairwise(x::RoMVector, y::RoMVector)
 Returns a pair `(a,b)`, filtered copies of `x` and `y`, in which elements `x[i]` and `y[i]`
 are "skipped" (filtered out) if either `ismissing(x[i])` or `ismissing(y[i])`.
 """
-function skipmissingpairwise(x::RealOrMissingVector{T}, y::RealOrMissingVector{U}) where {T} where {U}
+function skipmissingpairwise(x::RoMVector{T}, y::RoMVector{U}) where {T} where {U}
 
     length(x) == length(y) || error("Vectors must have same length")
 

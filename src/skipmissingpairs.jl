@@ -1,10 +1,10 @@
 
 """
-    skipmissingpairs(x::RealOrMissingVector, y::RealOrMissingVector)
+    skipmissingpairs(x::RoMVector, y::RoMVector)
 Returns a pair `(a,b)`, filtered copies of `x` and `y`, in which elements `x[i]` and `y[i]`
 are "skipped" (filtered out) if either `ismissing(x[i])` or `ismissing(y[i])`.
 """
-function skipmissingpairs(x::RealOrMissingVector{T}, y::RealOrMissingVector{U}) where {T} where {U}
+function skipmissingpairs(x::RoMVector{T}, y::RoMVector{U}) where {T} where {U}
 
     length(x) == length(y) || error("Vectors must have same length")
 
@@ -24,18 +24,18 @@ function skipmissingpairs(x::RealOrMissingVector{T}, y::RealOrMissingVector{U}) 
         end
     end
 
-    resize!(res1,j)
-    resize!(res2,j)
+    resize!(res1, j)
+    resize!(res2, j)
 
     res1, res2
 end
 
 """
-    skipmissingpairs(x::RealOrMissingMatrix)
+    skipmissingpairs(x::RoMMatrix)
 Returns `A`, a filtered copy of `x`, in which the row `x[i,:]` is "skipped" (filtered out)
 if `any(ismissing,x[i,:])`.
 """
-function skipmissingpairs(x::RealOrMissingMatrix{T}) where {T}
+function skipmissingpairs(x::RoMMatrix{T}) where {T}
 
     if !(missing isa eltype(x))
         return (x)
@@ -57,30 +57,32 @@ function skipmissingpairs(x::RealOrMissingMatrix{T}) where {T}
         end
     end
 
-    res = Matrix{T2}(undef, nrout, nc)
-    @inbounds for j = 1:nc
-        k = 0
-        for i = 1:nr
-            if chooser[i]
-                k += 1
-                res[k, j] = x[i, j]
+    if nrout == nr
+        return (x)
+    else
+        res = Matrix{T2}(undef, nrout, nc)
+        @inbounds for j = 1:nc
+            k = 0
+            for i = 1:nr
+                if chooser[i]
+                    k += 1
+                    res[k, j] = x[i, j]
+                end
             end
         end
+        return (res)
     end
-    res
 end
 
 """
-    skipmissingpairs(x::RealOrMissingMatrix,y::RealOrMissingMatrix)
+    skipmissingpairs(x::RoMMatrix,y::RoMMatrix)
 Returns a pair `(A,B)`, filtered copies of `x` and `y`, in which the rows `x[i,:]` and
-`y[i,:]` are "skipped" (filtered out) if either `any(ismissing,x[i,:])`  or
-`any(ismissing,y[i,:])`.
+`y[i,:]` are "skipped" (filtered out) if `any(ismissing,x[i,:])||any(ismissing,y[i,:])`.
 """
-function skipmissingpairs(x::RealOrMissingMatrix{T}, y::RealOrMissingMatrix{U}) where {T} where {U}
+function skipmissingpairs(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T} where {U}
 
-    size(x, 1) == size(y, 1) || error("arrays must have the same number of rows,"
-                                      *
-                                      " but got $(size(x,1)) and $(size(y,1))")
+    size(x, 1) == size(y, 1) || error("arrays must have the same number of rows\
+                                       but got row counts of $(size(x,1)) and $(size(y,1))")
 
     T2 = x isa Matrix{Missing} ? Missing : T
     U2 = y isa Matrix{Missing} ? Missing : U
@@ -137,15 +139,14 @@ function skipmissingpairs(x::RealOrMissingMatrix{T}, y::RealOrMissingMatrix{U}) 
 end
 
 """
-    skipmissingpairs(x::RealOrMissingVector,y::RealOrMissingMatrix)
+    skipmissingpairs(x::RoMVector,y::RoMMatrix)
 Returns a pair `(a,B)`, filtered copies of `x` and `y`, in which the elements `x[i]` and
 rows `y[i,:]` are "skipped" (filtered out) if either `ismissing(x[i])` or
 `any(ismissing,y[i,:])`.
 """
-function skipmissingpairs(x::RealOrMissingVector{T}, y::RealOrMissingMatrix{U}) where {T} where {U}
-    length(x) == size(y, 1) || error("vector length must must match number of rows in matrix,"
-                                     *
-                                     " but got $(length(x)) and $(size(y,1))")
+function skipmissingpairs(x::RoMVector{T}, y::RoMMatrix{U}) where {T} where {U}
+    length(x) == size(y, 1) || error("vector length must must match number of rows in \
+    matrix, but vector length was $(length(x)) and number of rows was $(size(y,1))")
 
     T2 = x isa Vector{Missing} ? Missing : T
     U2 = y isa Matrix{Missing} ? Missing : T
@@ -195,7 +196,8 @@ function skipmissingpairs(x::RealOrMissingVector{T}, y::RealOrMissingMatrix{U}) 
 
 end
 
-function skipmissingpairs(x::RealOrMissingMatrix, y::RealOrMissingVector)
+function skipmissingpairs(x::RoMMatrix, y::RoMVector)
     res2, res1 = skipmissingpairs(y, x)
     res1, res2
 end
+

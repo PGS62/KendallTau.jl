@@ -61,7 +61,7 @@ Results from all 3 functions identical? true
 """
 function speedtest(functions, nr::Int, nc::Int)
 
-    rng = MersenneTwister(1)# make the contents of matrix1 etc. deterministic so successive calls with fixed nc & nr are fully comparable
+    rng = MersenneTwister(1)# make the contents of matrix1 etc. deterministic so successive calls with given nc & nr are fully comparable
     results = Array{Any}(undef, length(functions))
     times = Array{Float64}(undef, length(functions))
     allocations = Array{Float64}(undef, length(functions))
@@ -79,8 +79,8 @@ function speedtest(functions, nr::Int, nc::Int)
     println("ComputerName = $(ENV["COMPUTERNAME"])")
     @show Threads.nthreads()
 
-    #for k = 1:5
-     for k = 1:1   
+    for k = 1:5
+    # for k = 1:1   
         println("-"^50)
         if k == 1
             @show(size(matrix1))

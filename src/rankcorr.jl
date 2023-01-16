@@ -14,7 +14,7 @@ first 116 lines of that file. =#
 Compute Kendall's rank correlation coefficient, τ. `x` and `y` must both be either
 matrices or vectors.
 """
-function corkendall(x::RealOrMissingVector, y::RealOrMissingVector; skipmissing::Symbol=:none)
+function corkendall(x::RoMVector, y::RoMVector; skipmissing::Symbol=:none)
     length(x) == length(y) || throw(DimensionMismatch("Vectors must have same length"))
     x, y = handlelistwise(x, y, skipmissing)
     ck!(copy(x), copy(y))
@@ -22,9 +22,7 @@ end
 
 #= It is idiosyncratic that this method returns a vector, not a matrix, i.e. not consistent
 with Statistics.cor or corspearman. But fixing that is a breaking change. =#
-function corkendall(x::RealOrMissingMatrix,
-    y::RealOrMissingVector;
-    skipmissing::Symbol=:none)
+function corkendall(x::RoMMatrix, y::RoMVector; skipmissing::Symbol=:none)
     size(x, 1) == length(y) ||
         throw(DimensionMismatch("x and y have inconsistent dimensions"))
     x, y = handlelistwise(x, y, skipmissing)
@@ -34,9 +32,7 @@ function corkendall(x::RealOrMissingMatrix,
     return ([ck_sorted!(copy(sortedy), x[:, i], permy) for i in 1:n])
 end
 
-function corkendall(x::RealOrMissingVector,
-    y::RealOrMissingMatrix;
-    skipmissing::Symbol=:none)
+function corkendall(x::RoMVector, y::RoMMatrix; skipmissing::Symbol=:none)
     size(y, 1) == length(x) ||
         throw(DimensionMismatch("x and y have inconsistent dimensions"))
     x, y = handlelistwise(x, y, skipmissing)
@@ -46,8 +42,7 @@ function corkendall(x::RealOrMissingVector,
     return (reshape([ck_sorted!(copy(sortedx), y[:, i], permx) for i in 1:n], 1, n))
 end
 
-function corkendall(x::RealOrMissingMatrix;
-    skipmissing::Symbol=:none)
+function corkendall(x::RoMMatrix; skipmissing::Symbol=:none)
     x = handlelistwise(x, skipmissing)
     n = size(x, 2)
     C = Matrix{Float64}(I, n, n)
@@ -61,9 +56,7 @@ function corkendall(x::RealOrMissingMatrix;
     return C
 end
 
-function corkendall(x::RealOrMissingMatrix,
-    y::RealOrMissingMatrix;
-    skipmissing::Symbol=:none)
+function corkendall(x::RoMMatrix, y::RoMMatrix; skipmissing::Symbol=:none)
     x, y = handlelistwise(x, y, skipmissing)
     nr = size(x, 2)
     nc = size(y, 2)
@@ -82,17 +75,23 @@ end
 # Journal of the American Statistical Association, vol. 61, no. 314, 1966, pp. 436–439.
 # JSTOR, www.jstor.org/stable/2282833.
 """
-    ck_sortedshuffled!(x::RealVector, y::RealVector)
-Kendall correlation between two vectors but this function omits the initial sorting of
-arguments. So calculating Kendall correlation between `x` and `y` is a three stage process:
-a) sort `x` to get `sortedx`; b) apply the same permutation to `y` to get `shuffledy`;
-c) call this function on `sortedx` and `shuffledy`.
+    ck_sortedshuffled!(sortedx::AbstractVector{<:Real}, shuffledy::AbstractVector{<:Real})
+
+Kendall correlation between two vectors but this function omits the initial sorting and 
+permuting of arguments. So calculating Kendall correlation between `x` and `y` is a three
+stage process (as implemented by function `ck!`).
+
+a) Sort `x` to get `sortedx`;
+
+b) Apply the same permutation to `y` to get `shuffledy`;
+
+c) Call `ck_sortedshuffled!` on `sortedx` and `shuffledy`.
 """
-function ck_sortedshuffled!(x::RealVector, y::RealVector)
-    if any(isnan, x) || any(isnan, y)
+function ck_sortedshuffled!(sortedx::AbstractVector{<:Real}, shuffledy::AbstractVector{<:Real})
+    if any(isnan, sortedx) || any(isnan, shuffledy)
         return NaN
     end
-    n = length(x)
+    n = length(sortedx)
 
     # Use widen to avoid overflows on both 32bit and 64bit
     npairs = div(widen(n) * (n - 1), 2)
@@ -100,29 +99,31 @@ function ck_sortedshuffled!(x::RealVector, y::RealVector)
     k = 0
 
     @inbounds for i = 2:n
-        if x[i-1] == x[i]
+        if sortedx[i-1] == sortedx[i]
             k += 1
         elseif k > 0
-            # Sort the corresponding chunk of y, so the rows of hcat(x,y) are
-            # sorted first on x, then (where x values are tied) on y. Hence
-            # double ties can be counted by calling countties.
-            sort!(view(y, (i-k-1):(i-1)))
+            #=
+            Sort the corresponding chunk of shuffledy, so the rows of hcat(sortedx,shuffledy)
+            are sorted first on sortedx, then (where sortedx values are tied) on shuffledy.
+            Hence double ties can be counted by calling countties.
+            =#
+            sort!(view(shuffledy, (i-k-1):(i-1)))
             ntiesx += div(widen(k) * (k + 1), 2) # Must use wide integers here
-            ndoubleties += countties(y, i - k - 1, i - 1)
+            ndoubleties += countties(shuffledy, i - k - 1, i - 1)
             k = 0
         end
     end
     if k > 0
-        sort!(view(y, (n-k):n))
+        sort!(view(shuffledy, (n-k):n))
         ntiesx += div(widen(k) * (k + 1), 2)
-        ndoubleties += countties(y, n - k, n)
+        ndoubleties += countties(shuffledy, n - k, n)
     end
 
-    nswaps = merge_sort!(y, 1, n)
-    ntiesy = countties(y, 1, n)
+    nswaps = merge_sort!(shuffledy, 1, n)
+    ntiesy = countties(shuffledy, 1, n)
 
     # Calls to float below prevent possible overflow errors when
-    # length(x) exceeds 77_936 (32 bit) or 5_107_605_667 (64 bit)
+    # length(sortedx) exceeds 77_936 (32 bit) or 5_107_605_667 (64 bit)
 
     (npairs + ndoubleties - ntiesx - ntiesy - 2 * nswaps) /
     sqrt(float(npairs - ntiesx) * float(npairs - ntiesy))
@@ -130,38 +131,36 @@ end
 
 # Auxiliary functions for Kendall's rank correlation
 """
-    ck!(x::RealVector, y::RealVector, permx::AbstractVector{<:Integer}=sortperm(x))
+    ck!(x::AbstractVector{<:Real}, y::AbstractVector{<:Real}, permx::AbstractVector{<:Integer}=sortperm(x))
 Kendall correlation between two vectors `x` and `y`. Third argument `permx` is the
 permutation that must be applied to `x` to sort it.
 """
-function ck!(x::RealVector, y::RealVector, permx::AbstractVector{<:Integer}=sortperm(x))
+function ck!(x::AbstractVector{<:Real}, y::AbstractVector{<:Real}, permx::AbstractVector{<:Integer}=sortperm(x))
     permute!(x, permx)
     permute!(y, permx)
     ck_sortedshuffled!(x, y)
 end
 
-function ck!(x::RealOrMissingVector, y::RealOrMissingVector,
-    permx::AbstractVector{<:Integer}=sortperm(x))
+function ck!(x::RoMVector, y::RoMVector, permx::AbstractVector{<:Integer}=sortperm(x))
     permute!(x, permx)
     permute!(y, permx)
     x, y = skipmissingpairs(x, y)
-    length(x) >= 2 || return (NaN)
     ck_sortedshuffled!(x, y)
 end
 
 """
-    ck_sorted!(sortedx::RealVector, y::RealVector, permx::AbstractVector{<:Integer})
+    ck_sorted!(sortedx::AbstractVector{<:Real}, y::AbstractVector{<:Real}, permx::AbstractVector{<:Integer})
 Kendall correlation between two vectors but this function omits the initial sorting of the
 first argument. So calculating Kendall correlation between `x` and `y` is a two stage
 process: a) sort `x` to get `sortedx`; b) call this function on `sortedx` and `y`, with the
 third argument being the permutation that achieved the sorting of `x`.
 """
-function ck_sorted!(sortedx::RealVector, y::RealVector, permx::AbstractVector{<:Integer})
+function ck_sorted!(sortedx::AbstractVector{<:Real}, y::AbstractVector{<:Real}, permx::AbstractVector{<:Integer})
     permute!(y, permx)
     ck_sortedshuffled!(sortedx, y)
 end
 # method for when missings appear, so call skipmissingpairs.
-function ck_sorted!(sortedx::RealOrMissingVector, y::RealOrMissingVector,
+function ck_sorted!(sortedx::RoMVector, y::RoMVector,
     permx::AbstractVector{<:Integer})
     permute!(y, permx)
     sortedx, y = skipmissingpairs(sortedx, y)
@@ -170,10 +169,10 @@ function ck_sorted!(sortedx::RealOrMissingVector, y::RealOrMissingVector,
 end
 
 """
-    countties(x::RealVector, lo::Integer, hi::Integer)
+    countties(x::AbstractVector{<:Real}, lo::Integer, hi::Integer)
 Return the number of ties within `x[lo:hi]`. Assumes `x` is sorted.
 """
-function countties(x::AbstractVector, lo::Integer, hi::Integer)
+function countties(x::AbstractVector{<:Real}, lo::Integer, hi::Integer)
     # Use of widen below prevents possible overflow errors when
     # length(x) exceeds 2^16 (32 bit) or 2^32 (64 bit)
     thistiecount = result = widen(0)
@@ -294,17 +293,18 @@ function handlelistwise(x::AbstractArray, y::AbstractArray, skipmissing::Symbol)
     elseif skipmissing == :pairwise
     elseif skipmissing == :none
         if missing isa eltype(x) || missing isa eltype(y)
-            throw(ArgumentError("When Missing is an allowed element type"
-                                * " then keyword argument skipmissing must be either "
-                                * "`:pairwise` or `:listwise`, but got `:$skipmissing`"))
+            throw(ArgumentError("When Missing is an allowed element type\
+                                then keyword argument skipmissing must be either\
+                                `:pairwise` or `:listwise`, but got `:$skipmissing`"))
         end
     else
         if missing isa eltype(x) || missing isa eltype(y)
-            throw(ArgumentError("keyword argument skipmissing must be either " *
-                                "`:pairwise` or `:listwise`, but got `:$skipmissing`"))
+            throw(ArgumentError("keyword argument skipmissing must be either \
+                                `:pairwise` or `:listwise`, but got `:$skipmissing`"))
         else
-            throw(ArgumentError("keyword argument skipmissing must be either " *
-                                "`:pairwise`, `:listwise` or `:none` but got `:$skipmissing`"))
+            throw(ArgumentError("keyword argument skipmissing must be either \
+                                `:pairwise`, `:listwise` or `:none` but got \
+                                `:$skipmissing`"))
         end
     end
     return (x, y)
@@ -318,17 +318,19 @@ function handlelistwise(x::AbstractArray, skipmissing::Symbol)
     elseif skipmissing == :pairwise
     elseif skipmissing == :none
         if missing isa eltype(x)
-            throw(ArgumentError("When Missing is an allowed element type"
-                                * " then keyword argument skipmissing must be either "
-                                * "`:pairwise` or `:listwise`, but got `:$skipmissing`"))
+            throw(ArgumentError("When Missing is an allowed element type \
+                                then keyword argument skipmissing must be either "
+                                *
+                                "`:pairwise` or `:listwise`, but got `:$skipmissing`"))
         end
     else
         if missing isa eltype(x)
-            throw(ArgumentError("keyword argument skipmissing must be either " *
-                                "`:pairwise` or `:listwise`, but got `:$skipmissing`"))
+            throw(ArgumentError("keyword argument skipmissing must be either \
+                                `:pairwise` or `:listwise`, but got `:$skipmissing`"))
         else
-            throw(ArgumentError("keyword argument skipmissing must be either " *
-                                "`:pairwise`, `:listwise` or `:none` but got `:$skipmissing`"))
+            throw(ArgumentError("keyword argument skipmissing must be either \
+                                `:pairwise`, `:listwise` or `:none` but got \
+                                `:$skipmissing`"))
         end
     end
     return (x)

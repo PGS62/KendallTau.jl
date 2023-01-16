@@ -3,16 +3,16 @@
 import Base.Threads.@spawn
 
 # Threading not possible in this case
-corkendall_threads_f(x::RealOrMissingVector, y::RealOrMissingVector) = corkendall(x, y)
+corkendall_threads_f(x::RoMVector, y::RoMVector) = corkendall(x, y)
 
-function corkendall_threads_f(x::RealOrMissingMatrix, y::RealOrMissingMatrix)
+function corkendall_threads_f(x::RoMMatrix, y::RoMMatrix)
     nr = size(x, 2)
     nc = size(y, 2)
 
     #speedup provided by threading is greater when the second argument has more columns, so switch.
     #TODO test that hypothesis more thoroughly!
     if nr > nc
-        return (convert(RealMatrix, transpose(corkendall_threads_f(y, x))))
+        return (convert(AbstractMatrix{<:Real}, transpose(corkendall_threads_f(y, x))))
     end
 
     C = zeros(Float64, nr, nc)
@@ -31,7 +31,7 @@ function corkendall_threads_f(x::RealOrMissingMatrix, y::RealOrMissingMatrix)
     return C
 end
 
-function corkendall_threads_f(x::RealOrMissingMatrix)
+function corkendall_threads_f(x::RoMMatrix)
     nr = nc = size(x, 2)
     C = zeros(Float64, nr, nc)
 
@@ -56,7 +56,7 @@ function corkendall_threads_f(x::RealOrMissingMatrix)
     return C
 end
 
-function corkendall_threads_f(x::RealOrMissingVector, y::RealOrMissingMatrix)
+function corkendall_threads_f(x::RoMVector, y::RoMMatrix)
     nr = 1
     nc = size(y, 2)
 
@@ -76,7 +76,7 @@ function corkendall_threads_f(x::RealOrMissingVector, y::RealOrMissingMatrix)
     return C
 end
 
-function corkendall_threads_f(x::RealOrMissingMatrix, y::RealOrMissingVector)
+function corkendall_threads_f(x::RoMMatrix, y::RoMVector)
     l = size(x, 2)
     #it is idiosyncratic that this method returns a vector, not a matrix.
     C = zeros(Float64, l)
@@ -158,11 +158,11 @@ function partitioncols(nc::Int64, triangular::Bool, numtasks=Threads.nthreads())
 end
 
 """
-    ck_belowdiagonal(x::RealOrMissingMatrix, colnos::UnitRange{Int64})
+    ck_belowdiagonal(x::RoMMatrix, colnos::UnitRange{Int64})
 For use from multi-threading code to avoid double calculation of elements. Returns corkendall(x)[:,colnos] but with NaNs
 on and above the diagonal of corkendall(x).
 """
-function ck_belowdiagonal(x::RealOrMissingMatrix, colnos::UnitRange{Int64})
+function ck_belowdiagonal(x::RoMMatrix, colnos::UnitRange{Int64})
     nr = size(x, 2)
     nc = length(colnos)
     C = Matrix{Float64}(undef, nr, nc)

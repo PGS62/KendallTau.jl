@@ -2,9 +2,9 @@
 
 import Base.Threads.@spawn
 
-corkendall_threads_d(x::RealOrMissingVector, y::RealOrMissingVector) = corkendall(float(copy(x)), float(copy(y)))# threads not used in this case
+corkendall_threads_d(x::RoMVector, y::RoMVector) = corkendall(float(copy(x)), float(copy(y)))# threads not used in this case
 
-function corkendall_threads_d(x::RealOrMissingMatrix, y::RealOrMissingVector)
+function corkendall_threads_d(x::RoMMatrix, y::RoMVector)
     n = size(x, 2)
     C = ones(float(eltype(x)), n)
 
@@ -22,7 +22,7 @@ function corkendall_threads_d(x::RealOrMissingMatrix, y::RealOrMissingVector)
     return C
 end
 
-function corkendall_threads_d(x::RealOrMissingVector, y::RealOrMissingMatrix)
+function corkendall_threads_d(x::RoMVector, y::RoMMatrix)
     n = size(y, 2)
     C = ones(float(eltype(y)), 1, n)
 
@@ -40,7 +40,7 @@ function corkendall_threads_d(x::RealOrMissingVector, y::RealOrMissingMatrix)
     return C
 end
 
-function corkendall_threads_d(x::RealOrMissingMatrix)
+function corkendall_threads_d(x::RoMMatrix)
     n = size(x, 2)
     C = ones(float(eltype(x)), n, n)# avoids dependency on LinearAlgebra
 
@@ -63,7 +63,7 @@ function corkendall_threads_d(x::RealOrMissingMatrix)
     return C
 end
 
-function corkendall_threads_d(x::RealOrMissingMatrix, y::RealOrMissingMatrix)
+function corkendall_threads_d(x::RoMMatrix, y::RoMMatrix)
     nr = size(x, 2)
     nc = size(y, 2)
     C = zeros(float(eltype(x)), nr, nc)

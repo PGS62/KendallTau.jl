@@ -1,7 +1,7 @@
 import Base.Threads.@spawn
 
 #tried a very fine-grained threading, calculating one correlation per thread and launching only 8 threads at a time
-function corkendall_threads_g(x::RealOrMissingMatrix)
+function corkendall_threads_g(x::RoMMatrix)
     n = size(x, 2)
     C = Matrix{Float64}(I, n, n)
 
@@ -28,7 +28,7 @@ end
 
 # Experiment with always having j-1 tasks for row j
 # seems slow for the_mother_of_all_tests(), was 25.8% completed after 1 hour 8 mins
-function corkendall_threads_v7(x::RealOrMissingMatrix)
+function corkendall_threads_v7(x::RoMMatrix)
     n = size(x, 2)
     C = Matrix{Float64}(I, n, n)
 
@@ -59,7 +59,7 @@ function corkendall_threads_v7(x::RealOrMissingMatrix)
 end
 
 # break up C into 10 x 10 pieces...
-function corkendall_threads_v8(x::RealOrMissingMatrix)
+function corkendall_threads_v8(x::RoMMatrix)
     n = size(x, 2)
     C = Matrix{Float64}(I, n, n)
 
@@ -81,7 +81,7 @@ function corkendall_threads_v8(x::RealOrMissingMatrix)
     return C
 end
 
-function corkendall_threads_v9(x::RealOrMissingMatrix)
+function corkendall_threads_v9(x::RoMMatrix)
     n = size(x, 2)
     C = Matrix{Float64}(I, n, n)
 
@@ -141,7 +141,7 @@ end
 
 
 #each task calculates one row of the matrix
-function corkendall_threads_v10(x::RealOrMissingMatrix)
+function corkendall_threads_v10(x::RoMMatrix)
     n = size(x, 2)
     C = Matrix{Float64}(I, n, n)
 
@@ -190,7 +190,7 @@ end
 
 
 
-function corkendall_threads_v6(x::RealOrMissingMatrix)
+function corkendall_threads_v6(x::RoMMatrix)
     n = size(x, 2)
     C = Matrix{Float64}(I, n, n)
     for j = 2:n

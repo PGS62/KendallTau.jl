@@ -9,9 +9,9 @@ import Base.Threads.@spawn
 Compute Kendall's rank correlation coefficient, τ. `x` and `y` must both be either
 matrices or vectors. Uses threads when either `x` or `y` is a matrix.
 """
-corkendall_threads(x::RealOrMissingVector, y::RealOrMissingVector) = corkendall(float(copy(x)), float(copy(y)))# threads not used in this case
+corkendall_threads(x::RoMVector, y::RoMVector) = corkendall(float(copy(x)), float(copy(y)))# threads not used in this case
 
-function corkendall_threads(x::RealOrMissingMatrix, y::RealOrMissingVector)
+function corkendall_threads(x::RoMMatrix, y::RoMVector)
     n = size(x, 2)
     C = ones(float(eltype(x)), n)
 
@@ -23,7 +23,7 @@ function corkendall_threads(x::RealOrMissingMatrix, y::RealOrMissingVector)
     return C
 end
 
-function corkendall_threads(x::RealOrMissingVector, y::RealOrMissingMatrix)
+function corkendall_threads(x::RoMVector, y::RoMMatrix)
     n = size(y, 2)
     C = ones(float(eltype(y)), 1, n)
 
@@ -35,7 +35,7 @@ function corkendall_threads(x::RealOrMissingVector, y::RealOrMissingMatrix)
     return C
 end
 
-function corkendall_threads(x::RealOrMissingMatrix)
+function corkendall_threads(x::RoMMatrix)
     n = size(x, 2)
     C = ones(float(eltype(x)), n, n)# avoids dependency on LinearAlgebra
 
@@ -49,7 +49,7 @@ function corkendall_threads(x::RealOrMissingMatrix)
     return C
 end
 
-function corkendall_threads(x::RealOrMissingMatrix, y::RealOrMissingMatrix)
+function corkendall_threads(x::RoMMatrix, y::RoMMatrix)
     nr = size(x, 2)
     nc = size(y, 2)
     C = zeros(float(eltype(x)), nr, nc)

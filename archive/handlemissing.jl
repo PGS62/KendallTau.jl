@@ -5,7 +5,7 @@ function corkendall_hm(x::AbstractMatrix)
         permx = sortperm(view(x, :, j))
         for i = 1:j-1
             x′, y′, permx′ = handlemissing(view(x, :, j), view(x, :, i), permx)
-            C[j, i] = C[j, i] = corkendall_sb!(x′, y′, permx′)
+            C[j, i] = C[j, i] = ck!(x′, y′, permx′)
             C[i, j] = C[j, i]
         end
     end
@@ -16,7 +16,7 @@ function handlemissing(x::AbstractVector{<:Real}, y::AbstractVector{<:Real}, sor
     x, y, sortpermx
 end
 
-function handlemissing(x::RealOrMissingVector{T}, y::RealOrMissingVector{U},
+function handlemissing(x::RoMVector{T}, y::RoMVector{U},
     sortpermx::AbstractVector{<:Integer}) where {T} where {U}
 
     length(x) == length(y) == length(sortpermx) || throw("Vectors must have the same length")
@@ -64,7 +64,7 @@ function handlemissing(x::RealOrMissingVector{T}, y::RealOrMissingVector{U},
 
 end
 
-function handlemissing_naive(x::RealOrMissingVector, y::RealOrMissingVector)
+function handlemissing_naive(x::RoMVector, y::RoMVector)
 
     included = .!(ismissing.(x) .|| ismissing.(y))
 

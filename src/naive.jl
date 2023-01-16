@@ -1,10 +1,10 @@
 """
-    corkendall_naive(x::RealVector, y::RealVector)
+    corkendall_naive(x::AbstractVector{<:Real}, y::AbstractVector{<:Real})
 
 Naive implementation of Kendall Tau. Slow O(n²) but simple, so good for testing against
 implementations that use Knight's algorithm.
 """
-function corkendall_naive(x::RealVector, y::RealVector)
+function corkendall_naive(x::AbstractVector{<:Real}, y::AbstractVector{<:Real})
     if any(isnan, x) || any(isnan, y)
         return NaN
     end
@@ -36,18 +36,18 @@ function corkendall_naive(x::RealVector, y::RealVector)
     numerator / denominator
 end
 
-function corkendall_naive(x::RealOrMissingVector, y::RealOrMissingVector)
+function corkendall_naive(x::RoMVector, y::RoMVector)
     a, b = skipmissingpairs_naive(x, y)
     corkendall_naive(a, b)
 end
 
-corkendall_naive(x::RealOrMissingMatrix, y::RealOrMissingVector) = Float64[corkendall_naive(float(x[:, i]), float(y)) for i in axes(x, 2)]
+corkendall_naive(x::RoMMatrix, y::RoMVector) = Float64[corkendall_naive(float(x[:, i]), float(y)) for i in axes(x, 2)]
 
-corkendall_naive(x::RealOrMissingVector, y::RealOrMissingMatrix) = (n = size(y, 2); reshape(Float64[corkendall_naive(float(x), float(y[:, i])) for i = 1:n], 1, n))
+corkendall_naive(x::RoMVector, y::RoMMatrix) = (n = size(y, 2); reshape(Float64[corkendall_naive(float(x), float(y[:, i])) for i = 1:n], 1, n))
 
-corkendall_naive(x::RealOrMissingMatrix, y::RealOrMissingMatrix) = Float64[corkendall_naive(float(x[:, i]), float(y[:, j])) for i in axes(x, 2), j in axes(y, 2)]
+corkendall_naive(x::RoMMatrix, y::RoMMatrix) = Float64[corkendall_naive(float(x[:, i]), float(y[:, j])) for i in axes(x, 2), j in axes(y, 2)]
 
-function corkendall_naive(x::RealOrMissingMatrix)
+function corkendall_naive(x::RoMMatrix)
     n = size(x, 2)
     C = ones(Float64, n, n)
     for j in 2:n, i in 1:j-1
@@ -83,10 +83,10 @@ function corkendall_naive(x::AbstractArray, y::AbstractArray; skipmissing::Symbo
 end
 
 """
-    skipmissingpairs_naive(x::RealOrMissingVector,y::RealOrMissingVector)
+    skipmissingpairs_naive(x::RoMVector,y::RoMVector)
 Simpler but slower version of skipmissingpairs    .
 """
-function skipmissingpairs_naive(x::RealOrMissingVector, y::RealOrMissingVector)
+function skipmissingpairs_naive(x::RoMVector, y::RoMVector)
     keep = .!(ismissing.(x) .| ismissing.(y))
     x = x[keep]
     y = y[keep]
