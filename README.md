@@ -119,6 +119,8 @@ More recently I have made further changes to `corkendall`:
 2) Refactoring for minor further speedups relative to the version contributed to StatsBase in February
 <details><summary><ins>Test results here.</ins></summary>
 <p>
+
+```julia  
 julia> KendallTau.speedtest([StatsBase.corkendall,KendallTau.corkendall],1000,100)
 ###################################################################
 Executing speedtest 2021-04-20T18:22:16.925
@@ -172,6 +174,8 @@ Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 0.938185443668993
 Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 1.0
 Results from both functions identical? true
 ###################################################################
+```
+
 </p>
 </details>
 
