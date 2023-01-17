@@ -418,3 +418,126 @@ Ratio of memory allocated KendallTau.corkendall_threads vs KendallTau.corkendall
 Results from both functions identical? true
 ###################################################################
 
+
+julia> KT.speedtest([KT.corkendall,KT.FromStatsBase.corkendall_pw],1000,100,true)
+###################################################################
+Executing speedtest 2023-01-17T19:23:10.917
+ComputerName = 109OCS-KITCHEN
+Threads.nthreads() = 1
+--------------------------------------------------
+size(matrix1) = (1000, 100)
+typeof(matrix1) = Matrix{Float64}
+KendallTau.corkendall(matrix1)
+  296.249 ms (20297 allocations: 99.52 MiB)
+KendallTau.FromStatsBase.corkendall_pw(matrix1)
+  283.060 ms (29999 allocations: 174.73 MiB)
+Speed ratio KendallTau.FromStatsBase.corkendall_pw vs KendallTau.corkendall: 1.046593687976887
+Ratio of memory allocated KendallTau.FromStatsBase.corkendall_pw vs KendallTau.corkendall: 1.755636438343143
+Results from both functions identical? true
+--------------------------------------------------
+size(matrix1) = (1000, 100)
+typeof(matrix1) = Matrix{Float64}
+size(matrix2) = (1000, 100)
+typeof(matrix2) = Matrix{Float64}
+KendallTau.corkendall(matrix1,matrix2)
+  509.496 ms (40502 allocations: 197.88 MiB)
+KendallTau.FromStatsBase.corkendall_pw(matrix1,matrix2)
+  559.936 ms (60302 allocations: 351.36 MiB)
+Speed ratio KendallTau.FromStatsBase.corkendall_pw vs KendallTau.corkendall: 0.9099184549662819
+Ratio of memory allocated KendallTau.FromStatsBase.corkendall_pw vs KendallTau.corkendall: 1.7756142033387097
+Results from both functions identical? true
+--------------------------------------------------
+size(vector1) = (1000,)
+typeof(vector1) = Vector{Float64}
+size(matrix1) = (1000, 100)
+typeof(matrix1) = Matrix{Float64}
+KendallTau.corkendall(vector1,matrix1)
+  4.855 ms (506 allocations: 2.74 MiB)
+KendallTau.FromStatsBase.corkendall_pw(vector1,matrix1)
+  5.188 ms (605 allocations: 3.51 MiB)
+Speed ratio KendallTau.FromStatsBase.corkendall_pw vs KendallTau.corkendall: 0.935815889904013
+Ratio of memory allocated KendallTau.FromStatsBase.corkendall_pw vs KendallTau.corkendall: 1.2802110553323787
+Results from both functions identical? true
+--------------------------------------------------
+size(matrix1) = (1000, 100)
+typeof(matrix1) = Matrix{Float64}
+size(vector1) = (1000,)
+typeof(vector1) = Vector{Float64}
+KendallTau.corkendall(matrix1,vector1)
+  4.882 ms (504 allocations: 2.74 MiB)
+KendallTau.FromStatsBase.corkendall_pw(matrix1,vector1)
+  5.145 ms (603 allocations: 3.51 MiB)
+Speed ratio KendallTau.FromStatsBase.corkendall_pw vs KendallTau.corkendall: 0.9488415487482507
+Ratio of memory allocated KendallTau.FromStatsBase.corkendall_pw vs KendallTau.corkendall: 1.2802204231277128
+Results from both functions identical? true
+--------------------------------------------------
+size(vector1) = (1000,)
+typeof(vector1) = Vector{Float64}
+size(vector2) = (1000,)
+typeof(vector2) = Vector{Float64}
+KendallTau.corkendall(vector1,vector2)
+  78.700 μs (8 allocations: 43.77 KiB)
+KendallTau.FromStatsBase.corkendall_pw(vector1,vector2)
+  77.900 μs (9 allocations: 43.78 KiB)
+Speed ratio KendallTau.FromStatsBase.corkendall_pw vs KendallTau.corkendall: 1.0102695763799743
+Ratio of memory allocated KendallTau.FromStatsBase.corkendall_pw vs KendallTau.corkendall: 1.00035701535166
+Results from both functions identical? true
+--------------------------------------------------
+size(matrix1) = (1000, 100)
+typeof(matrix1) = Matrix{Union{Missing, Float64}}
+KendallTau.corkendall(matrix1;skipmissing=:pairwise)
+  238.546 ms (30197 allocations: 177.78 MiB)
+KendallTau.FromStatsBase.corkendall_pw(matrix1;skipmissing=:pairwise)
+  745.015 ms (80109 allocations: 271.81 MiB)
+Speed ratio KendallTau.FromStatsBase.corkendall_pw vs KendallTau.corkendall: 0.32018947811506565
+Ratio of memory allocated KendallTau.FromStatsBase.corkendall_pw vs KendallTau.corkendall: 1.5288846688550344
+Results from both functions identical? true
+--------------------------------------------------
+size(matrix1) = (1000, 100)
+typeof(matrix1) = Matrix{Union{Missing, Float64}}
+size(matrix2) = (1000, 100)
+typeof(matrix2) = Matrix{Union{Missing, Float64}}
+KendallTau.corkendall(matrix1,matrix2;skipmissing=:pairwise)
+  473.219 ms (60502 allocations: 355.72 MiB)
+KendallTau.FromStatsBase.corkendall_pw(matrix1,matrix2;skipmissing=:pairwise)
+  1.484 s (149809 allocations: 539.24 MiB)
+Speed ratio KendallTau.FromStatsBase.corkendall_pw vs KendallTau.corkendall: 0.3189617490869137
+Ratio of memory allocated KendallTau.FromStatsBase.corkendall_pw vs KendallTau.corkendall: 1.515885733610602
+Results from both functions identical? true
+--------------------------------------------------
+size(vector1) = (1000,)
+typeof(vector1) = Vector{Union{Missing, Float64}}
+size(matrix1) = (1000, 100)
+typeof(matrix1) = Matrix{Union{Missing, Float64}}
+KendallTau.corkendall(vector1,matrix1;skipmissing=:pairwise)
+  4.412 ms (709 allocations: 4.42 MiB)
+KendallTau.FromStatsBase.corkendall_pw(vector1,matrix1;skipmissing=:pairwise)
+  14.487 ms (1716 allocations: 5.87 MiB)
+Speed ratio KendallTau.FromStatsBase.corkendall_pw vs KendallTau.corkendall: 0.3045425993801468
+Ratio of memory allocated KendallTau.FromStatsBase.corkendall_pw vs KendallTau.corkendall: 1.3301624707158801
+Results from both functions identical? true
+--------------------------------------------------
+size(matrix1) = (1000, 100)
+typeof(matrix1) = Matrix{Union{Missing, Float64}}
+size(vector1) = (1000,)
+typeof(vector1) = Vector{Union{Missing, Float64}}
+KendallTau.corkendall(matrix1,vector1;skipmissing=:pairwise)
+  4.422 ms (707 allocations: 4.42 MiB)
+KendallTau.FromStatsBase.corkendall_pw(matrix1,vector1;skipmissing=:pairwise)
+  14.607 ms (1421 allocations: 5.45 MiB)
+Speed ratio KendallTau.FromStatsBase.corkendall_pw vs KendallTau.corkendall: 0.3027288660076129
+Ratio of memory allocated KendallTau.FromStatsBase.corkendall_pw vs KendallTau.corkendall: 1.233738769868694
+Results from both functions identical? true
+--------------------------------------------------
+size(vector1) = (1000,)
+typeof(vector1) = Vector{Union{Missing, Float64}}
+size(vector2) = (1000,)
+typeof(vector2) = Vector{Union{Missing, Float64}}
+KendallTau.corkendall(vector1,vector2;skipmissing=:pairwise)
+  101.900 μs (10 allocations: 61.27 KiB)
+KendallTau.FromStatsBase.corkendall_pw(vector1,vector2;skipmissing=:pairwise)
+  155.700 μs (32 allocations: 66.19 KiB)
+Speed ratio KendallTau.FromStatsBase.corkendall_pw vs KendallTau.corkendall: 0.6544637122671805
+Ratio of memory allocated KendallTau.FromStatsBase.corkendall_pw vs KendallTau.corkendall: 1.080336648814078
+Results from both functions identical? true
+###################################################################

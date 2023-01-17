@@ -1,10 +1,10 @@
 
 """
-    skipmissingpairs(x::RoMVector, y::RoMVector)
+    handlemissings(x::RoMVector, y::RoMVector)
 Returns a pair `(a,b)`, filtered copies of `x` and `y`, in which elements `x[i]` and `y[i]`
-are "skipped" (filtered out) if either `ismissing(x[i])` or `ismissing(y[i])`.
+are filtered out if either `ismissing(x[i])` or `ismissing(y[i])`.
 """
-function skipmissingpairs(x::RoMVector{T}, y::RoMVector{U}) where {T} where {U}
+function handlemissings(x::RoMVector{T}, y::RoMVector{U}) where {T} where {U}
 
     length(x) == length(y) || error("Vectors must have same length")
 
@@ -31,11 +31,11 @@ function skipmissingpairs(x::RoMVector{T}, y::RoMVector{U}) where {T} where {U}
 end
 
 """
-    skipmissingpairs(x::RoMMatrix)
-Returns `A`, a filtered copy of `x`, in which the row `x[i,:]` is "skipped" (filtered out)
-if `any(ismissing,x[i,:])`.
+    handlemissings(x::RoMMatrix)
+Returns `A`, a filtered copy of `x`, in which the row `x[i,:]` is filtered out if 
+`any(ismissing,x[i,:])`.
 """
-function skipmissingpairs(x::RoMMatrix{T}) where {T}
+function handlemissings(x::RoMMatrix{T}) where {T}
 
     if !(missing isa eltype(x))
         return (x)
@@ -75,11 +75,11 @@ function skipmissingpairs(x::RoMMatrix{T}) where {T}
 end
 
 """
-    skipmissingpairs(x::RoMMatrix,y::RoMMatrix)
+    handlemissings(x::RoMMatrix,y::RoMMatrix)
 Returns a pair `(A,B)`, filtered copies of `x` and `y`, in which the rows `x[i,:]` and
-`y[i,:]` are "skipped" (filtered out) if `any(ismissing,x[i,:])||any(ismissing,y[i,:])`.
+`y[i,:]` are both filtered out if `any(ismissing,x[i,:])||any(ismissing,y[i,:])`.
 """
-function skipmissingpairs(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T} where {U}
+function handlemissings(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T} where {U}
 
     size(x, 1) == size(y, 1) || error("arrays must have the same number of rows\
                                        but got row counts of $(size(x,1)) and $(size(y,1))")
@@ -139,12 +139,11 @@ function skipmissingpairs(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T} where {U}
 end
 
 """
-    skipmissingpairs(x::RoMVector,y::RoMMatrix)
+    handlemissings(x::RoMVector,y::RoMMatrix)
 Returns a pair `(a,B)`, filtered copies of `x` and `y`, in which the elements `x[i]` and
-rows `y[i,:]` are "skipped" (filtered out) if either `ismissing(x[i])` or
-`any(ismissing,y[i,:])`.
+rows `y[i,:]` are both filtered out if either `ismissing(x[i])||any(ismissing,y[i,:])`.
 """
-function skipmissingpairs(x::RoMVector{T}, y::RoMMatrix{U}) where {T} where {U}
+function handlemissings(x::RoMVector{T}, y::RoMMatrix{U}) where {T} where {U}
     length(x) == size(y, 1) || error("vector length must must match number of rows in \
     matrix, but vector length was $(length(x)) and number of rows was $(size(y,1))")
 
@@ -196,7 +195,63 @@ function skipmissingpairs(x::RoMVector{T}, y::RoMMatrix{U}) where {T} where {U}
 
 end
 
-function skipmissingpairs(x::RoMMatrix, y::RoMVector)
-    res2, res1 = skipmissingpairs(y, x)
+function handlemissings(x::RoMMatrix, y::RoMVector)
+    res2, res1 = handlemissings(y, x)
     res1, res2
+end
+
+"""
+    handlelistwise(x::AbstractArray,y::AbstractArray,skipmissing::Symbol)
+Handles the case of `skipmissing == :listwise`. This is a simpler case than `:pairwise`, we
+merely need to construct new argument(s) for `corkendall` by calling `handlemissings`. The
+function also validates `skipmissing`, throwing an error if invalid.
+"""
+function handlelistwise(x::AbstractArray, y::AbstractArray, skipmissing::Symbol)
+    if skipmissing == :listwise
+        if x isa Matrix || y isa Matrix
+            return (handlemissings(x, y))
+        end
+    elseif skipmissing == :pairwise
+    elseif skipmissing == :none
+        if missing isa eltype(x) || missing isa eltype(y)
+            throw(ArgumentError("When missing is an allowed element type \
+                                then keyword argument skipmissing must be either\
+                                `:pairwise` or `:listwise`, but got `:$skipmissing`"))
+        end
+    else
+        if missing isa eltype(x) || missing isa eltype(y)
+            throw(ArgumentError("keyword argument skipmissing must be either \
+                                `:pairwise` or `:listwise`, but got `:$skipmissing`"))
+        else
+            throw(ArgumentError("keyword argument skipmissing must be either \
+                                `:pairwise`, `:listwise` or `:none` but got \
+                                `:$skipmissing`"))
+        end
+    end
+    return (x, y)
+end
+
+function handlelistwise(x::AbstractArray, skipmissing::Symbol)
+    if skipmissing == :listwise
+        if x isa Matrix
+            return (handlemissings(x))
+        end
+    elseif skipmissing == :pairwise
+    elseif skipmissing == :none
+        if missing isa eltype(x)
+            throw(ArgumentError("When missing is an allowed element type \
+                                then keyword argument skipmissing must be either \
+                                `:pairwise` or `:listwise`, but got `:$skipmissing`"))
+        end
+    else
+        if missing isa eltype(x)
+            throw(ArgumentError("keyword argument skipmissing must be either \
+                                `:pairwise` or `:listwise`, but got `:$skipmissing`"))
+        else
+            throw(ArgumentError("keyword argument skipmissing must be either \
+                                `:pairwise`, `:listwise` or `:none` but got \
+                                `:$skipmissing`"))
+        end
+    end
+    return (x)
 end

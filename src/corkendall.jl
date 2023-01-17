@@ -1,7 +1,3 @@
-#= This file is intended to be a drop-in replacement for file rankcorr.jl in the StatsBase 
-package, except that this file does not contain the code for Spearman's correlation in the 
-first 116 lines of that file. =#
-
 #######################################
 # 
 #   Kendall correlation
@@ -9,9 +5,20 @@ first 116 lines of that file. =#
 #######################################
 
 """
-    corkendall(x, y=x)
+    corkendall(x, y=x; skipmissing::Symbol=:none)
+
 Compute Kendall's rank correlation coefficient, τ. `x` and `y` must both be either
-matrices or vectors.
+vectors or matrices, with elements that are either real numbers or missing values. For
+matrix inputs τ is calculated column by column.
+
+# Keyword argument
+
+- `skipmissing::Symbol=:none:` If `:none` (the default), missing values in either `x` or `y`
+    cause the function to raise an error. Use `:pairwise` to skip entries with a missing 
+    value in either of the two vectors used to calculate (an element of) the return. Use 
+    `:listwise` to skip entries where a missing value appears anywhere in a given row of `x`
+    or `y`; note that this might drop a high proportion of entries.
+
 """
 function corkendall(x::RoMVector, y::RoMVector; skipmissing::Symbol=:none)
     length(x) == length(y) || throw(DimensionMismatch("Vectors must have same length"))
@@ -143,7 +150,7 @@ end
 function corkendall!(x::RoMVector, y::RoMVector, permx::AbstractVector{<:Integer}=sortperm(x))
     permute!(x, permx)
     permute!(y, permx)
-    x, y = skipmissingpairs(x, y)
+    x, y = handlemissings(x, y)
     corkendall_sortedshuffled!(x, y)
 end
 
@@ -158,11 +165,11 @@ function corkendall_sorted!(sortedx::AbstractVector{<:Real}, y::AbstractVector{<
     permute!(y, permx)
     corkendall_sortedshuffled!(sortedx, y)
 end
-# method for when missings appear, so call skipmissingpairs.
+# method for when missings appear, so call handlemissings.
 function corkendall_sorted!(sortedx::RoMVector, y::RoMVector,
     permx::AbstractVector{<:Integer})
     permute!(y, permx)
-    sortedx, y = skipmissingpairs(sortedx, y)
+    sortedx, y = handlemissings(sortedx, y)
     length(sortedx) >= 2 || return (NaN)
     corkendall_sortedshuffled!(sortedx, y)
 end
@@ -276,60 +283,4 @@ function insertion_sort!(v::AbstractVector, lo::Integer, hi::Integer)
         v[j] = x
     end
     return nswaps
-end
-
-"""
-    handlelistwise(x::AbstractArray,y::AbstractArray,skipmissing::Symbol)
-Handles the case of `skipmissing == :listwise`. This is a simpler case than `:pairwise`, we
-merely need to construct new argument(s) for `corkendall` by calling `skipmissingpairs`. The
-function also validates `skipmissing`, throwing an error if invalid.
-"""
-function handlelistwise(x::AbstractArray, y::AbstractArray, skipmissing::Symbol)
-    if skipmissing == :listwise
-        if x isa Matrix || y isa Matrix
-            return (skipmissingpairs(x, y))
-        end
-    elseif skipmissing == :pairwise
-    elseif skipmissing == :none
-        if missing isa eltype(x) || missing isa eltype(y)
-            throw(ArgumentError("When missing is an allowed element type \
-                                then keyword argument skipmissing must be either\
-                                `:pairwise` or `:listwise`, but got `:$skipmissing`"))
-        end
-    else
-        if missing isa eltype(x) || missing isa eltype(y)
-            throw(ArgumentError("keyword argument skipmissing must be either \
-                                `:pairwise` or `:listwise`, but got `:$skipmissing`"))
-        else
-            throw(ArgumentError("keyword argument skipmissing must be either \
-                                `:pairwise`, `:listwise` or `:none` but got \
-                                `:$skipmissing`"))
-        end
-    end
-    return (x, y)
-end
-
-function handlelistwise(x::AbstractArray, skipmissing::Symbol)
-    if skipmissing == :listwise
-        if x isa Matrix
-            return (skipmissingpairs(x))
-        end
-    elseif skipmissing == :pairwise
-    elseif skipmissing == :none
-        if missing isa eltype(x)
-            throw(ArgumentError("When missing is an allowed element type \
-                                then keyword argument skipmissing must be either \
-                                `:pairwise` or `:listwise`, but got `:$skipmissing`"))
-        end
-    else
-        if missing isa eltype(x)
-            throw(ArgumentError("keyword argument skipmissing must be either \
-                                `:pairwise` or `:listwise`, but got `:$skipmissing`"))
-        else
-            throw(ArgumentError("keyword argument skipmissing must be either \
-                                `:pairwise`, `:listwise` or `:none` but got \
-                                `:$skipmissing`"))
-        end
-    end
-    return (x)
 end

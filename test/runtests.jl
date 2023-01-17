@@ -2,7 +2,8 @@ using KendallTau
 using Test
 
 @testset "KendallTau.jl" begin
-  include("rankcorr.jl")
-  include("corkendall.jl")
-  include("skipmissingpairs.jl")
+    include("compare_implementations.jl")
+    include("rankcorr.jl")
+    include("corkendall.jl")
+    include("handlemissings.jl")
 end

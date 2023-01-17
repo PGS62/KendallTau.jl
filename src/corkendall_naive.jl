@@ -5,7 +5,7 @@ Naive implementation of Kendall Tau. Slow O(n²) but simple, so good for testing
 implementations that use Knight's algorithm.
 """
 function corkendall_naive(x::AbstractVector{<:Real}, y::AbstractVector{<:Real})
-    length(x)==length(y)|| throw(DimensionMismatch("Vectors must have same length"))
+    length(x) == length(y) || throw(DimensionMismatch("Vectors must have same length"))
     if any(isnan, x) || any(isnan, y)
         return NaN
     end
@@ -35,7 +35,7 @@ function corkendall_naive(x::AbstractVector{<:Real}, y::AbstractVector{<:Real})
 end
 
 function corkendall_naive(x::RoMVector, y::RoMVector)
-    a, b = skipmissingpairs_naive(x, y)
+    a, b = handlemissings_naive(x, y)
     corkendall_naive(a, b)
 end
 
@@ -56,7 +56,7 @@ end
 
 function corkendall_naive(x::AbstractArray; skipmissing::Symbol)
     if skipmissing == :listwise
-        x = skipmissingpairs_naive(x)
+        x = handlemissings_naive(x)
     end
     if skipmissing == :pairwise || skipmissing == :listwise
         return (corkendall_naive(x))
@@ -69,7 +69,7 @@ end
 
 function corkendall_naive(x::AbstractArray, y::AbstractArray; skipmissing::Symbol)
     if skipmissing == :listwise
-        x, y = skipmissingpairs_naive(x, y)
+        x, y = handlemissings_naive(x, y)
     end
     if skipmissing == :pairwise || skipmissing == :listwise
         return (corkendall_naive(x, y))
@@ -81,11 +81,11 @@ function corkendall_naive(x::AbstractArray, y::AbstractArray; skipmissing::Symbo
 end
 
 """
-    skipmissingpairs_naive(x::RoMVector,y::RoMVector)
-Simpler but slower version of skipmissingpairs    .
+    handlemissings_naive(x::RoMVector,y::RoMVector)
+Simpler but slower version of handlemissings    .
 """
-function skipmissingpairs_naive(x::RoMVector, y::RoMVector)
-    length(x) == length(y)|| throw(DimensionMismatch("Vectors must be same length"))
+function handlemissings_naive(x::RoMVector, y::RoMVector)
+    length(x) == length(y) || throw(DimensionMismatch("Vectors must be same length"))
     keep = .!(ismissing.(x) .| ismissing.(y))
     x = x[keep]
     y = y[keep]
@@ -94,27 +94,27 @@ function skipmissingpairs_naive(x::RoMVector, y::RoMVector)
     x, y
 end
 
-#Alternative (simpler but slower) implementation of skipmissingpairs
-function skipmissingpairs_naive(x::AbstractMatrix)
+#Alternative (simpler but slower) implementation of handlemissings
+function handlemissings_naive(x::AbstractMatrix)
     choose = [!any(ismissing, x[i, :]) for i in axes(x, 1)]
     x[choose, :]
 end
 
-function skipmissingpairs_naive(x::AbstractMatrix, y::AbstractMatrix)
+function handlemissings_naive(x::AbstractMatrix, y::AbstractMatrix)
     choose1 = [!any(ismissing, x[i, :]) for i in axes(x, 1)]
     choose2 = [!any(ismissing, y[i, :]) for i in axes(y, 1)]
     choose = choose1 .& choose2
     x[choose, :], y[choose, :]
 end
 
-function skipmissingpairs_naive(x::AbstractVector, y::AbstractMatrix)
+function handlemissings_naive(x::AbstractVector, y::AbstractMatrix)
     choose1 = .!ismissing.(x)
     choose2 = [!any(ismissing, y[i, :]) for i in axes(y, 1)]
     choose = choose1 .& choose2
     x[choose], y[choose, :]
 end
 
-function skipmissingpairs_naive(x::AbstractMatrix, y::AbstractVector)
+function handlemissings_naive(x::AbstractMatrix, y::AbstractVector)
     choose1 = [!any(ismissing, x[i, :]) for i in axes(x, 1)]
     choose2 = .!ismissing.(x)
     choose = choose1 .& choose2

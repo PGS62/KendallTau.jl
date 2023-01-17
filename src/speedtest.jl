@@ -281,7 +281,7 @@ end
 function testmissings()
     x = [missing; 1:1000]
     y = [1:1000; missing]
-    @benchmark skipmissingpairs($x, $y)
+    @benchmark handlemissings($x, $y)
 end
 
 #= test different ways of "skipping missing pairs".
@@ -309,8 +309,8 @@ function test_skipmissings(n=10000)
         y3 = collect(itry)
     end
 
-    # use KendallTau.skipmissingpairs
-    @btime x4, y4 = KendallTau.skipmissingpairs($x, $y)
+    # use KendallTau.handlemissings
+    @btime x4, y4 = KendallTau.handlemissings($x, $y)
 
     nothing
 end
