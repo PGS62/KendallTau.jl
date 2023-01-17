@@ -59,7 +59,7 @@ Results from all 3 functions identical? true
 --------------------------------------------------
 ```
 """
-function speedtest(functions, nr::Int, nc::Int)
+function speedtest(functions, nr::Int, nc::Int, fns_handle_missings::Bool)
 
     rng = MersenneTwister(1)# make the contents of matrix1 etc. deterministic so successive calls with given nc & nr are fully comparable
     results = Array{Any}(undef, length(functions))
@@ -77,23 +77,38 @@ function speedtest(functions, nr::Int, nc::Int)
     println("ComputerName = $(ENV["COMPUTERNAME"])")
     @show Threads.nthreads()
 
-    for k = 1:5
-        # for k = 1:1   
+    for k = 1:(ifelse(fns_handle_missings, 10, 5))
+        if k == 6
+            matrix1 = sprinklemissings(matrix1, 0.1, MersenneTwister(0))
+            matrix2 = sprinklemissings(matrix2, 0.1, MersenneTwister(0))
+            vector1 = sprinklemissings(vector1, 0.1, MersenneTwister(0))
+            vector2 = sprinklemissings(vector2, 0.1, MersenneTwister(0))
+        end
+
         println("-"^50)
-        if k == 1
+        if k == 1 || k == 6
             @show(size(matrix1))
-        elseif k == 2
+            @show(typeof(matrix1))
+        elseif k == 2 || k == 7
             @show(size(matrix1))
+            @show(typeof(matrix1))
             @show(size(matrix2))
-        elseif k == 3
+            @show(typeof(matrix2))
+        elseif k == 3 || k == 8
             @show(size(vector1))
+            @show(typeof(vector1))
             @show(size(matrix1))
-        elseif k == 4
+            @show(typeof(matrix1))
+        elseif k == 4 || k == 9
             @show(size(matrix1))
+            @show(typeof(matrix1))
             @show(size(vector1))
-        elseif k == 5
+            @show(typeof(vector1))
+        elseif k == 5 || k == 10
             @show(size(vector1))
+            @show(typeof(vector1))
             @show(size(vector2))
+            @show(typeof(vector2))
         end
         i = 0
         for fn in functions
@@ -113,6 +128,21 @@ function speedtest(functions, nr::Int, nc::Int)
             elseif k == 5
                 println("$(fname(fn))(vector1,vector2)")
                 tmp = @btimed $fn($vector1, $vector2)
+            elseif k == 6
+                println("$(fname(fn))(matrix1;skipmissing=:pairwise)")
+                tmp = @btimed $fn($matrix1; skipmissing=:pairwise)
+            elseif k == 7
+                println("$(fname(fn))(matrix1,matrix2;skipmissing=:pairwise)")
+                tmp = @btimed $fn($matrix1, $matrix2; skipmissing=:pairwise)
+            elseif k == 8
+                println("$(fname(fn))(vector1,matrix1;skipmissing=:pairwise)")
+                tmp = @btimed $fn($vector1, $matrix1; skipmissing=:pairwise)
+            elseif k == 9
+                println("$(fname(fn))(matrix1,vector1;skipmissing=:pairwise)")
+                tmp = @btimed $fn($matrix1, $vector1; skipmissing=:pairwise)
+            elseif k == 10
+                println("$(fname(fn))(vector1,vector2;skipmissing=:pairwise)")
+                tmp = @btimed $fn($vector1, $vector2; skipmissing=:pairwise)
             end
             results[i], times[i], allocations[i] = tmp[1], tmp[2].time, tmp[3]
             if i > 1

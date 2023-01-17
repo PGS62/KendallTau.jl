@@ -42,5 +42,5 @@ end
 @test KendallTau.compare_implementations(KendallTau.corkendall, KendallTau.corkendall_naive, abstol=0.0, maxcols=10, maxrows=10, numtests=500, fns_handle_missings=true) == true
 @test KendallTau.compare_implementations(KendallTau.corkendall, KendallTau.corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=500, fns_handle_missings=true) == true
 @test KendallTau.compare_implementations(KendallTau.corkendall, KendallTau.corkendall_naive, abstol=1e14, maxcols=1, maxrows=50000, numtests=10, fns_handle_missings=true) == true
-@test KendallTau.compare_implementations(KendallTau.corkendall_threads, KendallTau.corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=50, fns_handle_missings=false) == true
+@test KendallTau.compare_implementations(KendallTau.corkendall_threads, KendallTau.corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=50, fns_handle_missings=true) == true
 @test KendallTau.compare_implementations(KendallTau.FromStatsBase.corkendall_pw, KendallTau.corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=50, fns_handle_missings=true) == true

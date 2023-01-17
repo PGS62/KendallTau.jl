@@ -19,7 +19,7 @@ end
 function handlemissing(x::RoMVector{T}, y::RoMVector{U},
     sortpermx::AbstractVector{<:Integer}) where {T} where {U}
 
-    length(x) == length(y) == length(sortpermx) || throw("Vectors must have the same length")
+    length(x) == length(y) == length(sortpermx) || throw("Vectors must have same length")
     n = length(x)
 
     T2 = x isa Vector{Missing} ? Missing : T

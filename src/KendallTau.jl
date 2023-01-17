@@ -1,9 +1,9 @@
 module KendallTau
 using Random
 using BenchmarkTools
-using LinearAlgebra # so that identity matrix I is available.
+using LinearAlgebra # So that identity matrix I is available. TODO remove this dependency.
 
-#RoM is short for "Real or Missing"
+#RoM stands for "Real or Missing"
 const RoMVector{T<:Real} = AbstractVector{<:Union{T,Missing}}
 const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
 
@@ -19,8 +19,8 @@ using LinearAlgebra
 include("from_statsbase/rankcor.jl")
 include("from_statsbase/pairwise.jl")
 include("from_statsbase/rankcor_pw.jl")
-end #module
+end # module
 
-export corkendall
+export corkendall, corkendall_threads
 
 end # module

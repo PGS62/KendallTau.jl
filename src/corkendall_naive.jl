@@ -5,6 +5,7 @@ Naive implementation of Kendall Tau. Slow O(n²) but simple, so good for testing
 implementations that use Knight's algorithm.
 """
 function corkendall_naive(x::AbstractVector{<:Real}, y::AbstractVector{<:Real})
+    length(x)==length(y)|| throw(DimensionMismatch("Vectors must have same length"))
     if any(isnan, x) || any(isnan, y)
         return NaN
     end
@@ -13,9 +14,6 @@ function corkendall_naive(x::AbstractVector{<:Real}, y::AbstractVector{<:Real})
         return (NaN)
     end
     npairs = div(n * (n - 1), 2)
-    if length(y) ≠ n
-        error("Vectors must have same length")
-    end
 
     numerator, tiesx, tiesy = 0, 0, 0
     for i in 2:n, j in 1:(i-1)
@@ -41,11 +39,11 @@ function corkendall_naive(x::RoMVector, y::RoMVector)
     corkendall_naive(a, b)
 end
 
-corkendall_naive(x::RoMMatrix, y::RoMVector) = Float64[corkendall_naive(float(x[:, i]), float(y)) for i in axes(x, 2)]
+corkendall_naive(x::RoMMatrix, y::RoMVector) = Float64[corkendall_naive(x[:, i], y) for i in axes(x, 2)]
 
-corkendall_naive(x::RoMVector, y::RoMMatrix) = (n = size(y, 2); reshape(Float64[corkendall_naive(float(x), float(y[:, i])) for i = 1:n], 1, n))
+corkendall_naive(x::RoMVector, y::RoMMatrix) = (n = size(y, 2); reshape(Float64[corkendall_naive(x, y[:, i]) for i = 1:n], 1, n))
 
-corkendall_naive(x::RoMMatrix, y::RoMMatrix) = Float64[corkendall_naive(float(x[:, i]), float(y[:, j])) for i in axes(x, 2), j in axes(y, 2)]
+corkendall_naive(x::RoMMatrix, y::RoMMatrix) = Float64[corkendall_naive(x[:, i], y[:, j]) for i in axes(x, 2), j in axes(y, 2)]
 
 function corkendall_naive(x::RoMMatrix)
     n = size(x, 2)
@@ -87,6 +85,7 @@ end
 Simpler but slower version of skipmissingpairs    .
 """
 function skipmissingpairs_naive(x::RoMVector, y::RoMVector)
+    length(x) == length(y)|| throw(DimensionMismatch("Vectors must be same length"))
     keep = .!(ismissing.(x) .| ismissing.(y))
     x = x[keep]
     y = y[keep]

@@ -26,7 +26,7 @@ end
 function filtersortperm_v2(x::AbstractVector, include::AbstractVector{Bool},
     sortpermx::AbstractVector{<:Integer})
 
-    length(x) == length(sortpermx) == length(include) || throw("Vectors must have the same length")
+    length(x) == length(sortpermx) == length(include) || throw("Vectors must have same length")
 
     out = sortpermx[include[sortpermx]]
 
@@ -45,7 +45,7 @@ end
 function filtersortperm_v3(x::AbstractVector{T}, include::AbstractVector{Bool},
     sortpermx::AbstractVector{<:Integer}) where {T <: Integer}
 
-    length(x) == length(sortpermx) == length(include) || throw("Vectors must have the same length")
+    length(x) == length(sortpermx) == length(include) || throw("Vectors must have same length")
     n = length(x)
 
     j = 1
@@ -71,7 +71,7 @@ end
 function filtersortperm_v4(x::AbstractVector, include::AbstractVector{Bool},
     sortpermx::AbstractVector{<:Integer})
 
-    length(x) == length(sortpermx) == length(include) || throw("Vectors must have the same length")
+    length(x) == length(sortpermx) == length(include) || throw("Vectors must have same length")
     n = length(x)
 
     j = 1

@@ -10,129 +10,114 @@ x1 = x[:, 1]
 x2 = x[:, 2]
 y = Y[:, 1]
 
-#= corspearman
+# corkendall and friends
+for f in (corkendall, corkendall_threads, KendallTau.corkendall_naive)
+    @show f
+    # Check error, handling of NaN, Inf etc
+    @test_throws DimensionMismatch("Vectors must have same length") f([1, 2, 3, 4], [1, 2, 3])
+    @test isnan(f([1, 2], [3, NaN]))
+    @test isnan(f([1, 1, 1], [1, 2, 3]))
+    @test f([-Inf, -0.0, Inf], [1, 2, 3]) == 1.0
 
-@test corspearman(x1, y) ≈ -0.102597835208515
-@test corspearman(x2, y) ≈ -0.081110710565381
+    # Test, with exact equality, some known results. 
+    # AbstractVector{<:Real}, AbstractVector{<:Real}
+    @test f(x1, y) == -1 / sqrt(90)
+    @test f(x2, y) == -1 / sqrt(72)
+    # AbstractMatrix{<:Real}, AbstractVector{<:Real}
+    @test f(x, y) == [-1 / sqrt(90), -1 / sqrt(72)]
+    # AbstractVector{<:Real}, AbstractMatrix{<:Real}
+    @test f(y, x) == [-1 / sqrt(90) -1 / sqrt(72)]
 
-@test corspearman(x, y) ≈ [-0.102597835208515, -0.081110710565381]
-@test corspearman(y, x) ≈ [-0.102597835208515 -0.081110710565381]
+    # n = 78_000 tests for overflow errors on 32 bit
+    # Testing for overflow errors on 64bit would require n be too large for practicality
+    # This also tests merge_sort! since n is (much) greater than SMALL_THRESHOLD.
+    if !(f === KendallTau.corkendall_naive)
+        n = 78_000
+        # Test with many repeats
+        @test f(repeat(x1, n), repeat(y, n)) ≈ -1 / sqrt(90)
+        @test f(repeat(x2, n), repeat(y, n)) ≈ -1 / sqrt(72)
+        @test f(repeat(x, n), repeat(y, n)) ≈ [-1 / sqrt(90), -1 / sqrt(72)]
+        @test f(repeat(y, n), repeat(x, n)) ≈ [-1 / sqrt(90) -1 / sqrt(72)]
+        @test f(repeat([0, 1, 1, 0], n), repeat([1, 0, 1, 0], n)) == 0.0
 
-c11 = corspearman(x1, x1)
-c12 = corspearman(x1, x2)
-c22 = corspearman(x2, x2)
-@test c11 ≈ 1.0
-@test c22 ≈ 1.0
-@test corspearman(x, x) ≈ [c11 c12; c12 c22]
-@test corspearman(x)    ≈ [c11 c12; c12 c22]
+        # Test with no repeats, note testing for exact equality
+        @test f(collect(1:n), collect(1:n)) == 1.0
+        @test f(collect(1:n), reverse(collect(1:n))) == -1.0
 
-@test corspearman(x, Y) ==
-     [corspearman(x[:,i], Y[:,j]) for i in axes(x, 2), j in axes(Y, 2)] =#
+        # All elements identical should yield NaN
+        @test isnan(f(repeat([1], n), collect(1:n)))
 
-# corkendall
+        # Test handling of missings
+        @test f(Xm, Xm, skipmissing=:pairwise) == f(x, x)
+        @test f(Xm, Xm, skipmissing=:listwise) == f(x, x)
+        @test f(Xm, Ym, skipmissing=:listwise) == f(x, Y)
+        @test f(Xm, Ym, skipmissing=:pairwise) ≈ [-1/√90 0.4 1/√90
+            -2/√154 7/√165 -1/√154]
 
-# Check error, handling of NaN, Inf etc
-@test_throws DimensionMismatch("Vectors must have same length") corkendall([1, 2, 3, 4], [1, 2, 3])
-@test isnan(corkendall([1, 2], [3, NaN]))
-@test isnan(corkendall([1, 1, 1], [1, 2, 3]))
-@test corkendall([-Inf, -0.0, Inf], [1, 2, 3]) == 1.0
+        # Test not-correct values of skipmissing
+        @test_throws ArgumentError f(Xm)
+        @test_throws ArgumentError f(x, skipmissing=:foo)
 
-# Test, with exact equality, some known results. 
-# AbstractVector{<:Real}, AbstractVector{<:Real}
-@test corkendall(x1, y) == -1 / sqrt(90)
-@test corkendall(x2, y) == -1 / sqrt(72)
-# AbstractMatrix{<:Real}, AbstractVector{<:Real}
-@test corkendall(x, y) == [-1 / sqrt(90), -1 / sqrt(72)]
-# AbstractVector{<:Real}, AbstractMatrix{<:Real}
-@test corkendall(y, x) == [-1 / sqrt(90) -1 / sqrt(72)]
+        c11 = f(x1, x1)
+        c12 = f(x1, x2)
+        c22 = f(x2, x2)
 
-# n = 78_000 tests for overflow errors on 32 bit
-# Testing for overflow errors on 64bit would require n be too large for practicality
-# This also tests merge_sort! since n is (much) greater than SMALL_THRESHOLD.
-n = 78_000
-# Test with many repeats
-@test corkendall(repeat(x1, n), repeat(y, n)) ≈ -1 / sqrt(90)
-@test corkendall(repeat(x2, n), repeat(y, n)) ≈ -1 / sqrt(72)
-@test corkendall(repeat(x, n), repeat(y, n)) ≈ [-1 / sqrt(90), -1 / sqrt(72)]
-@test corkendall(repeat(y, n), repeat(x, n)) ≈ [-1 / sqrt(90) -1 / sqrt(72)]
-@test corkendall(repeat([0, 1, 1, 0], n), repeat([1, 0, 1, 0], n)) == 0.0
+        # AbstractMatrix{<:Real}, AbstractMatrix{<:Real}
+        @test f(x, x) ≈ [c11 c12; c12 c22]
+        # AbstractMatrix{<:Real}
+        @test f(x) ≈ [c11 c12; c12 c22]
 
-# Test with no repeats, note testing for exact equality
-@test corkendall(collect(1:n), collect(1:n)) == 1.0
-@test corkendall(collect(1:n), reverse(collect(1:n))) == -1.0
+        @test c11 == 1.0
+        @test c22 == 1.0
+        @test c12 == 3 / sqrt(20)
+    else
+        c11 = f(x1, x1)
+        c12 = f(x1, x2)
+        c22 = f(x2, x2)
+    end
+    # Finished testing for overflow, so redefine n for speedier tests
+    n = 100
 
-# All elements identical should yield NaN
-@test isnan(corkendall(repeat([1], n), collect(1:n)))
+    @test f(repeat(x, n), repeat(x, n)) ≈ [c11 c12; c12 c22]
+    @test f(repeat(x, n)) ≈ [c11 c12; c12 c22]
 
-# Test handling of missings
-@test corkendall(Xm, Xm, skipmissing=:pairwise) == corkendall(x, x)
-@test corkendall(Xm, Xm, skipmissing=:listwise) == corkendall(x, x)
-@test corkendall(Xm, Ym, skipmissing=:listwise) == corkendall(x, Y)
-@test corkendall(Xm, Ym, skipmissing=:pairwise) ≈ [-1/√90 0.4 1/√90
-    -2/√154 7/√165 -1/√154]
+    # All eight three-element permutations
+    z = [1 1 1
+        1 1 2
+        1 2 2
+        1 2 2
+        1 2 1
+        2 1 2
+        1 1 2
+        2 2 2]
 
-# Test not-correct values of skipmissing
-@test_throws ArgumentError corkendall(Xm)
-@test_throws ArgumentError corkendall(x, skipmissing=:foo)
+    @test f(z) == [1 0 1/3; 0 1 0; 1/3 0 1]
+    @test f(z, z) == [1 0 1/3; 0 1 0; 1/3 0 1]
+    @test f(z[:, 1], z) == [1 0 1 / 3]
+    @test f(z, z[:, 1]) == [1; 0; 1 / 3]
 
-c11 = corkendall(x1, x1)
-c12 = corkendall(x1, x2)
-c22 = corkendall(x2, x2)
+    z = float(z)
+    @test f(z) == [1 0 1/3; 0 1 0; 1/3 0 1]
+    @test f(z, z) == [1 0 1/3; 0 1 0; 1/3 0 1]
+    @test f(z[:, 1], z) == [1 0 1 / 3]
+    @test f(z, z[:, 1]) == [1; 0; 1 / 3]
 
-# AbstractMatrix{<:Real}, AbstractMatrix{<:Real}
-@test corkendall(x, x) ≈ [c11 c12; c12 c22]
-# AbstractMatrix{<:Real}
-@test corkendall(x) ≈ [c11 c12; c12 c22]
+    w = repeat(z, n)
+    @test f(w) == [1 0 1/3; 0 1 0; 1/3 0 1]
+    @test f(w, w) == [1 0 1/3; 0 1 0; 1/3 0 1]
+    @test f(w[:, 1], w) == [1 0 1 / 3]
+    @test f(w, w[:, 1]) == [1; 0; 1 / 3]
 
-@test c11 == 1.0
-@test c22 == 1.0
-@test c12 == 3 / sqrt(20)
+    KendallTau.midpoint(1, 10) == 5
+    KendallTau.midpoint(1, widen(10)) == 5
 
-# Finished testing for overflow, so redefine n for speedier tests
-n = 100
+    # NaN handling
 
-@test corkendall(repeat(x, n), repeat(x, n)) ≈ [c11 c12; c12 c22]
-@test corkendall(repeat(x, n)) ≈ [c11 c12; c12 c22]
+    Xnan = copy(x)
+    Xnan[1, 1] = NaN
+    Ynan = copy(Y)
+    Ynan[2, 1] = NaN
 
-# All eight three-element permutations
-z = [1 1 1
-    1 1 2
-    1 2 2
-    1 2 2
-    1 2 1
-    2 1 2
-    1 1 2
-    2 2 2]
-
-@test corkendall(z) == [1 0 1/3; 0 1 0; 1/3 0 1]
-@test corkendall(z, z) == [1 0 1/3; 0 1 0; 1/3 0 1]
-@test corkendall(z[:, 1], z) == [1 0 1 / 3]
-@test corkendall(z, z[:, 1]) == [1; 0; 1 / 3]
-
-z = float(z)
-@test corkendall(z) == [1 0 1/3; 0 1 0; 1/3 0 1]
-@test corkendall(z, z) == [1 0 1/3; 0 1 0; 1/3 0 1]
-@test corkendall(z[:, 1], z) == [1 0 1 / 3]
-@test corkendall(z, z[:, 1]) == [1; 0; 1 / 3]
-
-w = repeat(z, n)
-@test corkendall(w) == [1 0 1/3; 0 1 0; 1/3 0 1]
-@test corkendall(w, w) == [1 0 1/3; 0 1 0; 1/3 0 1]
-@test corkendall(w[:, 1], w) == [1 0 1 / 3]
-@test corkendall(w, w[:, 1]) == [1; 0; 1 / 3]
-
-KendallTau.midpoint(1, 10) == 5
-KendallTau.midpoint(1, widen(10)) == 5
-
-# NaN handling
-
-Xnan = copy(x)
-Xnan[1, 1] = NaN
-Ynan = copy(Y)
-Ynan[2, 1] = NaN
-
-# for f in (corspearman, corkendall)
-for f in (corkendall,)
     @test isnan(f([1.0, NaN, 2.0], [2.0, 1.0, 3.4]))
     @test all(isnan, f([1.0, NaN], [1 2; 3 4]))
     @test all(isnan, f([1 2; 3 4], [1.0, NaN]))
@@ -148,14 +133,8 @@ for f in (corkendall,)
     for k in 1:2
         @test isequal(f(Xnan[:, k], Ynan),
             [f(Xnan[:, k], Ynan[:, j]) for i in 1:1, j in axes(Ynan, 2)])
-        # TODO: fix corkendall (PR#659)
-        if f === corkendall
-            @test isequal(f(Xnan, Ynan[:, k]),
-                [f(Xnan[:, i], Ynan[:, k]) for i in axes(Xnan, 2)])
-        else
-            @test isequal(f(Xnan, Ynan[:, k]),
-                [f(Xnan[:, i], Ynan[:, k]) for i in axes(Xnan, 2), j in 1:1])
-        end
+        @test isequal(f(Xnan, Ynan[:, k]),
+            [f(Xnan[:, i], Ynan[:, k]) for i in axes(Xnan, 2)])
     end
 
     # Wrong dimensions

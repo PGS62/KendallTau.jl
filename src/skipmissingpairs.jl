@@ -200,4 +200,3 @@ function skipmissingpairs(x::RoMMatrix, y::RoMVector)
     res2, res1 = skipmissingpairs(y, x)
     res1, res2
 end
-

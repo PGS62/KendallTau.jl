@@ -1,63 +1,75 @@
-# Threaded version... this version uses one thread per element of the returned matrix.
+# Threaded version... Uses one thread per element of the return.
 
-#TODO re-write code in this file to have skipmissing argument
 """
-    corkendall_threads(x, y=x)
-
+    corkendall(x, y=x)
 Compute Kendall's rank correlation coefficient, τ. `x` and `y` must both be either
-matrices or vectors. Uses threads when either `x` or `y` is a matrix.
+matrices or vectors.
 """
-corkendall_threads(x::RoMVector, y::RoMVector) = corkendall(float(copy(x)), float(copy(y)))# threads not used in this case
+function corkendall_threads(x::RoMVector, y::RoMVector; skipmissing::Symbol=:none)
+    corkendall(x, y;skipmissing)#threads not used in this case
+end
 
-function corkendall_threads(x::RoMMatrix, y::RoMVector)
+#= It is idiosyncratic that this method returns a vector, not a matrix, i.e. not consistent
+with Statistics.cor or corspearman. But fixing that is a breaking change. =#
+function corkendall_threads(x::RoMMatrix, y::RoMVector; skipmissing::Symbol=:none)
+    size(x, 1) == length(y) ||
+        throw(DimensionMismatch("x and y have inconsistent dimensions"))
+    x, y = handlelistwise(x, y, skipmissing)
     n = size(x, 2)
+    permy = sortperm(y)
+    sortedy = y[permy]
+
     C = ones(float(eltype(x)), n)
 
     permy = sortperm(y)
     Threads.@threads for i = 1:n
-        C[i] = corkendall!(float(copy(y)), float(x[:, i]), permy)
+        C[i] = corkendall_sorted!(copy(sortedy), x[:, i], permy)
     end
-
-    return C
+    return(C)
 end
 
-function corkendall_threads(x::RoMVector, y::RoMMatrix)
+function corkendall_threads(x::RoMVector, y::RoMMatrix; skipmissing::Symbol=:none)
+    size(y, 1) == length(x) ||
+        throw(DimensionMismatch("x and y have inconsistent dimensions"))
+    x, y = handlelistwise(x, y, skipmissing)
     n = size(y, 2)
+    permx = sortperm(x)
+    sortedx = x[permx]
+
     C = ones(float(eltype(y)), 1, n)
 
     permx = sortperm(x)
     Threads.@threads for i = 1:n
-        C[1, i] = corkendall!(float(copy(x)), float(y[:, i]), permx)
+        C[1, i] = corkendall_sorted!(copy(sortedx), y[:, i], permx)
     end
-
-    return C
+    return(C)
 end
 
-function corkendall_threads(x::RoMMatrix)
+function corkendall_threads(x::RoMMatrix; skipmissing::Symbol=:none)
+    x = handlelistwise(x, skipmissing)
     n = size(x, 2)
-    C = ones(float(eltype(x)), n, n)# avoids dependency on LinearAlgebra
-
+    C = Matrix{Float64}(I, n, n)
     Threads.@threads for j = 2:n
         permx = sortperm(x[:, j])
+        sortedx = x[:, j][permx]
         for i = 1:j-1
-            C[i, j] = C[j, i] = corkendall!(x[:, j], x[:, i], permx)
+            C[i, j] = C[j, i] = corkendall_sorted!(sortedx, x[:, i], permx)
         end
     end
-
     return C
 end
 
-function corkendall_threads(x::RoMMatrix, y::RoMMatrix)
+function corkendall_threads(x::RoMMatrix, y::RoMMatrix; skipmissing::Symbol=:none)
+    x, y = handlelistwise(x, y, skipmissing)
     nr = size(x, 2)
     nc = size(y, 2)
-    C = zeros(float(eltype(x)), nr, nc)
-
+    C = Matrix{Float64}(undef, nr, nc)
     Threads.@threads for j = 1:nr
         permx = sortperm(x[:, j])
+        sortedx = x[:, j][permx]
         for i = 1:nc
-            C[j, i] = corkendall!(x[:, j], y[:, i], permx)
+            C[j, i] = corkendall_sorted!(sortedx, y[:, i], permx)
         end
     end
-
     return C
 end

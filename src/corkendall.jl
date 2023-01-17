@@ -280,9 +280,9 @@ end
 
 """
     handlelistwise(x::AbstractArray,y::AbstractArray,skipmissing::Symbol)
-Handles the case of skipmissing = :listwise. This is a simpler case than :pairwise, we
-merely need to construct new argument(s) for corkendall by calling skipmissingpairs. The
-function also validates skipmissing, throwing an error if invalid.
+Handles the case of `skipmissing == :listwise`. This is a simpler case than `:pairwise`, we
+merely need to construct new argument(s) for `corkendall` by calling `skipmissingpairs`. The
+function also validates `skipmissing`, throwing an error if invalid.
 """
 function handlelistwise(x::AbstractArray, y::AbstractArray, skipmissing::Symbol)
     if skipmissing == :listwise
@@ -292,7 +292,7 @@ function handlelistwise(x::AbstractArray, y::AbstractArray, skipmissing::Symbol)
     elseif skipmissing == :pairwise
     elseif skipmissing == :none
         if missing isa eltype(x) || missing isa eltype(y)
-            throw(ArgumentError("When Missing is an allowed element type\
+            throw(ArgumentError("When missing is an allowed element type \
                                 then keyword argument skipmissing must be either\
                                 `:pairwise` or `:listwise`, but got `:$skipmissing`"))
         end
@@ -317,10 +317,9 @@ function handlelistwise(x::AbstractArray, skipmissing::Symbol)
     elseif skipmissing == :pairwise
     elseif skipmissing == :none
         if missing isa eltype(x)
-            throw(ArgumentError("When Missing is an allowed element type \
-                                then keyword argument skipmissing must be either "
-                                *
-                                "`:pairwise` or `:listwise`, but got `:$skipmissing`"))
+            throw(ArgumentError("When missing is an allowed element type \
+                                then keyword argument skipmissing must be either \
+                                `:pairwise` or `:listwise`, but got `:$skipmissing`"))
         end
     else
         if missing isa eltype(x)
