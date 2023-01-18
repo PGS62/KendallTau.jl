@@ -3,6 +3,7 @@ Changes:
 1) For compatibility with function pairwise, changed argument declarations in corkendall 
 and corkendall! to AbstractMatrix and AbstractVector (was previously 
 AbstractMatrix{<:Real} and AbstractVecor{<:Real}).
+2) Edited 4th line of corkendall! to throw a DimensionMismatch (in order to pass tests)
 =#
 
 # Rank-based correlations
@@ -133,7 +134,7 @@ end
 function corkendall!(x::AbstractVector, y::AbstractVector, permx::AbstractArray{<:Integer}=sortperm(x))
     if any(isnan, x) || any(isnan, y) return NaN end
     n = length(x)
-    if n != length(y) error("Vectors must have same length") end
+    if n != length(y) throw(DimensionMismatch("Vectors must have same length")) end
 
     # Initial sorting
     permute!(x, permx)

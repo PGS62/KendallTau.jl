@@ -20,6 +20,6 @@ include("from_statsbase/pairwise.jl")
 include("from_statsbase/rankcor_pw.jl")
 end # module
 
-export corkendall, corkendall_threads
+export corkendall
 
 end # module

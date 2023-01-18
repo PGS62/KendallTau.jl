@@ -77,7 +77,8 @@ function speedtest(functions, nr::Int, nc::Int, fns_handle_missings::Bool)
     println("ComputerName = $(ENV["COMPUTERNAME"])")
     @show Threads.nthreads()
 
-    for k = 1:(ifelse(fns_handle_missings, 10, 5))
+   # for k = 1:(ifelse(fns_handle_missings, 10, 5))
+for k = 6:6
         if k == 6
             matrix1 = sprinklemissings(matrix1, 0.1, MersenneTwister(0))
             matrix2 = sprinklemissings(matrix2, 0.1, MersenneTwister(0))

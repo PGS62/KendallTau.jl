@@ -11,7 +11,8 @@ x2 = x[:, 2]
 y = Y[:, 1]
 
 # corkendall and friends
-for f in (corkendall, corkendall_threads, KendallTau.corkendall_naive)
+for f in (corkendall, KendallTau.corkendall_unthreaded, KendallTau.corkendall_threaded, 
+    KendallTau.corkendall_naive,KendallTau.FromStatsBase.corkendall_pw)
     @show f
     # Check error, handling of NaN, Inf etc
     @test_throws DimensionMismatch("Vectors must have same length") f([1, 2, 3, 4], [1, 2, 3])

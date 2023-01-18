@@ -8,74 +8,145 @@
     corkendall(x, y=x; skipmissing::Symbol=:none)
 
 Compute Kendall's rank correlation coefficient, τ. `x` and `y` must both be either
-vectors or matrices, with elements that are either real numbers or missing values. For
-matrix inputs τ is calculated column by column.
+vectors or matrices, with elements that are either real numbers or missing values.
 
-# Keyword argument
+For matrix inputs, τ is calculated column against column, so that the `[i,j]` element of the
+result is the Kendall correlation between column `i` of `x` and column `j` of `y`.
 
-- `skipmissing::Symbol=:none:` If `:none` (the default), missing values in either `x` or `y`
+# Keyword arguments
+
+- `skipmissing::Symbol=:none` If `:none` (the default), missing values in either `x` or `y`
     cause the function to raise an error. Use `:pairwise` to skip entries with a missing 
     value in either of the two vectors used to calculate (an element of) the return. Use 
     `:listwise` to skip entries where a missing value appears anywhere in a given row of `x`
     or `y`; note that this might drop a high proportion of entries.
 
+-  `threaded::Symbol` If `:threaded` then `Threads.@threads` is used to parallelise the
+    calculation of elements of the return. If `:none` then all elements of the return are
+    calculated on a single thread. Defaults to `:none` if both `x` and `y` are vectors, and
+    to `:threaded` otherwise.
+
 """
-function corkendall(x::RoMVector, y::RoMVector; skipmissing::Symbol=:none)
-    length(x) == length(y) || throw(DimensionMismatch("Vectors must have same length"))
-    x, y = handlelistwise(x, y, skipmissing)
-    corkendall!(copy(x), copy(y))
+function corkendall(x::RoMVector, y::RoMVector; skipmissing::Symbol=:none, threaded::Symbol=:none)
+    if threaded == :none
+        length(x) == length(y) || throw(DimensionMismatch("Vectors must have same length"))
+        x, y = handlelistwise(x, y, skipmissing)
+        return(corkendall!(copy(x), copy(y)))
+    elseif threaded == :threads
+        throw(ArgumentError("threaded execution not supported when both arguments are vectors"))
+    else
+        throw(ArgumentError("threaded must be :none, but got :$threaded"))
+    end
 end
 
 #= It is idiosyncratic that this method returns a vector, not a matrix, i.e. not consistent
 with Statistics.cor or corspearman. But fixing that is a breaking change. =#
-function corkendall(x::RoMMatrix, y::RoMVector; skipmissing::Symbol=:none)
+function corkendall(x::RoMMatrix, y::RoMVector; skipmissing::Symbol=:none, threaded::Symbol=:threaded)
     size(x, 1) == length(y) ||
         throw(DimensionMismatch("x and y have inconsistent dimensions"))
     x, y = handlelistwise(x, y, skipmissing)
     n = size(x, 2)
     permy = sortperm(y)
     sortedy = y[permy]
-    return ([corkendall_sorted!(copy(sortedy), x[:, i], permy) for i in 1:n])
+
+    C = ones(float(eltype(x)), n)
+
+    permy = sortperm(y)
+    if threaded == :threaded
+        Threads.@threads for i = 1:n
+            C[i] = corkendall_sorted!(copy(sortedy), x[:, i], permy)
+        end
+    elseif threaded == :none
+        for i = 1:n
+            C[i] = corkendall_sorted!(copy(sortedy), x[:, i], permy)
+        end
+    else
+        throw(ArgumentError("threaded must be :none or :threaded, but got :$threaded"))
+    end
+    return (C)
 end
 
-function corkendall(x::RoMVector, y::RoMMatrix; skipmissing::Symbol=:none)
+function corkendall(x::RoMVector, y::RoMMatrix; skipmissing::Symbol=:none, threaded::Symbol=:threaded)
     size(y, 1) == length(x) ||
         throw(DimensionMismatch("x and y have inconsistent dimensions"))
     x, y = handlelistwise(x, y, skipmissing)
     n = size(y, 2)
     permx = sortperm(x)
     sortedx = x[permx]
-    return (reshape([corkendall_sorted!(copy(sortedx), y[:, i], permx) for i in 1:n], 1, n))
+
+    C = ones(float(eltype(y)), 1, n)
+
+    permx = sortperm(x)
+    if threaded == :threaded
+        Threads.@threads for i = 1:n
+            C[1, i] = corkendall_sorted!(copy(sortedx), y[:, i], permx)
+        end
+    elseif threaded == :none
+        for i = 1:n
+            C[1, i] = corkendall_sorted!(copy(sortedx), y[:, i], permx)
+        end
+    else
+        throw(ArgumentError("threaded must be :none or :threaded, but got :$threaded"))
+    end
+    return (C)
 end
 
-function corkendall(x::RoMMatrix; skipmissing::Symbol=:none)
+function corkendall(x::RoMMatrix; skipmissing::Symbol=:none, threaded::Symbol=:threaded)
     x = handlelistwise(x, skipmissing)
     n = size(x, 2)
     C = Matrix{Float64}(I, n, n)
-    for j = 2:n
-        permx = sortperm(x[:, j])
-        sortedx = x[:, j][permx]
-        for i = 1:j-1
-            C[i, j] = C[j, i] = corkendall_sorted!(sortedx, x[:, i], permx)
+
+    if threaded == :threaded
+        Threads.@threads for j = 2:n
+            permx = sortperm(x[:, j])
+            sortedx = x[:, j][permx]
+            for i = 1:j-1
+                C[i, j] = C[j, i] = corkendall_sorted!(sortedx, x[:, i], permx)
+            end
         end
+    elseif threaded == :none
+        for j = 2:n
+            permx = sortperm(x[:, j])
+            sortedx = x[:, j][permx]
+            for i = 1:j-1
+                C[i, j] = C[j, i] = corkendall_sorted!(sortedx, x[:, i], permx)
+            end
+        end
+    else
+        throw(ArgumentError("threaded must be :none or :threaded, but got :$threaded"))
     end
+
     return C
 end
 
-function corkendall(x::RoMMatrix, y::RoMMatrix; skipmissing::Symbol=:none)
+function corkendall(x::RoMMatrix, y::RoMMatrix; skipmissing::Symbol=:none, threaded::Symbol=:threaded)
     x, y = handlelistwise(x, y, skipmissing)
     nr = size(x, 2)
     nc = size(y, 2)
     C = Matrix{Float64}(undef, nr, nc)
-    for j = 1:nr
-        permx = sortperm(x[:, j])
-        sortedx = x[:, j][permx]
-        for i = 1:nc
-            C[j, i] = corkendall_sorted!(sortedx, y[:, i], permx)
+    if threaded == :threaded
+        Threads.@threads for j = 1:nr
+            permx = sortperm(x[:, j])
+            sortedx = x[:, j][permx]
+            for i = 1:nc
+                C[j, i] = corkendall_sorted!(sortedx, y[:, i], permx)
+            end
         end
+    elseif threaded == :none
+        for j = 1:nr
+            permx = sortperm(x[:, j])
+            sortedx = x[:, j][permx]
+            for i = 1:nc
+                C[j, i] = corkendall_sorted!(sortedx, y[:, i], permx)
+            end
+        end
+    else
+        throw(ArgumentError("threaded must be :none or :threaded, but got :$threaded"))
     end
+
     return C
 end
+
 
 # Knight, William R. “A Computer Method for Calculating Kendall's Tau with Ungrouped Data.”
 # Journal of the American Statistical Association, vol. 61, no. 314, 1966, pp. 436–439.

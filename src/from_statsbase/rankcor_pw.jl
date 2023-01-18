@@ -10,38 +10,61 @@ f = FromStatsBase.corkendall
 
 function corkendall_pw(x::AbstractVector, y::AbstractVector=x; skipmissing::Symbol=:none)
     if skipmissing == :none
-        return(f(x, y))
+        if (missing isa eltype(x)) || (missing isa eltype(y))
+            throw(ArgumentError("When missing is an allowed element type \
+                                then keyword argument skipmissing must be either\
+                                `:pairwise` or `:listwise`, but got `:$skipmissing`"))
+        end
+        return (f(x, y))
     else
-        return(pairwise(f, [x], [y]; skipmissing)[1, 1])
+        return (pairwise(f, [x], [y]; skipmissing)[1, 1])
     end
 end
 
 function corkendall_pw(x::AbstractMatrix, y::AbstractVector; skipmissing::Symbol=:none)
     if skipmissing == :none
-        return(f(x, y))
+        if (missing isa eltype(x)) || (missing isa eltype(y))
+            throw(ArgumentError("When missing is an allowed element type \
+                                then keyword argument skipmissing must be either\
+                                `:pairwise` or `:listwise`, but got `:$skipmissing`"))
+        end
+
+        return (f(x, y))
     else
         #Unfortunate that the vec is necessary (for backward-compatibility)
-        return(vec(pairwise(f, eachcol(x), [y]; skipmissing)))
+        return (vec(pairwise(f, eachcol(x), [y]; skipmissing)))
     end
 end
 
 function corkendall_pw(x::AbstractVector, y::AbstractMatrix; skipmissing::Symbol=:none)
     if skipmissing == :none
-        return(f(x, y))
+        if (missing isa eltype(x)) || (missing isa eltype(y))
+            throw(ArgumentError("When missing is an allowed element type \
+                                then keyword argument skipmissing must be either\
+                                `:pairwise` or `:listwise`, but got `:$skipmissing`"))
+        end
+
+        return (f(x, y))
     else
-        return(pairwise(f, [x], eachcol(y); skipmissing))
+        return (pairwise(f, [x], eachcol(y); skipmissing))
     end
 end
 
 function corkendall_pw(x::AbstractMatrix, y::AbstractMatrix=x; skipmissing::Symbol=:none)
     symmetric = x === y
     if skipmissing == :none
+        if (missing isa eltype(x)) || (missing isa eltype(y))
+            throw(ArgumentError("When missing is an allowed element type \
+                                then keyword argument skipmissing must be either\
+                                `:pairwise` or `:listwise`, but got `:$skipmissing`"))
+        end
+
         if symmetric
-            return(f(x))
+            return (f(x))
         else
-            return(f(x, y))
+            return (f(x, y))
         end
     else
-        return(pairwise(f, eachcol(x), eachcol(y); symmetric, skipmissing))
+        return (pairwise(f, eachcol(x), eachcol(y); symmetric, skipmissing))
     end
 end
