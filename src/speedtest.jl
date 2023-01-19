@@ -77,8 +77,7 @@ function speedtest(functions, nr::Int, nc::Int, fns_handle_missings::Bool)
     println("ComputerName = $(ENV["COMPUTERNAME"])")
     @show Threads.nthreads()
 
-   # for k = 1:(ifelse(fns_handle_missings, 10, 5))
-for k = 6:6
+    for k = 1:(ifelse(fns_handle_missings, 10, 5))
         if k == 6
             matrix1 = sprinklemissings(matrix1, 0.1, MersenneTwister(0))
             matrix2 = sprinklemissings(matrix2, 0.1, MersenneTwister(0))
@@ -315,3 +314,40 @@ function test_skipmissings(n=10000)
 
     nothing
 end
+
+using PlotlyJS
+
+#KendallTau.how_scaleable(KendallTau.corkendall_unthreaded,KendallTau.corkendall_threaded,1000,2 .^ (6:11),false)
+function how_scaleable(fn1::Function, fn2::Function, nr::Integer, ncs::Vector{<:Integer}, with_missings::Bool)
+
+    n = length(ncs)
+
+    timings1 = zeros(n)
+    timings2 = zeros(n)
+    i = 0
+    
+    for nc in ncs
+        i += 1
+        x = rand(MersenneTwister(0), nc, nr)
+        if with_missings
+            x = ifelse.(x .< 0.1, missing, x)
+        end
+        res1, est1 = @btimed $fn1($x)
+        res2, est2 = @btimed $fn2($x)
+        res1 == res2 || throw("Different return values from $fn1 and $fn2, nr = $nr, nc = $nc, with_missings = $with_missings")
+        timings1[i] = est1.time / 1e9
+        timings2[i] = est2.time / 1e9
+        println("nc = $nc, nr = $nr, fn1 = $fn1, fn2 = $fn2, time1 = $(est1.time/1e9), time2 = $(est2.time/1e9)")
+    end
+
+    display(hcat(ncs, timings1, timings2, timings1 ./ timings2))
+
+    plot([
+        scatter(x=nr, y=timings1, mode="line", name="$fn1"),
+        scatter(x=nr, y=timings2, mode="lines", name="$fn2"),
+    ])
+
+    
+
+end
+
