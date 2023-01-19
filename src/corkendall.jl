@@ -15,7 +15,7 @@ result is the Kendall correlation between column `i` of `x` and column `j` of `y
 
 # Keyword arguments
 
-- `skipmissing::Symbol=:none` If `:none` (the default), missing values in either `x` or `y`
+- `skipmissing::Symbol=:none` If `:none`, missing values in either `x` or `y`
     cause the function to raise an error. Use `:pairwise` to skip entries with a missing 
     value in either of the two vectors used to calculate (an element of) the return. Use 
     `:listwise` to skip entries where a missing value appears anywhere in a given row of `x`
@@ -28,14 +28,12 @@ result is the Kendall correlation between column `i` of `x` and column `j` of `y
 
 """
 function corkendall(x::RoMVector, y::RoMVector; skipmissing::Symbol=:none, threaded::Symbol=:none)
-    if threaded == :none
+    if threaded == :none || threaded == :threaded
         length(x) == length(y) || throw(DimensionMismatch("Vectors must have same length"))
         x, y = handlelistwise(x, y, skipmissing)
         return(corkendall!(copy(x), copy(y)))
-    elseif threaded == :threads
-        throw(ArgumentError("threaded execution not supported when both arguments are vectors"))
     else
-        throw(ArgumentError("threaded must be :none, but got :$threaded"))
+        throw(ArgumentError("threaded must be :none or :threaded, but got :$threaded"))
     end
 end
 
@@ -146,7 +144,6 @@ function corkendall(x::RoMMatrix, y::RoMMatrix; skipmissing::Symbol=:none, threa
 
     return C
 end
-
 
 # Knight, William R. “A Computer Method for Calculating Kendall's Tau with Ungrouped Data.”
 # Journal of the American Statistical Association, vol. 61, no. 314, 1966, pp. 436–439.
@@ -354,4 +351,20 @@ function insertion_sort!(v::AbstractVector, lo::Integer, hi::Integer)
         v[j] = x
     end
     return nswaps
+end
+
+#=Wrappers required for convenience when using functions speedtest and
+compare_implementations=#
+
+function corkendall_threaded(x, y; skipmissing::Symbol=:none)
+    corkendall(x, y; skipmissing=skipmissing, threaded=:threaded)
+end
+function corkendall_threaded(x; skipmissing::Symbol=:none)
+    corkendall(x, skipmissing=skipmissing, threaded=:threaded)
+end
+function corkendall_unthreaded(x, y; skipmissing::Symbol=:none)
+    corkendall(x, y; skipmissing=skipmissing, threaded=:none)
+end
+function corkendall_unthreaded(x; skipmissing::Symbol=:none)
+    corkendall(x, skipmissing=skipmissing, threaded=:none)
 end

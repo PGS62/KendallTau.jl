@@ -1,5 +1,6 @@
 using KendallTau
 using Test
+using Random
 
 x = Float64[1 0; 2 1; 3 0; 4 1; 5 10]
 Y = Float64[5 5 6; 3 4 1; 4 0 4; 2 6 1; 5 7 10]
@@ -11,8 +12,8 @@ x2 = x[:, 2]
 y = Y[:, 1]
 
 # corkendall and friends
-for f in (corkendall, KendallTau.corkendall_unthreaded, KendallTau.corkendall_threaded, 
-    KendallTau.corkendall_naive,KendallTau.FromStatsBase.corkendall_pw)
+for f in (corkendall, KendallTau.corkendall_unthreaded, KendallTau.corkendall_threaded,
+    corkendall_naive, KendallTau.FromStatsBase.corkendall_pw)
     @show f
     # Check error, handling of NaN, Inf etc
     @test_throws DimensionMismatch("Vectors must have same length") f([1, 2, 3, 4], [1, 2, 3])
@@ -32,7 +33,7 @@ for f in (corkendall, KendallTau.corkendall_unthreaded, KendallTau.corkendall_th
     # n = 78_000 tests for overflow errors on 32 bit
     # Testing for overflow errors on 64bit would require n be too large for practicality
     # This also tests merge_sort! since n is (much) greater than SMALL_THRESHOLD.
-    if !(f === KendallTau.corkendall_naive)
+    if !(f === corkendall_naive)
         n = 78_000
         # Test with many repeats
         @test f(repeat(x1, n), repeat(y, n)) ≈ -1 / sqrt(90)
@@ -143,5 +144,14 @@ for f in (corkendall, KendallTau.corkendall_unthreaded, KendallTau.corkendall_th
     @test_throws DimensionMismatch f([1], [1 2; 3 4])
     @test_throws DimensionMismatch f([1 2; 3 4], [1])
     @test_throws ArgumentError f([1 2; 3 4:4 6], [1 2; 3 4])
+
+    #= Test functions against corkendall_naive, a "reference implementation" that has the 
+    advantage of simplicity.
+    =#
+    if f !== corkendall_naive
+        @test compare_implementations(f, corkendall_naive, abstol=0.0, maxcols=10, maxrows=10, numtests=200, fns_handle_missings=true) == true
+        @test compare_implementations(f, corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=200, fns_handle_missings=true) == true
+        @test compare_implementations(f, corkendall_naive, abstol=1e14, maxcols=2, maxrows=20000, numtests=5, fns_handle_missings=true) == true
+    end
 
 end

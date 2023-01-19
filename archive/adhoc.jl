@@ -1,4 +1,3 @@
-
 macro threads_if(ex,threaded)
     return :(
         if threaded == :threaded
@@ -11,7 +10,6 @@ macro threads_if(ex,threaded)
     )
 end
 
-
 function demo(threaded::Symbol)
     @threads_if(
         for i = 1:10
@@ -19,5 +17,3 @@ function demo(threaded::Symbol)
         end
     ,threaded)
 end
-
-

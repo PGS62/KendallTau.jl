@@ -107,8 +107,6 @@ Results from all 3 functions identical? true
 </p>
 </details>
 
-
-
 ## Update 20 April 2021
 The code of `corkendall` from this package was incorporated in Julia StatsBase on 8 February 2021 (see [this](https://github.com/JuliaStats/StatsBase.jl/commit/11ac5b596405367b3217d3d962e22523fef9bb0d) commit).
 
@@ -178,7 +176,6 @@ Results from both functions identical? true
 
 </p>
 </details>
-
 
 3) Tried various approaches to multi-threading. My experience so far is that it's possible to get speedups by a factor of approx 3.8 on a four core PC, but that the relative performance of the multi-threaded versions degrades as the number of columns in the correlation matrix to be calculated increases, so this is still a work in progress. Target correlation matrix size: 11,000 x 11,000.
 

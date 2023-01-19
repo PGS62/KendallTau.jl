@@ -2,7 +2,7 @@
 """
     handlemissings(x::RoMVector, y::RoMVector)
 Returns a pair `(a,b)`, filtered copies of `x` and `y`, in which elements `x[i]` and `y[i]`
-are filtered out if either `ismissing(x[i])` or `ismissing(y[i])`.
+are filtered out if  `ismissing(x[i])||ismissing(y[i])`.
 """
 function handlemissings(x::RoMVector{T}, y::RoMVector{U}) where {T} where {U}
 
@@ -32,7 +32,7 @@ end
 
 """
     handlemissings(x::RoMMatrix)
-Returns `A`, a filtered copy of `x`, in which the row `x[i,:]` is filtered out if 
+Returns a filtered copy of `x`, in which the row `x[i,:]` is filtered out if 
 `any(ismissing,x[i,:])`.
 """
 function handlemissings(x::RoMMatrix{T}) where {T}
@@ -76,7 +76,7 @@ end
 
 """
     handlemissings(x::RoMMatrix,y::RoMMatrix)
-Returns a pair `(A,B)`, filtered copies of `x` and `y`, in which the rows `x[i,:]` and
+Returns a pair `(a,b)`, filtered copies of `x` and `y`, in which the rows `x[i,:]` and
 `y[i,:]` are both filtered out if `any(ismissing,x[i,:])||any(ismissing,y[i,:])`.
 """
 function handlemissings(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T} where {U}
@@ -140,8 +140,8 @@ end
 
 """
     handlemissings(x::RoMVector,y::RoMMatrix)
-Returns a pair `(a,B)`, filtered copies of `x` and `y`, in which the elements `x[i]` and
-rows `y[i,:]` are both filtered out if either `ismissing(x[i])||any(ismissing,y[i,:])`.
+Returns a pair `(a,b)`, filtered copies of `x` and `y`, in which the elements `x[i]` and
+rows `y[i,:]` are both filtered out if `ismissing(x[i])||any(ismissing,y[i,:])`.
 """
 function handlemissings(x::RoMVector{T}, y::RoMMatrix{U}) where {T} where {U}
     length(x) == size(y, 1) || error("vector length must must match number of rows in \
@@ -203,7 +203,7 @@ end
 """
     handlelistwise(x::AbstractArray,y::AbstractArray,skipmissing::Symbol)
 Handles the case of `skipmissing == :listwise`. This is a simpler case than `:pairwise`, we
-merely need to construct new argument(s) for `corkendall` by calling `handlemissings`. The
+merely need to construct new argument(s) for `corkendall` by calling `handlelistwise`. The
 function also validates `skipmissing`, throwing an error if invalid.
 """
 function handlelistwise(x::AbstractArray, y::AbstractArray, skipmissing::Symbol)

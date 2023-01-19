@@ -1,8 +1,5 @@
-#=corkendall_pw uses (a copy of) StatsBase's pairwise function operating on (an amended copy
- of) StatsBase's corkendall to 
-
-As currently written, the approach "leaves some performance on the table" for the Matrix and
-Matrix-Matrix cases since it does not cache results from sortperm.
+#=corkendall_pw uses (a copy of) StatsBase's pairwise function operating on (a slightly 
+amended copy of) StatsBase's corkendall.
 
 =#
 

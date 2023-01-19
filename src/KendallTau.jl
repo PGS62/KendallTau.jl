@@ -8,9 +8,7 @@ const RoMVector{T<:Real} = AbstractVector{<:Union{T,Missing}}
 const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
 
 include("corkendall.jl")
-include("corkendall_naive.jl")
 include("handlemissings.jl")
-include("corkendall_threads.jl")
 include("speedtest.jl")
 
 module FromStatsBase

@@ -1,3 +1,8 @@
+
+#RoM stands for "Real or Missing"
+const RoMVector{T<:Real} = AbstractVector{<:Union{T,Missing}}
+const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
+
 """
     corkendall_naive(x::AbstractVector{<:Real}, y::AbstractVector{<:Real})
 
