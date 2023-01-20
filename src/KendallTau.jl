@@ -10,6 +10,7 @@ const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
 include("corkendall.jl")
 include("handlemissings.jl")
 include("speedtest.jl")
+include("experimental.jl")
 
 module FromStatsBase
 using LinearAlgebra
