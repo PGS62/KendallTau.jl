@@ -1,6 +1,6 @@
 
 
-function corkendall_experimental_b(x::RoMMatrix; skipmissing::Symbol=:none, threaded::Symbol=:threaded)
+function corkendall_experimental(x::RoMMatrix; skipmissing::Symbol=:none, threaded::Symbol=:threaded)
 
     x = handlelistwise(x, skipmissing)
     n = size(x, 2)
@@ -8,10 +8,10 @@ function corkendall_experimental_b(x::RoMMatrix; skipmissing::Symbol=:none, thre
 
     if threaded == :threaded
         nτ = n * (n - 1) ÷ 2
-        numchunks = round(Integer, nτ / 10_000, RoundUp)
+        numchunks = round(Integer, nτ / 50_000, RoundUp)
         colchunks = partitioncols(n, true, numchunks)
+
         for cols in colchunks
-            @show cols
             Threads.@threads for j in cols
                 permx = sortperm(x[:, j])
                 sortedx = x[:, j][permx]
@@ -36,37 +36,53 @@ function corkendall_experimental_b(x::RoMMatrix; skipmissing::Symbol=:none, thre
 end
 
 
+function corkendall_experimental(x::RoMMatrix, y::RoMMatrix; skipmissing::Symbol=:none, threaded::Symbol=:threaded)
+    x, y = handlelistwise(x, y, skipmissing)
+    nr = size(x, 2)
+    nc = size(y, 2)
+    C = Matrix{Float64}(undef, nr, nc)
+    if threaded == :threaded
+        nτ = nc * nr
+        numchunks = round(Integer, nτ / 50_000, RoundUp)
+        rowchunks = partitioncols(nr, false, numchunks)
 
-#corkendall_experimental does not work when the inner loop[ is threaded]
-function corkendall_experimental(x::RoMMatrix; skipmissing::Symbol=:none, threaded::Symbol=:threaded)
-    batchsize = 100000
+        for rows in rowchunks
+            Threads.@threads for i in rows
+                permx = sortperm(x[:, i])
+                sortedx = x[:, i][permx]
+                for j = 1:nc
+                    C[i, j] = corkendall_sorted!(sortedx, y[:, j], permx)
+                end
+            end
+        end
+    elseif threaded == :none
+        for i = 1:nr
+            permx = sortperm(x[:, i])
+            sortedx = x[:, i][permx]
+            for j = 1:nc
+                C[i, j] = corkendall_sorted!(sortedx, y[:, j], permx)
+            end
+        end
+    else
+        throw(ArgumentError("threaded must be :none or :threaded, but got :$threaded"))
+    end
+
+    return C
+end
+
+import Base.Threads.@spawn
+
+#after watching https://www.youtube.com/watch?v=FzhipiZO4Jk&ab_channel=JuliaHub
+function corkendall_sync(x::RoMMatrix; skipmissing::Symbol=:none, threaded::Symbol=:threaded)
     x = handlelistwise(x, skipmissing)
     n = size(x, 2)
     C = Matrix{Float64}(I, n, n)
 
     if threaded == :threaded
-        nτ = n * (n - 1) ÷ 2
-        ijs = Array{Integer}(undef, nτ, 2)
-        k = 0
-        for j = 2:n
-            for i = 1:j-1
-                k += 1
-                ijs[k, 1] = i
-                ijs[k, 2] = j
-            end
-        end
-        permx = sortperm(x[:, 1])
-        sortedx = x[:, 1][permx]
-
-        for lb = 1:batchsize:nτ
-            ub = min(lb + batchsize - 1, nτ)
-            Threads.@threads for k = lb:ub
-                i = ijs[k, 1]
-                j = ijs[k, 2]
-                if i == 1
-                    permx = sortperm(x[:, j])
-                    sortedx = x[:, j][permx]
-                end
+        @sync for j = 2:n
+            permx = sortperm(x[:, j])
+            sortedx = x[:, j][permx]
+            @spawn for i = 1:j-1
                 C[i, j] = C[j, i] = corkendall_sorted!(sortedx, x[:, i], permx)
             end
         end
@@ -86,17 +102,36 @@ function corkendall_experimental(x::RoMMatrix; skipmissing::Symbol=:none, thread
 end
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 """
-    partitioncols(nc::Int64, triangular::Bool)
-Auxiliary function for task load balancing. Returns a vector of `UnitRange`s, which partition the columns of the
-correlation matrix to be calculated, one "chunk" per task.
+    partitioncols(nc::Int64, symmetric::Bool, numchunks::Integer)
+
+Auxiliary function for task load balancing. Returns a vector of `UnitRange`s, which
+partition the columns of the correlation matrix to be calculated.
+
 # Arguments
 - `nc::Int64`: the number of columns in the correlation matrix.
-- `triangular::Bool`: should be `true` when calculating below-the-diagonal elements of a correlation matrix. In this
-case the partitions have (approximately) equal numbers of elements below the diagonal, so early partitions are narrower
-than later partitions.
-- `numtasks`: the number of tasks (or chunks) to partition to. The length of the return from the function
-is `min(nc,numtasks)`.
+- `symmetric::Bool`: `true` when calculating below-the-diagonal elements of a
+symmetric matrix. In this case the partitions have (approximately) equal numbers of
+elements below the diagonal, so early partitions are "narrower" (have fewer columns) than
+later partitions. `false` when calculating all elements of a (not necessarily square) 
+correlation matrix.
+- `numchunks`: the number of chunks to partition to. The length of the return from the
+function is `min(nc,numtasks)`.
 
 # Examples
 ```
@@ -115,10 +150,10 @@ julia> length.(KendallTau.partitioncols(100,true,4))
  48
 ```
 """
-function partitioncols(nc::Int64, triangular::Bool, numchunks::Integer)
+function partitioncols(nc::Int64, symmetric::Bool, numchunks::Integer)
 
     chunks = Vector{UnitRange{Int64}}(undef, 0)
-    if triangular
+    if symmetric
         lastcol = nc - 1
         numcorrels = nc * (nc - 1) ÷ 2
     else
@@ -126,20 +161,20 @@ function partitioncols(nc::Int64, triangular::Bool, numchunks::Integer)
         numcorrels = nc * nc
     end
 
-    correlsdone = tasksdone = 0
+    correlsdone = chunksdone = 0
     starttask = true
     chunkfirstcol = 0
     target = 0.0
     for i = 1:lastcol
         if starttask
             chunkfirstcol = i
-            target = correlsdone + (numcorrels - correlsdone) / (numchunks - tasksdone)
+            target = correlsdone + (numcorrels - correlsdone) / (numchunks - chunksdone)
         end
-        correlsdone += triangular ? (nc - i) : nc
+        correlsdone += symmetric ? (nc - i) : nc
         if correlsdone >= target || i == lastcol
             push!(chunks, chunkfirstcol:i)
             starttask = true
-            tasksdone += 1
+            chunksdone += 1
         else
             starttask = false
         end
@@ -147,4 +182,3 @@ function partitioncols(nc::Int64, triangular::Bool, numchunks::Integer)
 
     return (chunks)
 end
-
