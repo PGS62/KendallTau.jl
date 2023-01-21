@@ -1,4 +1,11 @@
+import Base.Threads.@spawn
 
+#=
+Test against @time KendallTau.corkendall_experimental(rand(1000,8000))
+on my laptop yielded time of 6020 seconds when task_limit = 250_000
+or 3177 seconds when task_limit = 50_000.
+=#
+const task_limit::Integer = 50_000
 
 function corkendall_experimental(x::RoMMatrix; skipmissing::Symbol=:none, threaded::Symbol=:threaded)
 
@@ -8,14 +15,15 @@ function corkendall_experimental(x::RoMMatrix; skipmissing::Symbol=:none, thread
 
     if threaded == :threaded
         nτ = n * (n - 1) ÷ 2
-        numchunks = round(Integer, nτ / 50_000, RoundUp)
-        colchunks = partitioncols(n, true, numchunks)
+        numchunks = round(Integer, nτ / task_limit, RoundUp)
+        colchunks = partitionmatrix(n, true, numchunks)
 
         for cols in colchunks
-            Threads.@threads for j in cols
+            @show cols,length(cols),now()
+            @sync for j in cols
                 permx = sortperm(x[:, j])
                 sortedx = x[:, j][permx]
-                for i = j+1:n
+                @spawn for i = j+1:n
                     C[i, j] = C[j, i] = corkendall_sorted!(sortedx, x[:, i], permx)
                 end
             end
@@ -43,14 +51,14 @@ function corkendall_experimental(x::RoMMatrix, y::RoMMatrix; skipmissing::Symbol
     C = Matrix{Float64}(undef, nr, nc)
     if threaded == :threaded
         nτ = nc * nr
-        numchunks = round(Integer, nτ / 50_000, RoundUp)
-        rowchunks = partitioncols(nr, false, numchunks)
+        numchunks = round(Integer, nτ / task_limit, RoundUp)
+        rowchunks = partitionmatrix(nr, false, numchunks)
 
         for rows in rowchunks
-            Threads.@threads for i in rows
+            @sync for i in rows
                 permx = sortperm(x[:, i])
                 sortedx = x[:, i][permx]
-                for j = 1:nc
+                @spawn for j = 1:nc
                     C[i, j] = corkendall_sorted!(sortedx, y[:, j], permx)
                 end
             end
@@ -70,20 +78,26 @@ function corkendall_experimental(x::RoMMatrix, y::RoMMatrix; skipmissing::Symbol
     return C
 end
 
-import Base.Threads.@spawn
 
-#after watching https://www.youtube.com/watch?v=FzhipiZO4Jk&ab_channel=JuliaHub
-function corkendall_sync(x::RoMMatrix; skipmissing::Symbol=:none, threaded::Symbol=:threaded)
+
+function corkendall_experimental_sync(x::RoMMatrix; skipmissing::Symbol=:none, threaded::Symbol=:threaded)
+
     x = handlelistwise(x, skipmissing)
     n = size(x, 2)
     C = Matrix{Float64}(I, n, n)
 
     if threaded == :threaded
-        @sync for j = 2:n
-            permx = sortperm(x[:, j])
-            sortedx = x[:, j][permx]
-            @spawn for i = 1:j-1
-                C[i, j] = C[j, i] = corkendall_sorted!(sortedx, x[:, i], permx)
+        nτ = n * (n - 1) ÷ 2
+        numchunks = round(Integer, nτ / 50_000, RoundUp)
+        colchunks = partitionmatrix(n, true, numchunks)
+
+        for cols in colchunks
+            @sync for j in cols
+                permx = sortperm(x[:, j])
+                sortedx = x[:, j][permx]
+                @spawn for i = j+1:n
+                    C[i, j] = C[j, i] = corkendall_sorted!(sortedx, x[:, i], permx)
+                end
             end
         end
     elseif threaded == :none
@@ -117,8 +131,32 @@ end
 
 
 
+
+
+
+
+
+
+#After watching https://www.youtube.com/watch?v=FzhipiZO4Jk&ab_channel=JuliaHub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 """
-    partitioncols(nc::Int64, symmetric::Bool, numchunks::Integer)
+    partitionmatrix(nc::Int64, symmetric::Bool, numchunks::Integer)
 
 Auxiliary function for task load balancing. Returns a vector of `UnitRange`s, which
 partition the columns of the correlation matrix to be calculated.
@@ -131,18 +169,18 @@ elements below the diagonal, so early partitions are "narrower" (have fewer colu
 later partitions. `false` when calculating all elements of a (not necessarily square) 
 correlation matrix.
 - `numchunks`: the number of chunks to partition to. The length of the return from the
-function is `min(nc,numtasks)`.
+function is `min(nc,numchunks)`.
 
 # Examples
 ```
-julia> length.(KendallTau.partitioncols(10,false,4))
+julia> length.(KendallTau.partitionmatrix(10,false,4))
 4-element Vector{Int64}:
  3
  3
  2
  2
 
-julia> length.(KendallTau.partitioncols(100,true,4))
+julia> length.(KendallTau.partitionmatrix(100,true,4))
 4-element Vector{Int64}:
  14
  16
@@ -150,7 +188,7 @@ julia> length.(KendallTau.partitioncols(100,true,4))
  48
 ```
 """
-function partitioncols(nc::Int64, symmetric::Bool, numchunks::Integer)
+function partitionmatrix(nc::Int64, symmetric::Bool, numchunks::Integer)
 
     chunks = Vector{UnitRange{Int64}}(undef, 0)
     if symmetric

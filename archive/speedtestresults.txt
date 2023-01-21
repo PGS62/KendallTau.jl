@@ -541,3 +541,48 @@ Speed ratio KendallTau.FromStatsBase.corkendall_pw vs KendallTau.corkendall: 0.6
 Ratio of memory allocated KendallTau.FromStatsBase.corkendall_pw vs KendallTau.corkendall: 1.080336648814078
 Results from both functions identical? true
 ###################################################################
+
+
+TEST THAT SHOWED IT'S WORTH USING   @sync and @spawn as opposed to just Threads.@threads
+about 20% speedup as a result of higher thread utilisation
+julia> KendallTau.how_scaleable(KendallTau.corkendall_experimental_sync,KendallTau.corkendall_experimental,1000,2 .^ (5:11)
+       ,false)
+###################################################################
+Executing how_scaleable 2023-01-21T07:59:45.835
+ComputerName = PHILIP-LAPTOP
+fn1 = KendallTau.corkendall_experimental_sync
+fn2 = KendallTau.corkendall_experimental
+nr = 1000
+ncs = [32, 64, 128, 256, 512, 1024, 2048]
+with_missings = false
+Threads.nthreads() = 8
+  5.941 ms (2341 allocations: 10.65 MiB)
+  7.347 ms (2191 allocations: 10.63 MiB)
+nc = 32, nr = 1000, fn1 = corkendall_experimental_sync, fn2 = corkendall_experimental, time1 = 0.0059413, time2 = 0.0073469, ratio = 0.808681212484177
+  23.356 ms (8775 allocations: 41.28 MiB)
+  30.713 ms (8432 allocations: 41.24 MiB)
+nc = 64, nr = 1000, fn1 = corkendall_experimental_sync, fn2 = corkendall_experimental, time1 = 0.023356, time2 = 0.0307126, ratio = 0.7604696443804823
+  95.389 ms (33927 allocations: 162.40 MiB)
+  130.379 ms (33201 allocations: 162.32 MiB)
+nc = 128, nr = 1000, fn1 = corkendall_experimental_sync, fn2 = corkendall_experimental, time1 = 0.0953888, time2 = 0.1303793, ratio = 0.7316253423664646
+  448.300 ms (133384 allocations: 644.09 MiB)
+  551.808 ms (131888 allocations: 643.92 MiB)
+nc = 256, nr = 1000, fn1 = corkendall_experimental_sync, fn2 = corkendall_experimental, time1 = 0.4483, time2 = 0.551808, ratio = 0.8124202621201577
+  2.133 s (528936 allocations: 2.51 GiB)
+  2.176 s (525973 allocations: 2.50 GiB)
+nc = 512, nr = 1000, fn1 = corkendall_experimental_sync, fn2 = corkendall_experimental, time1 = 2.1326329, time2 = 2.1762322, ratio = 0.9799656948371595
+  8.813 s (2106542 allocations: 10.00 GiB)
+  10.067 s (2100777 allocations: 10.00 GiB)
+nc = 1024, nr = 1000, fn1 = corkendall_experimental_sync, fn2 = corkendall_experimental, time1 = 8.8134886, time2 = 10.0668585, ratio = 0.8754954288867772
+  47.457 s (8407685 allocations: 39.95 GiB)
+  57.815 s (8396880 allocations: 39.95 GiB)
+nc = 2048, nr = 1000, fn1 = corkendall_experimental_sync, fn2 = corkendall_experimental, time1 = 47.4571438, time2 = 57.8151552, ratio = 0.8208426257065552
+7×4 Matrix{Float64}:
+   32.0   0.0059413   0.0073469  0.808681
+   64.0   0.023356    0.0307126  0.76047
+  128.0   0.0953888   0.130379   0.731625
+  256.0   0.4483      0.551808   0.81242
+  512.0   2.13263     2.17623    0.979966
+ 1024.0   8.81349    10.0669     0.875495
+ 2048.0  47.4571     57.8152     0.820843
+###################################################################

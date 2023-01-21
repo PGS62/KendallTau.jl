@@ -47,7 +47,7 @@ function corkendall_pw(x::AbstractVector, y::AbstractMatrix; skipmissing::Symbol
     end
 end
 
-function corkendall_pw(x::AbstractMatrix, y::AbstractMatrix=x; skipmissing::Symbol=:none)
+function corkendall_pw(x::AbstractMatrix, y::AbstractMatrix=x; skipmissing::Symbol=:pairwise)
     symmetric = x === y
     if skipmissing == :none
         if (missing isa eltype(x)) || (missing isa eltype(y))

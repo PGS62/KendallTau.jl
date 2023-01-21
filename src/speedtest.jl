@@ -371,8 +371,9 @@ nc = 2048, nr = 1000, fn1 = corkendall_sync, fn2 = corkendall_experimental, time
  2048.0  52.2336     56.3927     0.926248
 ###################################################################
 
-
  =#
+
+ #if fn2 == identity then only fn1 is timed
 function how_scaleable(fn1::Function, fn2::Function, nr::Integer, ncs::Vector{<:Integer}, with_missings::Bool)
 
     println("#"^67)
@@ -390,6 +391,10 @@ function how_scaleable(fn1::Function, fn2::Function, nr::Integer, ncs::Vector{<:
     timings2 = zeros(n)
     i = 0
 
+    dofn2 = !(fn2 == identity)
+
+    useBenchmarkTools = true
+
     if true#set to false when tweaking chart appearance
 
         for nc in ncs
@@ -398,47 +403,69 @@ function how_scaleable(fn1::Function, fn2::Function, nr::Integer, ncs::Vector{<:
             if with_missings
                 x = ifelse.(x .< 0.1, missing, x)
             end
-            if false#true = used @timed - quicker, but less accurate, false = use BenchmarkTools
+            if useBenchmarkTools
                 tuple1 = @timed(fn1(x))
-                tuple2 = @timed(fn2(x))
                 res1 = tuple1.value
-                res2 = tuple2.value
                 time1 = tuple1.time
-                time2 = tuple2.time
+                if dofn2
+                    tuple2 = @timed(fn2(x))
+                    res2 = tuple2.value
+                    time2 = tuple2.time
+                end
             else
                 res1, est1 = @btimed $fn1($x)
-                res2, est2 = @btimed $fn2($x)
                 time1 = est1.time / 1e9
-                time2 = est2.time / 1e9
+                if dofn2
+                    res2, est2 = @btimed $fn2($x)
+                    time2 = est2.time / 1e9
+                end
             end
 
-            res1 == res2 || throw("Different return values from $fn1 and $fn2, nr = $nr, nc = $nc, with_missings = $with_missings")
-
+            if dofn2
+                res1 == res2 || throw("Different return values from $fn1 and $fn2, nr = $nr, nc = $nc, with_missings = $with_missings")
+            end
             timings1[i] = time1
-            timings2[i] = time2
+            if dofn2
+                timings2[i] = time2
+            end
 
-            println("nc = $nc, nr = $nr, fn1 = $fn1, fn2 = $fn2, time1 = $(time1), time2 = $(time2), ratio = $(time1/time2)")
+            if dofn2
+                println("nc = $nc, nr = $nr, fn1 = $fn1, fn2 = $fn2, time1 = $(time1), time2 = $(time2), ratio = $(time1/time2)")
+            else
+                println("nc = $nc, nr = $nr, fn1 = $fn1, time1 = $(time1) ")
+            end
         end
 
-
-        display(hcat(ncs, timings1, timings2, timings1 ./ timings2))
-
+        if dofn2
+            display(hcat(ncs, timings1, timings2, timings1 ./ timings2))
+        else
+            display(hcat(ncs, timings1))
+        end
         println("#"^67)
 
     else
-
+        #for chart tweaking...
         timings1 = collect(ncs) .* 2
-        timings2 = collect(ncs) .* 3
+        if dofn2
+            timings2 = collect(ncs) .* 3
+        end
     end
 
-    plot([
-            scatter(x=ncs, y=timings1, mode="line", name="$fn1"),
-            scatter(x=ncs, y=timings2, mode="line", name="$fn2"),
-        ], Layout(; title="corkendall execution time vs input data size",
-            xaxis=attr(title="Data cols (Data rows = $nr)", type="log"),
-            yaxis=attr(title="Seconds", type="log")))
+    @show dofn2
+    if dofn2
+        plot([
+                scatter(x=ncs, y=timings1, mode="line", name="$fn1"),
+                scatter(x=ncs, y=timings2, mode="line", name="$fn2")
+            ], Layout(; title="corkendall execution time vs input data size",
+                xaxis=attr(title="Data cols (Data rows = $nr)", type="log"),
+                yaxis=attr(title="Seconds", type="log")))
+    else
+        plot([
+                scatter(x=ncs, y=timings1, mode="line", name="$fn1"),
+            ], Layout(; title="$fn1 execution time vs input data size",
+                xaxis=attr(title="Data cols (Data rows = $nr)", type="log"),
+                yaxis=attr(title="Seconds", type="log")))
 
-
-
+    end
 end
 
