@@ -586,3 +586,37 @@ nc = 2048, nr = 1000, fn1 = corkendall_experimental_sync, fn2 = corkendall_exper
  1024.0   8.81349    10.0669     0.875495
  2048.0  47.4571     57.8152     0.820843
 ###################################################################
+
+###################################################################
+Executing how_scaleable 2023-01-24T20:55:38.125
+ComputerName = MV-LAPTOP
+fn1 = KendallTau.corkendall_experimental
+fn2 = KendallTau.corkendall_threaded
+nr = 1000
+ncs = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192]
+with_missings = false
+Threads.nthreads() = 8
+nc = 2, nr = 1000, fn1 = corkendall_experimental, fn2 = corkendall_threaded, time1 = 0.0527013, time2 = 0.1119156, ratio = 0.47090217985696364
+nc = 4, nr = 1000, fn1 = corkendall_experimental, fn2 = corkendall_threaded, time1 = 0.0003749, time2 = 0.0003611, ratio = 1.0382165605095541
+nc = 8, nr = 1000, fn1 = corkendall_experimental, fn2 = corkendall_threaded, time1 = 0.0007598, time2 = 0.000823, ratio = 0.9232077764277036
+nc = 16, nr = 1000, fn1 = corkendall_experimental, fn2 = corkendall_threaded, time1 = 0.0025333, time2 = 0.0038149, ratio = 0.6640541036462293
+nc = 32, nr = 1000, fn1 = corkendall_experimental, fn2 = corkendall_threaded, time1 = 0.0101935, time2 = 0.0139893, ratio = 0.7286640503813628
+nc = 64, nr = 1000, fn1 = corkendall_experimental, fn2 = corkendall_threaded, time1 = 0.1303084, time2 = 0.0399335, ratio = 3.263134961874116
+nc = 128, nr = 1000, fn1 = corkendall_experimental, fn2 = corkendall_threaded, time1 = 0.1358018, time2 = 0.4585699, ratio = 0.29614198402468195
+nc = 256, nr = 1000, fn1 = corkendall_experimental, fn2 = corkendall_threaded, time1 = 0.7677599, time2 = 1.0986352, ratio = 0.6988306036435025
+nc = 512, nr = 1000, fn1 = corkendall_experimental, fn2 = corkendall_threaded, time1 = 2.517709, time2 = 3.3503314,ded,ded, time1 = 49.2300388, time2 = 64.6590096, ratio = 0.7613794133957783
+ded, time1 = 49.2300388, time2 = 64.6590096, ratio = 0.7613794133957783nc = 4096, nr = 1000, fn1 = corkendall_experimental, fn2 = corkendall_threaded, time1 = 332.2118334, time2 = 424.0690924, ratio = 0.7833908185099321nc = 8192, nr = 1000, fn1 = corkendall_experimental, fn2 = corkendall_threaded, time1 = 3475.3561758, time2 = 5380.3387426, ratio = 0.645936314061996413×4 Matrix{Float64}:
+    2.0     0.0527013     0.111916   0.470902
+    4.0     0.0003749     0.0003611  1.03822
+    8.0     0.0007598     0.000823   0.923208
+   16.0     0.0025333     0.0038149  0.664054
+   32.0     0.0101935     0.0139893  0.728664
+   64.0     0.130308      0.0399335  3.26313
+  128.0     0.135802      0.45857    0.296142
+  256.0     0.76776       1.09864    0.698831
+  512.0     2.51771       3.35033    0.751481
+ 1024.0    11.0495       11.1097     0.99458
+ 2048.0    49.23         64.659      0.761379
+ 4096.0   332.212       424.069      0.783391
+ 8192.0  3475.36       5380.34       0.645936
+###################################################################

@@ -19,7 +19,7 @@ function corkendall_experimental(x::RoMMatrix; skipmissing::Symbol=:none, thread
         colchunks = partitionmatrix(n, true, numchunks)
 
         for cols in colchunks
-            @show cols,length(cols),now()
+          #  @show cols, length(cols), now()
             @sync for j in cols
                 permx = sortperm(x[:, j])
                 sortedx = x[:, j][permx]
@@ -219,4 +219,21 @@ function partitionmatrix(nc::Int64, symmetric::Bool, numchunks::Integer)
     end
 
     return (chunks)
+end
+
+#Curious how much time might be spent inefficiently testing for isnan
+function test_idea()
+    nr=1000
+    nc = 11000
+    x = rand(nr, nc)
+    @time begin
+        for i = 2:nc
+            for j = 1:i-1
+                for k = 1:nr
+                    isproblem = isnan(x[k, i]) || isnan(x[k, j])
+                end
+            end
+        end
+    end
+
 end

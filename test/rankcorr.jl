@@ -48,35 +48,33 @@ for f in (corkendall, KendallTau.corkendall_unthreaded, KendallTau.corkendall_th
 
         # All elements identical should yield NaN
         @test isnan(f(repeat([1], n), collect(1:n)))
-
-        # Test handling of missings
-        @test f(Xm, Xm, skipmissing=:pairwise) == f(x, x)
-        @test f(Xm, Xm, skipmissing=:listwise) == f(x, x)
-        @test f(Xm, Ym, skipmissing=:listwise) == f(x, Y)
-        @test f(Xm, Ym, skipmissing=:pairwise) ≈ [-1/√90 0.4 1/√90
-            -2/√154 7/√165 -1/√154]
-
-        # Test not-correct values of skipmissing
-        @test_throws ArgumentError f(Xm)
-        @test_throws ArgumentError f(x, skipmissing=:foo)
-
-        c11 = f(x1, x1)
-        c12 = f(x1, x2)
-        c22 = f(x2, x2)
-
-        # AbstractMatrix{<:Real}, AbstractMatrix{<:Real}
-        @test f(x, x) ≈ [c11 c12; c12 c22]
-        # AbstractMatrix{<:Real}
-        @test f(x) ≈ [c11 c12; c12 c22]
-
-        @test c11 == 1.0
-        @test c22 == 1.0
-        @test c12 == 3 / sqrt(20)
-    else
-        c11 = f(x1, x1)
-        c12 = f(x1, x2)
-        c22 = f(x2, x2)
     end
+
+    # Test handling of missings
+    @test f(Xm, Xm, skipmissing=:pairwise) == f(x, x)
+    @test f(Xm, Xm, skipmissing=:listwise) == f(x, x)
+    @test f(Xm, Ym, skipmissing=:listwise) == f(x, Y)
+    @test f(Xm, Ym, skipmissing=:pairwise) ≈ [-1/√90 0.4 1/√90
+        -2/√154 7/√165 -1/√154]
+
+    # Test not-correct values of skipmissing
+    if !(f === corkendall_naive)
+        @test_throws ArgumentError f(Xm)
+    end
+    @test_throws ArgumentError f(x; skipmissing=:foo)
+
+    c11 = f(x1, x1)
+    c12 = f(x1, x2)
+    c22 = f(x2, x2)
+
+    # AbstractMatrix{<:Real}, AbstractMatrix{<:Real}
+    @test f(x, x) ≈ [c11 c12; c12 c22]
+    # AbstractMatrix{<:Real}
+    @test f(x) ≈ [c11 c12; c12 c22]
+
+    @test c11 == 1.0
+    @test c22 == 1.0
+    @test c12 == 3 / sqrt(20)
     # Finished testing for overflow, so redefine n for speedier tests
     n = 100
 

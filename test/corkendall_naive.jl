@@ -1,4 +1,3 @@
-
 #RoM stands for "Real or Missing"
 const RoMVector{T<:Real} = AbstractVector{<:Union{T,Missing}}
 const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
@@ -68,7 +67,7 @@ function corkendall_naive(x::AbstractArray; skipmissing::Symbol)
     elseif skipmissing == :none && !(missing isa eltype(x))
         return (corkendall_naive(x))
     else
-        throw("keyword argument skipmissing has unrecognised value `:$skipmissing`")
+        throw(ArgumentError("keyword argument skipmissing has unrecognised value `:$skipmissing`"))
     end
 end
 
