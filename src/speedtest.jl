@@ -21,11 +21,13 @@ macro btimed(args...)
         local $trial, $result = $BenchmarkTools.run_result($bench)
         local $trialmin = $BenchmarkTools.minimum($trial)
         local $trialallocs = $BenchmarkTools.allocs($trialmin)
+#=
         println("  ",
             $BenchmarkTools.prettytime($BenchmarkTools.time($trialmin)),
             " (", $trialallocs, " allocation",
             $trialallocs == 1 ? "" : "s", ": ",
             $BenchmarkTools.prettymemory($BenchmarkTools.memory($trialmin)), ")")
+=#
         $result, $trialmin, $BenchmarkTools.memory($trialmin)
     end)
 end
@@ -319,152 +321,117 @@ using PlotlyJS
 
 #=
 
+julia> KT = KendallTau;KT.how_scaleable([KT.corkendall_unthreaded,KT.corkendall_threaded,KT.corkendall_experimental],1000,2 .^(1:9),false)
 ###################################################################
-Executing how_scaleable 2023-01-20T19:32:29.756
-ComputerName = PHILIP-LAPTOP
-fn1 = KendallTau.corkendall_sync
-fn2 = KendallTau.corkendall_experimental
-nr = 1000
-ncs = [4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]
+Executing how_scaleable 2023-01-30T16:55:45.911
+ComputerName = DESKTOP-HSGAM5S
+fns[1] = corkendall_unthreaded
+fns[2] = corkendall_threaded
+fns[3] = corkendall_experimental
+ncs = [2, 4, 8, 16, 32, 64, 128, 256, 512]
 with_missings = false
-Threads.nthreads() = 8
-  363.100 μs (70 allocations: 217.55 KiB)
-  220.900 μs (91 allocations: 220.67 KiB)
-nc = 4, nr = 1000, fn1 = corkendall_sync, fn2 = corkendall_experimental, time1 = 0.0003631, time2 = 0.0002209, ratio = 1.6437301946582163
-  841.300 μs (202 allocations: 786.17 KiB)
-  452.600 μs (199 allocations: 786.73 KiB)
-nc = 8, nr = 1000, fn1 = corkendall_sync, fn2 = corkendall_experimental, time1 = 0.0008413, time2 = 0.0004526, ratio = 1.8588157313300928
-  2.048 ms (659 allocations: 2.81 MiB)
-  1.767 ms (607 allocations: 2.81 MiB)
-nc = 16, nr = 1000, fn1 = corkendall_sync, fn2 = corkendall_experimental, time1 = 0.0020481, time2 = 0.0017671, ratio = 1.159017599456737
-  6.141 ms (2339 allocations: 10.65 MiB)
-  7.216 ms (2191 allocations: 10.63 MiB)
-nc = 32, nr = 1000, fn1 = corkendall_sync, fn2 = corkendall_experimental, time1 = 0.0061415, time2 = 0.0072163, ratio = 0.8510594071754223
-  24.493 ms (8773 allocations: 41.28 MiB)
-  29.968 ms (8432 allocations: 41.24 MiB)
-nc = 64, nr = 1000, fn1 = corkendall_sync, fn2 = corkendall_experimental, time1 = 0.0244927, time2 = 0.0299675, ratio = 0.8173087511470759
-  97.742 ms (33925 allocations: 162.40 MiB)
-  125.707 ms (33200 allocations: 162.32 MiB)
-nc = 128, nr = 1000, fn1 = corkendall_sync, fn2 = corkendall_experimental, time1 = 0.0977419, time2 = 0.1257073, ratio = 0.7775355926028164
-  445.738 ms (133382 allocations: 644.09 MiB)
-  572.770 ms (131888 allocations: 643.92 MiB)
-nc = 256, nr = 1000, fn1 = corkendall_sync, fn2 = corkendall_experimental, time1 = 0.4457379, time2 = 0.5727699, ratio = 0.7782146024084017
-  1.985 s (528904 allocations: 2.51 GiB)
-  2.105 s (525972 allocations: 2.50 GiB)
-nc = 512, nr = 1000, fn1 = corkendall_sync, fn2 = corkendall_experimental, time1 = 1.9847789, time2 = 2.1047392, ratio = 0.9430046725028925
-  8.953 s (2106378 allocations: 10.00 GiB)
-  10.465 s (2100776 allocations: 10.00 GiB)
-nc = 1024, nr = 1000, fn1 = corkendall_sync, fn2 = corkendall_experimental, time1 = 8.9534024, time2 = 10.4651793, ratio = 0.855542188369386
-  52.234 s (8407048 allocations: 39.95 GiB)
-  56.393 s (8396873 allocations: 39.95 GiB)
-nc = 2048, nr = 1000, fn1 = corkendall_sync, fn2 = corkendall_experimental, time1 = 52.2336465, time2 = 56.3927285, ratio = 0.9262479026883759
-10×4 Matrix{Float64}:
-    4.0   0.0003631   0.0002209  1.64373
-    8.0   0.0008413   0.0004526  1.85882
-   16.0   0.0020481   0.0017671  1.15902
-   32.0   0.0061415   0.0072163  0.851059
-   64.0   0.0244927   0.0299675  0.817309
-  128.0   0.0977419   0.125707   0.777536
-  256.0   0.445738    0.57277    0.778215
-  512.0   1.98478     2.10474    0.943005
- 1024.0   8.9534     10.4652     0.855542
- 2048.0  52.2336     56.3927     0.926248
+useBenchmarkTools = true
+Threads.nthreads() = 20
+nc = 2, nr = 1000, f = corkendall_unthreaded,  time = 3.15e-5
+nc = 2, nr = 1000, f = corkendall_threaded,  time = 4.89e-5, ratio = 0.6441717791411042
+nc = 2, nr = 1000, f = corkendall_experimental,  time = 4.3e-5, ratio = 0.7325581395348837
+nc = 4, nr = 1000, f = corkendall_unthreaded,  time = 0.0002538
+nc = 4, nr = 1000, f = corkendall_threaded,  time = 0.0001413, ratio = 1.7961783439490446
+nc = 32, nr = 1000, f = corkendall_experimental,  time = 0.0018497, ratio = 8.814726712439855
+nc = 64, nr = 1000, f = corkendall_unthreaded,  time = 0.0662705
+nc = 64, nr = 1000, f = corkendall_threaded,  time = 0.0073268, ratio = 9.044944586995687
+nc = 64, nr = 1000, f = corkendall_experimental,  time = 0.0060442, ratio = 10.964312895006783
+nc = 128, nr = 1000, f = corkendall_unthreaded,  time = 0.2677632
+nc = 128, nr = 1000, f = corkendall_threaded,  time = 0.029432, ratio = 9.09768958956238
+nc = 128, nr = 1000, f = corkendall_experimental,  time = 0.0243275, ratio = 11.006605693145618
+nc = 256, nr = 1000, f = corkendall_unthreaded,  time = 1.0604601
+nc = 256, nr = 1000, f = corkendall_threaded,  time = 0.2023788, ratio = 5.2399762228059465
+nc = 256, nr = 1000, f = corkendall_experimental,  time = 0.1587403, ratio = 6.680471814655761
+nc = 512, nr = 1000, f = corkendall_unthreaded,  time = 4.3017802
+nc = 512, nr = 1000, f = corkendall_threaded,  time = 1.0040729, ratio = 4.284330550102488
+nc = 512, nr = 1000, f = corkendall_experimental,  time = 1.008708, ratio = 4.26464368281009
+9×4 Matrix{Float64}:
+   2.0  3.15e-5    4.89e-5    4.3e-5
+   4.0  0.0002538  0.0001413  0.0001434
+   8.0  0.0010675  0.0002849  0.0003475
+  16.0  0.0042129  0.0006095  0.0007639
+  32.0  0.0163046  0.0017572  0.0018497
+  64.0  0.0662705  0.0073268  0.0060442
+ 128.0  0.267763   0.029432   0.0243275
+ 256.0  1.06046    0.202379   0.15874
+ 512.0  4.30178    1.00407    1.00871
 ###################################################################
-
  =#
 
- #if fn2 == identity then only fn1 is timed
-function how_scaleable(fn1::Function, fn2::Function, nr::Integer, ncs::Vector{<:Integer}, with_missings::Bool)
-
-    println("#"^67)
-    println("Executing how_scaleable $(now())")
-    println("ComputerName = $(ENV["COMPUTERNAME"])")
-    @show fn1
-    @show fn2
-    @show nr
-    @show ncs
-    @show with_missings
-    @show Threads.nthreads()
-
-    n = length(ncs)
-    timings1 = zeros(n)
-    timings2 = zeros(n)
-    i = 0
-
-    dofn2 = !(fn2 == identity)
+function how_scaleable(fns::Vector{Function}, nr::Integer, ncs::Vector{<:Integer}, with_missings::Bool)
 
     useBenchmarkTools = true
 
+    println("#"^67)
+    println("Executing $(StackTraces.stacktrace()[1].func) $(now())")
+    println("ComputerName = $(ENV["COMPUTERNAME"])")
+
+    for i in eachindex(fns)
+        println("fns[$i] = $(fns[i])")
+    end
+
+    @show ncs
+    @show with_missings
+    @show useBenchmarkTools
+    @show Threads.nthreads()
+
+    n = length(ncs)
+
+    datatoplot = Array{Float64}(undef, n, length(fns))
+
     if true#set to false when tweaking chart appearance
 
-        for nc in ncs
-            i += 1
+        for (i, nc) in enumerate(ncs)
             x = rand(MersenneTwister(0), nr, nc)
             if with_missings
                 x = ifelse.(x .< 0.1, missing, x)
             end
-            if  useBenchmarkTools
-                res1, est1 = @btimed $fn1($x)
-                time1 = est1.time / 1e9
-                if dofn2
-                    res2, est2 = @btimed $fn2($x)
-                    time2 = est2.time / 1e9
+            for (j, f) in enumerate(fns)
+                if useBenchmarkTools
+                    res, est = @btimed $f($x)
+                    time = est.time / 1e9
+                else
+                    tuple = @timed(f(x))
+                    res = tuple.value
+                    time = tuple.time
                 end
-            else
-                tuple1 = @timed(fn1(x))
-                res1 = tuple1.value
-                time1 = tuple1.time
-                if dofn2
-                    tuple2 = @timed(fn2(x))
-                    res2 = tuple2.value
-                    time2 = tuple2.time
+
+                if j == 1
+                    global res1 = copy(res)
                 end
-            end
+                datatoplot[i, j] = time
 
-            if dofn2
-                res1 == res2 || throw("Different return values from $fn1 and $fn2, nr = $nr, nc = $nc, with_missings = $with_missings")
-            end
-            timings1[i] = time1
-            if dofn2
-                timings2[i] = time2
-            end
+                if j > 1
+                    res == res1 || throw("Different return values from $f and $(fns[1]), nr = $nr, nc = $nc, with_missings = $with_missings")
+                end
+                printthis = "nc = $nc, nr = $nr, f = $f,  time = $(time)"
+                if j > 1
+                    printthis = printthis * ", ratio = $(datatoplot[i,1]/time)"
+                end
 
-            if dofn2
-                println("nc = $nc, nr = $nr, fn1 = $fn1, fn2 = $fn2, time1 = $(time1), time2 = $(time2), ratio = $(time1/time2)")
-            else
-                println("nc = $nc, nr = $nr, fn1 = $fn1, time1 = $(time1) ")
+                println(printthis)
             end
         end
 
-        if dofn2
-            display(hcat(ncs, timings1, timings2, timings1 ./ timings2))
-        else
-            display(hcat(ncs, timings1))
-        end
+        display(hcat(ncs, datatoplot))
+
         println("#"^67)
 
     else
         #for chart tweaking...
-        timings1 = collect(ncs) .* 2
-        if dofn2
-            timings2 = collect(ncs) .* 3
-        end
+        datatoplot = ncs .* (1:length(fns))'
     end
 
-    if dofn2
-        plot([
-                scatter(x=ncs, y=timings1, mode="line", name="$fn1"),
-                scatter(x=ncs, y=timings2, mode="line", name="$fn2")
-            ], Layout(; title="corkendall execution time vs input data size",
-                xaxis=attr(title="Data cols (Data rows = $nr)", type="log"),
-                yaxis=attr(title="Seconds", type="log")))
-    else
-        plot([
-                scatter(x=ncs, y=timings1, mode="line", name="$fn1"),
-            ], Layout(; title="$fn1 execution time vs input data size",
-                xaxis=attr(title="Data cols (Data rows = $nr)", type="log"),
-                yaxis=attr(title="Seconds", type="log")))
+    plot([
+        scatter(x=ncs, y=datatoplot[:, i], mode="line", name="$(fns[i])") for i in 1:length(fns)], Layout(; title="Time to evaluate corkendall(x) vs num cols in x",
+        xaxis=attr(title="Num cols (num rows = $nr)", type="log"),
+        yaxis=attr(title="Seconds", type="log")))
 
-    end
 end
+
 
