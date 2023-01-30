@@ -620,3 +620,116 @@ ded, time1 = 49.2300388, time2 = 64.6590096, ratio = 0.7613794133957783nc = 4096
  4096.0   332.212       424.069      0.783391
  8192.0  3475.36       5380.34       0.645936
 ###################################################################
+
+julia> KT.how_scaleable(KT.corkendall_unthreaded,KT.corkendall_threaded,1000,2 .^(1:11),false)
+###################################################################
+Executing how_scaleable 2023-01-26T18:49:24.819
+ComputerName = MV-LAPTOP
+fn1 = KendallTau.corkendall_unthreaded
+fn2 = KendallTau.corkendall_threaded
+nr = 1000
+ncs = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]
+with_missings = false
+Threads.nthreads() = 8
+  66.900 μs (10 allocations: 51.80 KiB)
+  84.100 μs (60 allocations: 57.06 KiB)
+nc = 2, nr = 1000, fn1 = corkendall_unthreaded, fn2 = corkendall_threaded, time1 = 6.69e-5, time2 = 8.41e-5, ratio = 0.7954815695600476
+  386.500 μs (40 allocations: 215.11 KiB)
+  197.600 μs (89 allocations: 220.34 KiB)
+nc = 4, nr = 1000, fn1 = corkendall_unthreaded, fn2 = corkendall_threaded, time1 = 0.0003865, time2 = 0.0001976, ratio = 1.9559716599190284      
+  1.621 ms (148 allocations: 781.17 KiB)
+  453.000 μs (197 allocations: 786.41 KiB)
+nc = 8, nr = 1000, fn1 = corkendall_unthreaded, fn2 = corkendall_threaded, time1 = 0.0016211, time2 = 0.000453, ratio = 3.5785871964679914       
+ = 0.0073333, ratio = 3.4425838299265
+  100.566 ms (8381 allocations: 41.24 MiB)
+  30.183 ms (8430 allocations: 41.24 MiB)
+nc = 64, nr = 1000, fn1 = corkendall_unthreaded, fn2 = corkendall_threaded, time1 = 0.1005661, time2 = 0.0301833, ratio = 3.3318457557656056
+ = 0.0073333, ratio = 3.4425838299265
+  100.566 ms (8381 allocations: 41.24 MiB)
+  30.183 ms (8430 allocations: 41.24 MiB)nc = 64, nr = 1000, fn1 = corkendall_unthreaded, fn2 = corkendall_threaded, time1 = 0.1005661, time2 = 0.0301833, ratio = 3.3318457557656056
+  30.183 ms (8430 allocations: 41.24 MiB)
+nc = 64, nr = 1000, fn1 = corkendall_unthreaded, fn2 = corkendall_threaded, time1 = 0.1005661, time2 = 0.0301833, ratio = 3.3318457557656056  411.754 ms (33149 allocations: 162.32 MiB)
+  136.875 ms (33198 allocations: 162.32 MiB)
+nc = 128, nr = 1000, fn1 = corkendall_unthreaded, fn2 = corkendall_threaded, time1 = 0.411754, time2 = 0.1368754, ratio = 3.008239610623969  1.639 s (131837 allocations: 643.92 MiB)
+  655.939 ms (131886 allocations: 643.92 MiB)
+nc = 256, nr = 1000, fn1 = corkendall_unthreaded, fn2 = corkendall_threaded, time1 = 1.6389535, time2 = 0.6559392, ratio = 2.4986363065357278  6.756 s (525821 allocations: 2.50 GiB)
+  2.580 s (525870 allocations: 2.50 GiB)
+nc = 512, nr = 1000, fn1 = corkendall_unthreaded, fn2 = corkendall_threaded, time1 = 6.7559919, time2 = 2.5804742, ratio = 2.618120305174917  43.188 s (2100221 allocations: 10.00 GiB)
+  17.611 s (2100272 allocations: 10.00 GiB)
+nc = 1024, nr = 1000, fn1 = corkendall_unthreaded, fn2 = corkendall_threaded, time1 = 43.1876938, time2 = 17.6106193, ratio = 2.4523665558995984
+  125.846 s (8394749 allocations: 39.95 GiB)
+  72.843 s (8394801 allocations: 39.95 GiB)
+nc = 2048, nr = 1000, fn1 = corkendall_unthreaded, fn2 = corkendall_threaded, time1 = 125.8463768, time2 = 72.8433304, ratio = 1.7276307399585893
+11×4 Matrix{Float64}:
+    2.0    6.69e-5     8.41e-5    0.795482
+    4.0    0.0003865   0.0001976  1.95597
+    8.0    0.0016211   0.000453   3.57859
+   16.0    0.0063823   0.0016659  3.83114
+   32.0    0.0252455   0.0073333  3.44258
+   64.0    0.100566    0.0301833  3.33185
+  128.0    0.411754    0.136875   3.00824
+  256.0    1.63895     0.655939   2.49864
+  512.0    6.75599     2.58047    2.61812
+ 1024.0   43.1877     17.6106     2.45237
+ 2048.0  125.846      72.8433     1.72763
+###################################################################
+
+julia> KT.how_scaleable(KT.corkendall_unthreaded,KT.corkendall_threaded,1000,2 .^(1:12),false)
+###################################################################
+Executing how_scaleable 2023-01-26T19:20:19.575
+ComputerName = MV-LAPTOP
+fn1 = KendallTau.corkendall_unthreaded
+fn2 = KendallTau.corkendall_threaded
+nr = 1000
+ncs = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096]
+with_missings = false
+Threads.nthreads() = 8
+  67.300 μs (10 allocations: 51.80 KiB)
+  83.200 μs (59 allocations: 57.03 KiB)
+nc = 2, nr = 1000, fn1 = corkendall_unthreaded, fn2 = corkendall_threaded, time1 = 6.73e-5, time2 = 8.32e-5, ratio = 0.8088942307692307 
+  387.200 μs (40 allocations: 215.11 KiB)
+  190.200 μs (89 allocations: 220.34 KiB)
+nc = 4, nr = 1000, fn1 = corkendall_unthreaded, fn2 = corkendall_threaded, time1 = 0.0003872, time2 = 0.0001902, ratio = 2.035751840168244
+  1.629 ms (148 allocations: 781.17 KiB)
+  464.700 μs (197 allocations: 786.41 KiB)
+nc = 8, nr = 1000, fn1 = corkendall_unthreaded, fn2 = corkendall_threaded, time1 = 0.0016293, time2 = 0.0004647, ratio = 3.5061329890251773
+  6.381 ms (556 allocations: 2.80 MiB)
+  1.663 ms (605 allocations: 2.81 MiB)
+nc = 16, nr = 1000, fn1 = corkendall_unthreaded, fn2 = corkendall_threaded, time1 = 0.0063809, time2 = 0.0016625, ratio = 3.838135338345865
+  25.265 ms (2140 allocations: 10.63 MiB)
+  6.921 ms (2189 allocations: 10.63 MiB)
+nc = 32, nr = 1000, fn1 = corkendall_unthreaded, fn2 = corkendall_threaded, time1 = 0.0252648, time2 = 0.0069211, ratio = 3.650402392683244
+  107.114 ms (8381 allocations: 41.24 MiB)
+  29.664 ms (8430 allocations: 41.24 MiB)
+nc = 64, nr = 1000, fn1 = corkendall_unthreaded, fn2 = corkendall_threaded, time1 = 0.1071142, time2 = 0.0296644, ratio = 3.6108668976955545
+  421.840 ms (33149 allocations: 162.32 MiB)
+  143.740 ms (33198 allocations: 162.32 MiB)
+nc = 128, nr = 1000, fn1 = corkendall_unthreaded, fn2 = corkendall_threaded, time1 = 0.4218402, time2 = 0.1437398, ratio = 2.934748761303411
+  1.717 s (131837 allocations: 643.92 MiB)
+  670.204 ms (131886 allocations: 643.92 MiB)
+nc = 256, nr = 1000, fn1 = corkendall_unthreaded, fn2 = corkendall_threaded, time1 = 1.7166905, time2 = 0.6702044, ratio = 2.561443195538555
+  7.042 s (525821 allocations: 2.50 GiB)
+  3.113 s (525870 allocations: 2.50 GiB)
+nc = 512, nr = 1000, fn1 = corkendall_unthreaded, fn2 = corkendall_threaded, time1 = 7.0415698, time2 = 3.1131998, ratio = 2.261843200683747
+  31.451 s (2100221 allocations: 10.00 GiB)
+  15.176 s (2100270 allocations: 10.00 GiB)
+nc = 1024, nr = 1000, fn1 = corkendall_unthreaded, fn2 = corkendall_threaded, time1 = 31.4512507, time2 = 15.176199, ratio = 2.0724063186045463
+  2947.015 s (8394749 allocations: 39.95 GiB)
+  79.606 s (8394801 allocations: 39.95 GiB)
+nc = 2048, nr = 1000, fn1 = corkendall_unthreaded, fn2 = corkendall_threaded, time1 = 2947.0153862, time2 = 79.6062608, ratio = 37.01989462366508
+  461.383 s (33566717 allocations: 159.71 GiB)
+068, time2 = 626.0953581, ratio = 0.7369219414118509
+12×4 Matrix{Float64}:
+    2.0     6.73e-5      8.32e-5     0.808894
+    4.0     0.0003872    0.0001902   2.03575
+    8.0     0.0016293    0.0004647   3.50613
+   16.0     0.0063809    0.0016625   3.83814
+   32.0     0.0252648    0.0069211   3.6504
+   64.0     0.107114     0.0296644   3.61087
+  128.0     0.42184      0.14374     2.93475
+  256.0     1.71669      0.670204    2.56144
+  512.0     7.04157      3.1132      2.26184
+ 1024.0    31.4513      15.1762      2.07241
+ 2048.0  2947.02        79.6063     37.0199
+ 4096.0   461.383      626.095       0.736922
+###################################################################

@@ -1,4 +1,3 @@
-
 """
     handlemissings(x::RoMVector, y::RoMVector)
 Returns a pair `(a,b)`, filtered copies of `x` and `y`, in which elements `x[i]` and `y[i]`
@@ -12,22 +11,22 @@ function handlemissings(x::RoMVector{T}, y::RoMVector{U}) where {T} where {U}
     U2 = y isa Vector{Missing} ? Missing : U
     n = length(x)
 
-    res1 = Vector{T2}(undef, n)
-    res2 = Vector{U2}(undef, n)
+    a = Vector{T2}(undef, n)
+    b = Vector{U2}(undef, n)
     j::Int = 0
 
     @inbounds for i in eachindex(x)
         if !(ismissing(x[i]) || ismissing(y[i]))
             j += 1
-            res1[j] = x[i]
-            res2[j] = y[i]
+            a[j] = x[i]
+            b[j] = y[i]
         end
     end
 
-    resize!(res1, j)
-    resize!(res2, j)
+    resize!(a, j)
+    resize!(b, j)
 
-    res1, res2
+    a, b
 end
 
 """
@@ -112,29 +111,29 @@ function handlemissings(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T} where {U}
         end
     end
 
-    res1 = Matrix{T2}(undef, nrout, ncx)
+    a = Matrix{T2}(undef, nrout, ncx)
     @inbounds for j = 1:ncx
         k = 0
         for i = 1:nr
             if chooser[i]
                 k += 1
-                res1[k, j] = x[i, j]
+                a[k, j] = x[i, j]
             end
         end
     end
 
-    res2 = Matrix{U2}(undef, nrout, ncy)
+    b = Matrix{U2}(undef, nrout, ncy)
     @inbounds for j = 1:ncy
         k = 0
         for i = 1:nr
             if chooser[i]
                 k += 1
-                res2[k, j] = y[i, j]
+                b[k, j] = y[i, j]
             end
         end
     end
 
-    res1, res2
+    a, b
 
 end
 
@@ -171,33 +170,33 @@ function handlemissings(x::RoMVector{T}, y::RoMMatrix{U}) where {T} where {U}
         end
     end
 
-    res1 = Vector{T2}(undef, nrout)
+    a = Vector{T2}(undef, nrout)
     k = 0
     @inbounds for i = 1:nr
         if chooser[i]
             k += 1
-            res1[k] = x[i]
+            a[k] = x[i]
         end
     end
 
-    res2 = Matrix{U2}(undef, nrout, ncy)
+    b = Matrix{U2}(undef, nrout, ncy)
     @inbounds for j = 1:ncy
         k = 0
         for i = 1:nr
             if chooser[i]
                 k += 1
-                res2[k, j] = y[i, j]
+                b[k, j] = y[i, j]
             end
         end
     end
 
-    res1, res2
+    a, b
 
 end
 
 function handlemissings(x::RoMMatrix, y::RoMVector)
-    res2, res1 = handlemissings(y, x)
-    res1, res2
+    b, a = handlemissings(y, x)
+    a, b
 end
 
 """

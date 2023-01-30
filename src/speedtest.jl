@@ -403,7 +403,14 @@ function how_scaleable(fn1::Function, fn2::Function, nr::Integer, ncs::Vector{<:
             if with_missings
                 x = ifelse.(x .< 0.1, missing, x)
             end
-            if useBenchmarkTools
+            if  useBenchmarkTools
+                res1, est1 = @btimed $fn1($x)
+                time1 = est1.time / 1e9
+                if dofn2
+                    res2, est2 = @btimed $fn2($x)
+                    time2 = est2.time / 1e9
+                end
+            else
                 tuple1 = @timed(fn1(x))
                 res1 = tuple1.value
                 time1 = tuple1.time
@@ -411,13 +418,6 @@ function how_scaleable(fn1::Function, fn2::Function, nr::Integer, ncs::Vector{<:
                     tuple2 = @timed(fn2(x))
                     res2 = tuple2.value
                     time2 = tuple2.time
-                end
-            else
-                res1, est1 = @btimed $fn1($x)
-                time1 = est1.time / 1e9
-                if dofn2
-                    res2, est2 = @btimed $fn2($x)
-                    time2 = est2.time / 1e9
                 end
             end
 
@@ -451,7 +451,6 @@ function how_scaleable(fn1::Function, fn2::Function, nr::Integer, ncs::Vector{<:
         end
     end
 
-    @show dofn2
     if dofn2
         plot([
                 scatter(x=ncs, y=timings1, mode="line", name="$fn1"),
