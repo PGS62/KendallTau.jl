@@ -21,13 +21,11 @@ macro btimed(args...)
         local $trial, $result = $BenchmarkTools.run_result($bench)
         local $trialmin = $BenchmarkTools.minimum($trial)
         local $trialallocs = $BenchmarkTools.allocs($trialmin)
-#=
         println("  ",
             $BenchmarkTools.prettytime($BenchmarkTools.time($trialmin)),
             " (", $trialallocs, " allocation",
             $trialallocs == 1 ? "" : "s", ": ",
             $BenchmarkTools.prettymemory($BenchmarkTools.memory($trialmin)), ")")
-=#
         $result, $trialmin, $BenchmarkTools.memory($trialmin)
     end)
 end
@@ -366,6 +364,7 @@ nc = 512, nr = 1000, f = corkendall_experimental,  time = 1.008708, ratio = 4.26
 function how_scaleable(fns::Vector{Function}, nr::Integer, ncs::Vector{<:Integer}, with_missings::Bool)
 
     useBenchmarkTools = true
+    just_tweaking_plot = false
 
     println("#"^67)
     println("Executing $(StackTraces.stacktrace()[1].func) $(now())")
@@ -384,8 +383,9 @@ function how_scaleable(fns::Vector{Function}, nr::Integer, ncs::Vector{<:Integer
 
     datatoplot = Array{Float64}(undef, n, length(fns))
 
-    if true#set to false when tweaking chart appearance
-
+    if just_tweaking_plot
+        datatoplot = ncs .* (1:length(fns))'
+    else
         for (i, nc) in enumerate(ncs)
             x = rand(MersenneTwister(0), nr, nc)
             if with_missings
@@ -417,14 +417,8 @@ function how_scaleable(fns::Vector{Function}, nr::Integer, ncs::Vector{<:Integer
                 println(printthis)
             end
         end
-
         display(hcat(ncs, datatoplot))
-
         println("#"^67)
-
-    else
-        #for chart tweaking...
-        datatoplot = ncs .* (1:length(fns))'
     end
 
     plot([
