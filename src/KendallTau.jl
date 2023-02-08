@@ -10,14 +10,14 @@ const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
 include("corkendall.jl")
 include("handlemissings.jl")
 include("speedtest.jl")
-include("experimental.jl")
 
-module FromStatsBase
+module LowAllocation
 using LinearAlgebra
-include("from_statsbase/rankcor.jl")
-include("from_statsbase/pairwise.jl")
-include("from_statsbase/rankcor_pw.jl")
-end # module
+const RoMVector{T<:Real} = AbstractVector{<:Union{T,Missing}}
+const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
+include("handlemissings.jl")
+include("lowallocation.jl")
+end
 
 export corkendall
 

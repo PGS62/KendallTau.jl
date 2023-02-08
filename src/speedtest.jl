@@ -328,7 +328,7 @@ fns[2] = corkendall_threaded
 fns[3] = corkendall_experimental
 ncs = [2, 4, 8, 16, 32, 64, 128, 256, 512]
 with_missings = false
-useBenchmarkTools = true
+use_benchmark_tools = true
 Threads.nthreads() = 20
 nc = 2, nr = 1000, f = corkendall_unthreaded,  time = 3.15e-5
 nc = 2, nr = 1000, f = corkendall_threaded,  time = 4.89e-5, ratio = 0.6441717791411042
@@ -361,10 +361,14 @@ nc = 512, nr = 1000, f = corkendall_experimental,  time = 1.008708, ratio = 4.26
 ###################################################################
  =#
 
-function how_scaleable(fns::Vector{Function}, nr::Integer, ncs::Vector{<:Integer}, with_missings::Bool)
+function how_scaleable(fns::Vector{Function}, nr::Integer, ncs::Vector{<:Integer}, 
+    with_missings::Bool,use_benchmark_tools::Bool)
 
-    useBenchmarkTools = true
     just_tweaking_plot = false
+
+    function fullnameof(f::Function)
+        "$(Base.parentmodule(f)).$(Base.nameof(f))"
+    end
 
     println("#"^67)
     println("Executing $(StackTraces.stacktrace()[1].func) $(now())")
@@ -376,7 +380,7 @@ function how_scaleable(fns::Vector{Function}, nr::Integer, ncs::Vector{<:Integer
 
     @show ncs
     @show with_missings
-    @show useBenchmarkTools
+    @show use_benchmark_tools
     @show Threads.nthreads()
 
     n = length(ncs)
@@ -392,7 +396,7 @@ function how_scaleable(fns::Vector{Function}, nr::Integer, ncs::Vector{<:Integer
                 x = ifelse.(x .< 0.1, missing, x)
             end
             for (j, f) in enumerate(fns)
-                if useBenchmarkTools
+                if use_benchmark_tools
                     res, est = @btimed $f($x)
                     time = est.time / 1e9
                 else
@@ -407,9 +411,9 @@ function how_scaleable(fns::Vector{Function}, nr::Integer, ncs::Vector{<:Integer
                 datatoplot[i, j] = time
 
                 if j > 1
-                    res == res1 || throw("Different return values from $f and $(fns[1]), nr = $nr, nc = $nc, with_missings = $with_missings")
+                    res == res1 || throw("Different return values from $(fullnameof(f)) and $(fullnameof(fns[1])), nr = $nr, nc = $nc, with_missings = $with_missings")
                 end
-                printthis = "nc = $nc, nr = $nr, f = $f,  time = $(time)"
+                printthis = "nc = $nc, nr = $nr, f = $(fullnameof(f)),  time = $(time)"
                 if j > 1
                     printthis = printthis * ", ratio = $(datatoplot[i,1]/time)"
                 end
@@ -422,9 +426,9 @@ function how_scaleable(fns::Vector{Function}, nr::Integer, ncs::Vector{<:Integer
     end
 
     plot([
-        scatter(x=ncs, y=datatoplot[:, i], mode="line", name="$(fns[i])") for i in 1:length(fns)], Layout(; title="Time to evaluate corkendall(x) vs num cols in x",
-        xaxis=attr(title="Num cols (num rows = $nr)", type="log"),
-        yaxis=attr(title="Seconds", type="log")))
+            scatter(x=ncs, y=datatoplot[:, i], mode="line", name=fullnameof(fns[i])) for i in 1:length(fns)], Layout(; title="Time to evaluate corkendall(x) vs num cols in x",
+            xaxis=attr(title="Num cols (num rows = $nr)", type="log"),
+            yaxis=attr(title="Seconds", type="log")))
 
 end
 
