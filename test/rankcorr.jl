@@ -13,7 +13,7 @@ y = Y[:, 1]
 
 # corkendall and friends
 for f in (corkendall, KendallTau.corkendall_unthreaded, KendallTau.corkendall_threaded,
-    corkendall_naive, KendallTau.FromStatsBase.corkendall_pw)
+    corkendall_naive)
     @show f
     # Check error, handling of NaN, Inf etc
     @test_throws DimensionMismatch("Vectors must have same length") f([1, 2, 3, 4], [1, 2, 3])
