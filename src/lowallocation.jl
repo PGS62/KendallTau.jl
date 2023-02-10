@@ -11,7 +11,7 @@ ToDo 9 Feb 2023
 3) Check for allocations in threaded code when missings are present. 
 4) Amalgamate the single-matrix and two-matrix cases.
 5) Write vector-vector, vector-matrix, matrix-vector cases.
-6) Eliminate argument `threaded` from all methods.
+6) Eliminate argument `threaded` from all methods. Done
 7) Rename lowallocation.jl as corkendall.jl
 8) Rework docstrings
 9) Ask for code review?
@@ -37,25 +37,16 @@ result is the Kendall correlation between column `i` of `x` and column `j` of `y
     `:listwise` to skip entries where a missing value appears anywhere in a given row of `x`
     or `y`; note that this might drop a high proportion of entries.
 
--  `threaded::Symbol` If `:threaded` then `Threads.@threads` is used to parallelise the
-    calculation of elements of the return. If `:none` then all elements of the return are
-    calculated on a single thread. Defaults to `:none` if both `x` and `y` are vectors, and
-    to `:threaded` otherwise.
-
 """
-function corkendall(x::RoMVector, y::RoMVector; skipmissing::Symbol=:none, threaded::Symbol=:none)
-    if threaded == :none || threaded == :threaded
+function corkendall(x::RoMVector, y::RoMVector; skipmissing::Symbol=:none)
         length(x) == length(y) || throw(DimensionMismatch("Vectors must have same length"))
         x, y = handlelistwise(x, y, skipmissing)
         return (corkendall!(copy(x), copy(y)))
-    else
-        throw(ArgumentError("threaded must be :none or :threaded, but got :$threaded"))
-    end
 end
 
 #= It is idiosyncratic that this method returns a vector, not a matrix, i.e. not consistent
 with Statistics.cor or corspearman. But fixing that is a breaking change. =#
-function corkendall(x::RoMMatrix, y::RoMVector; skipmissing::Symbol=:none, threaded::Symbol=:threaded)
+function corkendall(x::RoMMatrix, y::RoMVector; skipmissing::Symbol=:none)
     size(x, 1) == length(y) ||
         throw(DimensionMismatch("x and y have inconsistent dimensions"))
     x, y = handlelistwise(x, y, skipmissing)
@@ -66,21 +57,14 @@ function corkendall(x::RoMMatrix, y::RoMVector; skipmissing::Symbol=:none, threa
     C = ones(float(eltype(x)), n)
 
     permy = sortperm(y)
-    if threaded == :threaded
         Threads.@threads for i = 1:n
             C[i] = corkendall_sorted!(copy(sortedy), x[:, i], permy)
         end
-    elseif threaded == :none
-        for i = 1:n
-            C[i] = corkendall_sorted!(copy(sortedy), x[:, i], permy)
-        end
-    else
-        throw(ArgumentError("threaded must be :none or :threaded, but got :$threaded"))
-    end
+
     return (C)
 end
 
-function corkendall(x::RoMVector, y::RoMMatrix; skipmissing::Symbol=:none, threaded::Symbol=:threaded)
+function corkendall(x::RoMVector, y::RoMMatrix; skipmissing::Symbol=:none)
     size(y, 1) == length(x) ||
         throw(DimensionMismatch("x and y have inconsistent dimensions"))
     x, y = handlelistwise(x, y, skipmissing)
@@ -91,17 +75,10 @@ function corkendall(x::RoMVector, y::RoMMatrix; skipmissing::Symbol=:none, threa
     C = ones(float(eltype(y)), 1, n)
 
     permx = sortperm(x)
-    if threaded == :threaded
         Threads.@threads for i = 1:n
             C[1, i] = corkendall_sorted!(copy(sortedx), y[:, i], permx)
         end
-    elseif threaded == :none
-        for i = 1:n
-            C[1, i] = corkendall_sorted!(copy(sortedx), y[:, i], permx)
-        end
-    else
-        throw(ArgumentError("threaded must be :none or :threaded, but got :$threaded"))
-    end
+
     return (C)
 end
 
@@ -109,7 +86,7 @@ function duplicate(x)
     [copy(x) for _ in 1:Threads.nthreads()]
 end
 
-function corkendall_threaded(x::RoMMatrix, y::RoMMatrix{T}=x; skipmissing::Symbol=:none) where T
+function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:none) where {T, U}
     symmetric = x === y
     x, y = handlelistwise(x, y, skipmissing)
     m, nr = size(x)
@@ -117,14 +94,13 @@ function corkendall_threaded(x::RoMMatrix, y::RoMMatrix{T}=x; skipmissing::Symbo
     m == m2 || throw(DimensionMismatch("x and y have inconsistent dimensions"))
     C = ones(Float64, nr, nc)
 
-    scratchyvectors = duplicate(similar(y, m))
-    sortyspaces = duplicate(Vector{T}(undef,m))
-    ycolis = duplicate(similar(y, m))
-    xcoljsorteds = duplicate(similar(x, m))
-    permxs = duplicate(zeros(Int, size(x, 1)))
+    scratchyvectors = duplicate(Vector{eltype(y)}(undef,m))
+    sortyspaces = duplicate(Vector{U}(undef,m))
+    ycolis = duplicate(Vector{eltype(y)}(undef,m))
+    xcoljsorteds = duplicate(Vector{eltype(x)}(undef,m))
+    permxs = duplicate(zeros(Int, m))
 
-    # Threads.@threads for j = (symmetric ? 2 : 1):nr
-    for j = (symmetric ? 2 : 1):nr
+    Threads.@threads for j = (symmetric ? 2 : 1):nr
 
         id = Threads.threadid()
         scratchyvector = scratchyvectors[id]
@@ -146,7 +122,6 @@ function corkendall_threaded(x::RoMMatrix, y::RoMMatrix{T}=x; skipmissing::Symbo
     end
     return C
 end
-
 
 # Knight, William R. “A Computer Method for Calculating Kendall's Tau with Ungrouped Data.”
 # Journal of the American Statistical Association, vol. 61, no. 314, 1966, pp. 436–439.
