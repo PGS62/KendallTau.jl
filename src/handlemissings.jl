@@ -29,6 +29,32 @@ function handlemissings(x::RoMVector{T}, y::RoMVector{U}) where {T} where {U}
     a, b
 end
 
+#low allocation version for testing
+function handlemissings_la(x::RoMVector{T}, y::RoMVector{U},tx::AbstractVector,ty::AbstractVector) where {T} where {U}
+
+    length(x) == length(y) ==length(tx)==length(ty)|| error("Vectors must have same length")
+
+  #  T2 = x isa Vector{Missing} ? Missing : T
+   # U2 = y isa Vector{Missing} ? Missing : U
+    n = length(x)
+
+    #a = Vector{T2}(undef, n)
+    #b = Vector{U2}(undef, n)
+    j::Int = 0
+
+    @inbounds for i in eachindex(x)
+        if !(ismissing(x[i]) || ismissing(y[i]))
+            j += 1
+            tx[j] = x[i]
+            typemax[j] = y[i]
+        end
+    end
+
+    resize!(tx, j)
+    resize!(ty, j)
+
+    tx, ty
+end
 """
     handlemissings(x::RoMMatrix)
 Returns a filtered copy of `x`, in which the row `x[i,:]` is filtered out if 

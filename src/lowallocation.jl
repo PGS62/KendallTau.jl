@@ -21,7 +21,7 @@ ToDo 9 Feb 2023
 
 
 """
-    corkendall(x, y=x; skipmissing::Symbol=:none)
+    corkendall(x, y=x; skipmissing::Symbol=:pairwise)
 
 Compute Kendall's rank correlation coefficient, τ. `x` and `y` must both be either
 vectors or matrices, with elements that are either real numbers or missing values.
@@ -31,14 +31,14 @@ result is the Kendall correlation between column `i` of `x` and column `j` of `y
 
 # Keyword arguments
 
-- `skipmissing::Symbol=:none` If `:none`, missing values in either `x` or `y`
+- `skipmissing::Symbol=:pairwise` If `:none`, missing values in either `x` or `y`
     cause the function to raise an error. Use `:pairwise` to skip entries with a missing 
     value in either of the two vectors used to calculate (an element of) the return. Use 
     `:listwise` to skip entries where a missing value appears anywhere in a given row of `x`
     or `y`; note that this might drop a high proportion of entries.
 
 """
-function corkendall(x::RoMVector, y::RoMVector; skipmissing::Symbol=:none)
+function corkendall(x::RoMVector, y::RoMVector; skipmissing::Symbol=:pairwise)
         length(x) == length(y) || throw(DimensionMismatch("Vectors must have same length"))
         x, y = handlelistwise(x, y, skipmissing)
         return (corkendall!(copy(x), copy(y)))
@@ -46,7 +46,7 @@ end
 
 #= It is idiosyncratic that this method returns a vector, not a matrix, i.e. not consistent
 with Statistics.cor or corspearman. But fixing that is a breaking change. =#
-function corkendall(x::RoMMatrix, y::RoMVector; skipmissing::Symbol=:none)
+function corkendall(x::RoMMatrix, y::RoMVector; skipmissing::Symbol=:pairwise)
     size(x, 1) == length(y) ||
         throw(DimensionMismatch("x and y have inconsistent dimensions"))
     x, y = handlelistwise(x, y, skipmissing)
@@ -64,7 +64,7 @@ function corkendall(x::RoMMatrix, y::RoMVector; skipmissing::Symbol=:none)
     return (C)
 end
 
-function corkendall(x::RoMVector, y::RoMMatrix; skipmissing::Symbol=:none)
+function corkendall(x::RoMVector, y::RoMMatrix; skipmissing::Symbol=:pairwise)
     size(y, 1) == length(x) ||
         throw(DimensionMismatch("x and y have inconsistent dimensions"))
     x, y = handlelistwise(x, y, skipmissing)
@@ -86,7 +86,7 @@ function duplicate(x)
     [copy(x) for _ in 1:Threads.nthreads()]
 end
 
-function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:none) where {T, U}
+function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:pairwise) where {T, U}
     symmetric = x === y
     x, y = handlelistwise(x, y, skipmissing)
     m, nr = size(x)
