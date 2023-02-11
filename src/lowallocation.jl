@@ -99,8 +99,11 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:pai
     ycolis = duplicate(Vector{eltype(y)}(undef,m))
     xcoljsorteds = duplicate(Vector{eltype(x)}(undef,m))
     permxs = duplicate(zeros(Int, m))
+    txs = duplicate(Vector{T}(undef,m))
+    tys = duplicate(Vector{U}(undef,m))
 
-    Threads.@threads for j = (symmetric ? 2 : 1):nr
+    #Threads.@threads for j = (symmetric ? 2 : 1):nr
+        for j = (symmetric ? 2 : 1):nr
 
         id = Threads.threadid()
         scratchyvector = scratchyvectors[id]
@@ -108,6 +111,8 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:pai
         ycoli = ycolis[id]
         xcoljsorted = xcoljsorteds[id]
         permx = permxs[id]
+        tx = txs[id]
+        ty=tys[id]
 
         sortperm!(permx, view(x, :, j))
         @inbounds for k in eachindex(xcoljsorted)
@@ -116,7 +121,7 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:pai
 
         for i = 1:(symmetric ? j - 1 : nc)
             ycoli .= view(y, :, i)
-            C[j, i] = corkendall_sorted!(xcoljsorted, ycoli, permx, scratchyvector, sortyspace)
+            C[j, i] = corkendall_sorted!(xcoljsorted, ycoli, permx, scratchyvector, sortyspace,tx,ty)
             symmetric && (C[i, j] = C[j, i])
         end
     end
@@ -207,18 +212,18 @@ first argument. So calculating Kendall correlation between `x` and `y` is a two 
 process: a) sort `x` to get `sortedx`; b) call this function on `sortedx` and `y`, with the
 third argument being the permutation that achieved the sorting of `x`.
 """
-function corkendall_sorted!(sortedx::AbstractVector{<:Real}, y::AbstractVector{<:Real}, permx::AbstractVector{<:Integer}, scratchyvector::AbstractVector{<:Real}, sortyspace::AbstractVector{<:Real})
+function corkendall_sorted!(sortedx::AbstractVector{<:Real}, y::AbstractVector{<:Real}, permx::AbstractVector{<:Integer}, scratchyvector::AbstractVector{<:Real}, sortyspace::AbstractVector{<:Real},tx,ty)
     @inbounds for i in eachindex(y)
         scratchyvector[i] = y[permx[i]]
     end
     corkendall_sortedshuffled!(sortedx, scratchyvector, sortyspace)
 end
 # method for when missings appear, so call handlemissings.
-function corkendall_sorted!(sortedx::RoMVector, y::RoMVector, permx::AbstractVector{<:Integer}, scratchyvector::RoMVector, sortyspace::RoMVector)
+function corkendall_sorted!(sortedx::RoMVector, y::RoMVector, permx::AbstractVector{<:Integer}, scratchyvector::RoMVector, sortyspace::RoMVector,tx,ty)
     @inbounds for i in eachindex(y)
         scratchyvector[i] = y[permx[i]]
     end
-    sortedx, scratchyvector = handlemissings(sortedx, scratchyvector)
+    sortedx, scratchyvector = handlemissings_la(sortedx, scratchyvector,tx,ty)
     length(sortedx) >= 2 || return (NaN)
     corkendall_sortedshuffled!(sortedx, scratchyvector, sortyspace)
 end
