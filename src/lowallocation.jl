@@ -144,7 +144,7 @@ b) Apply the same permutation to `y` to get `shuffledy`;
 
 c) Call `corkendall_sortedshuffled!` on `sortedx` and `shuffledy`.
 """
-function corkendall_sortedshuffled!(sortedx::AbstractVector{<:Real}, shuffledy::AbstractVector{<:Real}, sortyspace::AbstractVector{<:Real}=similar(shuffledy))
+function corkendall_sortedshuffled!(sortedx::AbstractVector{<:Real}, shuffledy::AbstractVector{<:Real}, sortyspace::AbstractVector{<:Real})
     if any(isnan, sortedx) || any(isnan, shuffledy)
         return NaN
     end
