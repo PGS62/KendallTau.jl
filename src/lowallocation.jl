@@ -8,9 +8,9 @@
 ToDo 9 Feb 2023
 1) Work for single-matrix case with missings. Done 9 Feb
 2) Does corkendall_sorted!need two scratch arguments?
-3) Check for allocations in threaded code when missings are present. 
-4) Amalgamate the single-matrix and two-matrix cases.
-5) Write vector-vector, vector-matrix, matrix-vector cases.
+3) Check for allocations in threaded code when missings are present. Mmm, problematic.
+4) Amalgamate the single-matrix and two-matrix cases. Done
+5) Write vector-vector, vector-matrix, matrix-vector cases. Done
 6) Eliminate argument `threaded` from all methods. Done
 7) Rename lowallocation.jl as corkendall.jl
 8) Rework docstrings
@@ -21,7 +21,7 @@ ToDo 9 Feb 2023
 
 
 """
-    corkendall(x, y=x; skipmissing::Symbol=:pairwise)
+    corkendall(x, y=x; skipmissing::Symbol=:none)
 
 Compute Kendall's rank correlation coefficient, τ. `x` and `y` must both be either
 vectors or matrices, with elements that are either real numbers or missing values.
@@ -31,62 +31,38 @@ result is the Kendall correlation between column `i` of `x` and column `j` of `y
 
 # Keyword arguments
 
-- `skipmissing::Symbol=:pairwise` If `:none`, missing values in either `x` or `y`
+- `skipmissing::Symbol=:none` If `:none`, missing values in either `x` or `y`
     cause the function to raise an error. Use `:pairwise` to skip entries with a missing 
     value in either of the two vectors used to calculate (an element of) the return. Use 
     `:listwise` to skip entries where a missing value appears anywhere in a given row of `x`
     or `y`; note that this might drop a high proportion of entries.
 
 """
-function corkendall(x::RoMVector, y::RoMVector; skipmissing::Symbol=:pairwise)
-        length(x) == length(y) || throw(DimensionMismatch("Vectors must have same length"))
-        x, y = handlelistwise(x, y, skipmissing)
-        return (corkendall!(copy(x), copy(y)))
+function corkendall(x::RoMVector, y::RoMVector; skipmissing::Symbol=:none)
+    length(x) == length(y) || throw(DimensionMismatch("Vectors must have same length"))
+    x, y = handlelistwise(x, y, skipmissing)
+    return (corkendall!(copy(x), copy(y)))
 end
 
 #= It is idiosyncratic that this method returns a vector, not a matrix, i.e. not consistent
 with Statistics.cor or corspearman. But fixing that is a breaking change. =#
-function corkendall(x::RoMMatrix, y::RoMVector; skipmissing::Symbol=:pairwise)
+function corkendall(x::RoMMatrix, y::RoMVector; skipmissing::Symbol=:none)
     size(x, 1) == length(y) ||
         throw(DimensionMismatch("x and y have inconsistent dimensions"))
-    x, y = handlelistwise(x, y, skipmissing)
-    n = size(x, 2)
-    permy = sortperm(y)
-    sortedy = y[permy]
-
-    C = ones(float(eltype(x)), n)
-
-    permy = sortperm(y)
-        Threads.@threads for i = 1:n
-            C[i] = corkendall_sorted!(copy(sortedy), x[:, i], permy)
-        end
-
-    return (C)
+    return (vec(corkendall(x, reshape(y, (length(y), 1)); skipmissing)))
 end
 
-function corkendall(x::RoMVector, y::RoMMatrix; skipmissing::Symbol=:pairwise)
+function corkendall(x::RoMVector, y::RoMMatrix; skipmissing::Symbol=:none)
     size(y, 1) == length(x) ||
         throw(DimensionMismatch("x and y have inconsistent dimensions"))
-    x, y = handlelistwise(x, y, skipmissing)
-    n = size(y, 2)
-    permx = sortperm(x)
-    sortedx = x[permx]
-
-    C = ones(float(eltype(y)), 1, n)
-
-    permx = sortperm(x)
-        Threads.@threads for i = 1:n
-            C[1, i] = corkendall_sorted!(copy(sortedx), y[:, i], permx)
-        end
-
-    return (C)
+    return (corkendall(reshape(x, (length(x), 1)), y; skipmissing))
 end
 
 function duplicate(x)
     [copy(x) for _ in 1:Threads.nthreads()]
 end
 
-function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:pairwise) where {T, U}
+function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:none) where {T,U}
     symmetric = x === y
     x, y = handlelistwise(x, y, skipmissing)
     m, nr = size(x)
@@ -94,16 +70,29 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:pai
     m == m2 || throw(DimensionMismatch("x and y have inconsistent dimensions"))
     C = ones(Float64, nr, nc)
 
-    scratchyvectors = duplicate(Vector{eltype(y)}(undef,m))
-    sortyspaces = duplicate(Vector{U}(undef,m))
-    ycolis = duplicate(Vector{eltype(y)}(undef,m))
-    xcoljsorteds = duplicate(Vector{eltype(x)}(undef,m))
+    scratchyvectors = duplicate(Vector{eltype(y)}(undef, m))
+    ycolis = duplicate(Vector{eltype(y)}(undef, m))
+    xcoljsorteds = duplicate(Vector{eltype(x)}(undef, m))
     permxs = duplicate(zeros(Int, m))
-    txs = duplicate(Vector{T}(undef,m))
-    tys = duplicate(Vector{U}(undef,m))
 
-    #Threads.@threads for j = (symmetric ? 2 : 1):nr
-        for j = (symmetric ? 2 : 1):nr
+    #T is not defined if x is Matrix{Missing}. Does this introduce type instability?
+    T2 = try
+        T
+    catch
+        Missing
+    end
+
+    U2 = try
+        U
+    catch
+        Missing
+    end
+
+    txs = duplicate(Vector{T2}(undef, m))
+    tys = duplicate(Vector{U2}(undef, m))
+    sortyspaces = duplicate(Vector{U2}(undef, m))
+
+    Threads.@threads for j = (symmetric ? 2 : 1):nr
 
         id = Threads.threadid()
         scratchyvector = scratchyvectors[id]
@@ -112,7 +101,7 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:pai
         xcoljsorted = xcoljsorteds[id]
         permx = permxs[id]
         tx = txs[id]
-        ty=tys[id]
+        ty = tys[id]
 
         sortperm!(permx, view(x, :, j))
         @inbounds for k in eachindex(xcoljsorted)
@@ -121,7 +110,7 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:pai
 
         for i = 1:(symmetric ? j - 1 : nc)
             ycoli .= view(y, :, i)
-            C[j, i] = corkendall_sorted!(xcoljsorted, ycoli, permx, scratchyvector, sortyspace,tx,ty)
+            C[j, i] = corkendall_sorted!(xcoljsorted, ycoli, permx, scratchyvector, sortyspace, tx, ty)
             symmetric && (C[i, j] = C[j, i])
         end
     end
@@ -195,14 +184,14 @@ permutation that must be applied to `x` to sort it.
 function corkendall!(x::AbstractVector{<:Real}, y::AbstractVector{<:Real}, permx::AbstractVector{<:Integer}=sortperm(x))
     permute!(x, permx)
     permute!(y, permx)
-    corkendall_sortedshuffled!(x, y)
+    corkendall_sortedshuffled!(x, y, similar(y))
 end
 
 function corkendall!(x::RoMVector, y::RoMVector, permx::AbstractVector{<:Integer}=sortperm(x))
     permute!(x, permx)
     permute!(y, permx)
     x, y = handlemissings(x, y)
-    corkendall_sortedshuffled!(x, y)
+    corkendall_sortedshuffled!(x, y, similar(y))
 end
 
 """
@@ -212,18 +201,18 @@ first argument. So calculating Kendall correlation between `x` and `y` is a two 
 process: a) sort `x` to get `sortedx`; b) call this function on `sortedx` and `y`, with the
 third argument being the permutation that achieved the sorting of `x`.
 """
-function corkendall_sorted!(sortedx::AbstractVector{<:Real}, y::AbstractVector{<:Real}, permx::AbstractVector{<:Integer}, scratchyvector::AbstractVector{<:Real}, sortyspace::AbstractVector{<:Real},tx,ty)
+function corkendall_sorted!(sortedx::AbstractVector{<:Real}, y::AbstractVector{<:Real}, permx::AbstractVector{<:Integer}, scratchyvector::AbstractVector{<:Real}, sortyspace::AbstractVector{<:Real}, tx, ty)
     @inbounds for i in eachindex(y)
         scratchyvector[i] = y[permx[i]]
     end
     corkendall_sortedshuffled!(sortedx, scratchyvector, sortyspace)
 end
 # method for when missings appear, so call handlemissings.
-function corkendall_sorted!(sortedx::RoMVector, y::RoMVector, permx::AbstractVector{<:Integer}, scratchyvector::RoMVector, sortyspace::RoMVector,tx,ty)
+function corkendall_sorted!(sortedx::RoMVector, y::RoMVector, permx::AbstractVector{<:Integer}, scratchyvector::RoMVector, sortyspace::RoMVector, tx, ty)
     @inbounds for i in eachindex(y)
         scratchyvector[i] = y[permx[i]]
     end
-    sortedx, scratchyvector = handlemissings_la(sortedx, scratchyvector,tx,ty)
+    sortedx, scratchyvector = handlemissings(sortedx, scratchyvector, tx, ty)
     length(sortedx) >= 2 || return (NaN)
     corkendall_sortedshuffled!(sortedx, scratchyvector, sortyspace)
 end

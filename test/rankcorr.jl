@@ -1,6 +1,8 @@
 using KendallTau
 using Test
 using Random
+include("corkendall_naive.jl")
+include("compare_implementations.jl")
 
 x = Float64[1 0; 2 1; 3 0; 4 1; 5 10]
 Y = Float64[5 5 6; 3 4 1; 4 0 4; 2 6 1; 5 7 10]
@@ -13,8 +15,9 @@ y = Y[:, 1]
 
 # corkendall and friends
 for f in (corkendall, KendallTau.corkendall_unthreaded, KendallTau.corkendall_threaded,
-    corkendall_naive)
-    @show f
+    corkendall_naive, KendallTau.LowAllocation.corkendall)
+
+    println("f = $(Base.parentmodule(f)).$(Base.nameof(f))")
     # Check error, handling of NaN, Inf etc
     @test_throws DimensionMismatch("Vectors must have same length") f([1, 2, 3, 4], [1, 2, 3])
     @test isnan(f([1, 2], [3, NaN]))
