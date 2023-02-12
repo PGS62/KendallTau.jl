@@ -6,6 +6,7 @@
 
 #=
 ToDo 9 Feb 2023
+0) Refactor - Currently too may mutating functions - corkendall!, corkendall_sorted!, corkendall_sortedshuffled!
 1) Work for single-matrix case with missings. Done
 2) Does corkendall_sorted!need two scratch arguments?
 3) Check for allocations in threaded code when missings are present. Mmm, problematic. Is boxing happening?
@@ -18,7 +19,6 @@ ToDo 9 Feb 2023
 10) Update README
 11) Suggest PR to StatsBase?
 =#
-
 
 """
     corkendall(x, y=x; skipmissing::Symbol=:none)
