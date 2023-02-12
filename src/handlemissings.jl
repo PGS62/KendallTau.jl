@@ -184,7 +184,7 @@ function handlelistwise(x::AbstractArray, y::AbstractArray, skipmissing::Symbol)
     end
     return (x, y)
 end
-
+#=
 function handlelistwise(x::AbstractArray, skipmissing::Symbol)
     if skipmissing == :listwise
         if x isa Matrix
@@ -209,3 +209,4 @@ function handlelistwise(x::AbstractArray, skipmissing::Symbol)
     end
     return (x)
 end
+=#

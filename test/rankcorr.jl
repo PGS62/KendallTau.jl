@@ -14,8 +14,7 @@ x2 = x[:, 2]
 y = Y[:, 1]
 
 # corkendall and friends
-for f in (corkendall, KendallTau.corkendall_unthreaded, KendallTau.corkendall_threaded,
-    corkendall_naive, KendallTau.LowAllocation.corkendall)
+for f in (KendallTau.corkendall, corkendall_naive)
 
     println("f = $(Base.parentmodule(f)).$(Base.nameof(f))")
     # Check error, handling of NaN, Inf etc

@@ -11,14 +11,6 @@ include("corkendall.jl")
 include("handlemissings.jl")
 include("speedtest.jl")
 
-module LowAllocation
-using LinearAlgebra
-const RoMVector{T<:Real} = AbstractVector{<:Union{T,Missing}}
-const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
-include("handlemissings.jl")
-include("lowallocation.jl")
-end
-
 export corkendall
 
 end # module
