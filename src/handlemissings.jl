@@ -46,49 +46,6 @@ function handlemissings(x::RoMVector, y::RoMVector,tx::AbstractVector,ty::Abstra
 
     view(tx,1:j), view(ty,1:j)
 end
-"""
-    handlemissings(x::RoMMatrix)
-Returns a filtered copy of `x`, in which the row `x[i,:]` is filtered out if 
-`any(ismissing,x[i,:])`.
-"""
-function handlemissings(x::RoMMatrix{T}) where {T}
-
-    if !(missing isa eltype(x))
-        return (x)
-    end
-
-    T2 = x isa Matrix{Missing} ? Missing : T
-    nr, nc = size(x)
-
-    chooser = fill(true, nr)
-
-    nrout = nr
-    @inbounds for i = 1:nr
-        for j = 1:nc
-            if ismissing(x[i, j])
-                chooser[i] = false
-                nrout -= 1
-                break
-            end
-        end
-    end
-
-    if nrout == nr
-        return (x)
-    else
-        res = Matrix{T2}(undef, nrout, nc)
-        @inbounds for j = 1:nc
-            k = 0
-            for i = 1:nr
-                if chooser[i]
-                    k += 1
-                    res[k, j] = x[i, j]
-                end
-            end
-        end
-        return (res)
-    end
-end
 
 """
     handlemissings(x::RoMMatrix,y::RoMMatrix)
@@ -184,29 +141,3 @@ function handlelistwise(x::AbstractArray, y::AbstractArray, skipmissing::Symbol)
     end
     return (x, y)
 end
-#=
-function handlelistwise(x::AbstractArray, skipmissing::Symbol)
-    if skipmissing == :listwise
-        if x isa Matrix
-            return (handlemissings(x))
-        end
-    elseif skipmissing == :pairwise
-    elseif skipmissing == :none
-        if missing isa eltype(x)
-            throw(ArgumentError("When missing is an allowed element type \
-                                then keyword argument skipmissing must be either \
-                                `:pairwise` or `:listwise`, but got `:$skipmissing`"))
-        end
-    else
-        if missing isa eltype(x)
-            throw(ArgumentError("keyword argument skipmissing must be either \
-                                `:pairwise` or `:listwise`, but got `:$skipmissing`"))
-        else
-            throw(ArgumentError("keyword argument skipmissing must be either \
-                                `:pairwise`, `:listwise` or `:none` but got \
-                                `:$skipmissing`"))
-        end
-    end
-    return (x)
-end
-=#

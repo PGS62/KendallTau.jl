@@ -5,19 +5,21 @@
 #######################################
 
 #=
-ToDo 9 Feb 2023
-0) Refactor - Currently too may mutating functions - corkendall!, corkendall_sorted!, corkendall_sortedshuffled!
-1) Work for single-matrix case with missings. Done
-2) Does corkendall_sorted!need two scratch arguments?
-3) Check for allocations in threaded code when missings are present. Mmm, problematic. Is boxing happening?
-4) Amalgamate the single-matrix and two-matrix cases. Done
-5) Write vector-vector, vector-matrix, matrix-vector cases. Done
-6) Eliminate argument `threaded` from all methods. Done
-7) Rename lowallocation.jl as corkendall.jl Done
-8) Rework docstrings
-9) Ask for code review?
-10) Update README
-11) Suggest PR to StatsBase?
+ToDo 12 Feb 2023
+1) Refactor - Currently too may mutating functions - corkendall!, corkendall_sorted!, corkendall_sortedshuffled!
+2) Take matrix-matrix method of handlemissings inside handlelistwise.
+3) Always use non-allocating method of handlemissings in vector-vector case.
+4) Work for single-matrix case with missings. DONE
+5) Does corkendall_sorted!need two scratch arguments?
+6) Check for allocations in threaded code when missings are present. Mmm, problematic. Is boxing happening?
+7) Amalgamate the single-matrix and two-matrix cases. DONE
+8) Write vector-vector, vector-matrix, matrix-vector cases. DONE
+9) Eliminate argument `threaded` from all methods. DONE
+10) Rename lowallocation.jl as corkendall.jl DONE
+11) Rework docstrings
+12) Ask for code review?
+13) Update README
+14) Suggest PR to StatsBase?
 =#
 
 """
@@ -327,5 +329,3 @@ function insertion_sort!(v::AbstractVector, lo::Integer, hi::Integer)
     end
     return nswaps
 end
-
-
