@@ -17,7 +17,7 @@ Calculate the KendallTau correlation matrix for data given as a csv file.
 - `outputfile::String`: Full path to an output csv file.
 - `inputhasheaderrow::Bool`: Pass in `true` if the input file has a header row. If so, row and column headers of `outputfile` match the input header row.
 - `inputhasheadercol::Bool`: Pass in `true` if the input file has a header column. The contents of the header column have no effect on the output correlations.
-- `outputhasheaderrow::Bool`: Pass in `true`` if `outputfile` is to be written with a header row. If `true` but `inputhasheaderrow` is `false` then the header row written is `Column1,Column2` etc.
+- `outputhasheaderrow::Bool`: Pass in `true` if `outputfile` is to be written with a header row. If `true` but `inputhasheaderrow` is `false` then the header row written is `Column1,Column2` etc.
 - `outputhasheadercol::Bool`: Pass in `true` if `outputfile` is to be written with a header column. If `true` but `inputhasheaderrow` is `false` then the header column written is `Column1,Column2` etc.
 
 """
