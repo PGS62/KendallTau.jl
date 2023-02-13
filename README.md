@@ -19,7 +19,8 @@ More recently I have made further changes to `corkendall`:
 2) `KendallTau.corkendall` now has a `skipmissings` keyword argument, to control the treatment of missing values. Allowed values are `:none`, `:pairwise` and `:listwise`.
 3) For convenience, there is a new function `corkendall_fromfile` which takes arguments in the form of names of csv files containing the input and output data.
  
-
+### Performance relative to `StatsBase.corkendall`
+Note the greatly reduced number and size of allocations. Reducing allocations was key to making multi-threading effective.
 ```julia
 julia> using StatsBase,KendallTau,Random
 
@@ -39,6 +40,62 @@ true
 
 julia> Threads.nthreads()#12 cores, 20 logical processors
 20
+```
+### Help for `KendallTau.corkendall`
+```julia
+help?> corkendall
+search: corkendall corkendall_fromfile
+
+  corkendall(x, y=x; skipmissing::Symbol=:none)
+
+
+  Compute Kendall's rank correlation coefficient, τ. x and y must both be either vectors or matrices,   
+  with elements that are either real numbers or missing values.
+
+  For matrix inputs, τ is calculated column against column, so that the [i,j] element of the result is  
+  the Kendall correlation between column i of x and column j of y.
+
+  Keyword arguments
+  ≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+
+    •  skipmissing::Symbol=:none If :none, missing values in either x or y cause the function to        
+       raise an error. Use :pairwise to skip entries with a missing value in either of the two
+       vectors used to calculate (an element of) the return. Use :listwise to skip entries where        
+       a missing value appears anywhere in a given row of x or y; note that this might drop a
+       high proportion of entries.
+```
+
+### Help for `KendallTau.corkendall_fromfile`
+```julia
+help?> corkendall_fromfile
+search: corkendall_fromfile
+
+  corkendall_fromfile(inputfile::String, outputfile::String, inputhasheaderrow::Bool,
+  inputhasheadercol::Bool, outputhasheaderrow::Bool, outputhasheadercol::Bool)
+
+
+  Calculate the KendallTau correlation matrix for data given as a csv file.
+
+  Arguments
+  ≡≡≡≡≡≡≡≡≡≡≡
+
+    •  inputfile::String: Full path to a csv file containing the input data.
+
+    •  outputfile::String: Full path to an output csv file.
+
+    •  inputhasheaderrow::Bool: Pass in true if the input file has a header row. If so,
+       row and column headers of outputfile match the input header row.
+
+    •  inputhasheadercol::Bool: Pass in true if the input file has a header column. The
+       contents of the header column have no effect on the output correlations.
+
+    •  outputhasheaderrow::Bool: Pass in true if outputfile is to be written with a header       
+       row. If true but inputhasheaderrow is false then the header row written is
+       Column1,Column2 etc.
+
+    •  outputhasheadercol::Bool: Pass in true if outputfile is to be written with a header       
+       column. If true but inputhasheaderrow is false then the header column written is
+       Column1,Column2 etc.
 ```
 
 Philip Swannell  
