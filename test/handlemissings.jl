@@ -10,8 +10,8 @@ mx = [1 2
     missing missing
     5 6]
 
-@test KendallTau.handlemissings(x, y) == ([2, 3, 4], [1, 2, 4])
-@test KendallTau.handlemissings(float.(x), y) == ([2.0, 3.0, 4.0], [1, 2, 4])
-@test KendallTau.handlemissings(x, float.(y)) == ([2, 3, 4], [1.0, 2.0, 4.0])
-@test KendallTau.handlemissings(u, v) == (Int64[], Int64[])
+@test KendallTau.handlemissings(x, y, similar(x), similar(y)) == ([2, 3, 4], [1, 2, 4])
+@test KendallTau.handlemissings(float.(x), y, similar(float.(x)), similar(y)) == ([2.0, 3.0, 4.0], [1, 2, 4])
+@test KendallTau.handlemissings(x, float.(y), similar(x), similar(float.(y))) == ([2, 3, 4], [1.0, 2.0, 4.0])
+@test KendallTau.handlemissings(u, v, similar(u), similar(v)) == (Int64[], Int64[])
 @test KendallTau.handlemissings(mx, mx) == ([1 2; 5 6], [1 2; 5 6])

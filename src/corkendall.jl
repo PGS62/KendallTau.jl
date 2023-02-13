@@ -5,21 +5,15 @@
 #######################################
 
 #=
-ToDo 12 Feb 2023
+ToDo 13 Feb 2023
+0) Move speedtest.jl and friends to the test folder and add necessary test dependencies
 1) Refactor - Currently too may mutating functions - corkendall!, corkendall_sorted!, corkendall_sortedshuffled!
-2) Take matrix-matrix method of handlemissings inside handlelistwise.
-3) Always use non-allocating method of handlemissings in vector-vector case.
-4) Work for single-matrix case with missings. DONE
-5) Does corkendall_sorted!need two scratch arguments?
-6) Check for allocations in threaded code when missings are present. Mmm, problematic. Is boxing happening?
-7) Amalgamate the single-matrix and two-matrix cases. DONE
-8) Write vector-vector, vector-matrix, matrix-vector cases. DONE
-9) Eliminate argument `threaded` from all methods. DONE
-10) Rename lowallocation.jl as corkendall.jl DONE
-11) Rework docstrings
-12) Ask for code review?
-13) Update README
-14) Suggest PR to StatsBase?
+2) Does corkendall_sorted!need two scratch arguments?
+3) Check for allocations in threaded code when missings are present. Mmm, problematic. Is boxing happening?
+5) Rework docstrings
+6) Ask for code review?
+7) Update README
+8) Suggest PR to StatsBase?
 =#
 
 """
@@ -60,6 +54,11 @@ function corkendall(x::RoMVector, y::RoMMatrix; skipmissing::Symbol=:none)
     return (corkendall(reshape(x, (length(x), 1)), y; skipmissing))
 end
 
+"""
+    duplicate(x)
+
+Returns a vector, each of whose `Threads.nthreads()` elements is a copy of `x`.
+"""
 function duplicate(x)
     [copy(x) for _ in 1:Threads.nthreads()]
 end
@@ -72,24 +71,15 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
     m == m2 || throw(DimensionMismatch("x and y have inconsistent dimensions"))
     C = ones(Float64, nr, nc)
 
+    #T is not defined if x is Matrix{Missing}. Does this introduce type instability?
+    T2 = @isdefined(T) ? T : Missing
+    U2 = @isdefined(U) ? U : Missing
+
+    #Create scratch vectors that enable threaded code to be non-allocating
     scratchyvectors = duplicate(Vector{eltype(y)}(undef, m))
     ycolis = duplicate(Vector{eltype(y)}(undef, m))
     xcoljsorteds = duplicate(Vector{eltype(x)}(undef, m))
     permxs = duplicate(zeros(Int, m))
-
-    #T is not defined if x is Matrix{Missing}. Does this introduce type instability?
-    T2 = try
-        T
-    catch
-        Missing
-    end
-
-    U2 = try
-        U
-    catch
-        Missing
-    end
-
     txs = duplicate(Vector{T2}(undef, m))
     tys = duplicate(Vector{U2}(undef, m))
     sortyspaces = duplicate(Vector{U2}(undef, m))
@@ -192,7 +182,7 @@ end
 function corkendall!(x::RoMVector, y::RoMVector, permx::AbstractVector{<:Integer}=sortperm(x))
     permute!(x, permx)
     permute!(y, permx)
-    x, y = handlemissings(x, y)
+    x, y = handlemissings(x, y, similar(x), similar(y))
     corkendall_sortedshuffled!(x, y, similar(y))
 end
 

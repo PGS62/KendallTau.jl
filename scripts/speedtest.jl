@@ -1,6 +1,10 @@
 
 using BenchmarkTools
 using Dates
+using Missings
+using Plotly
+using PlotlyJS
+using Random
 
 """
     @btimed expression [other parameters...]
@@ -271,7 +275,6 @@ function impactofmissings(nr::Int, nc::Int, proportionmissing::Float64=0.1)
     println("#"^67)
 end
 
-using Missings
 
 function sm1(x, y)
     mx, my = Missings.skipmissings(x, y)
@@ -315,7 +318,6 @@ function test_skipmissings(n=10000)
     nothing
 end
 
-using PlotlyJS
 
 #=
 
@@ -361,7 +363,7 @@ nc = 512, nr = 1000, f = corkendall_experimental,  time = 1.008708, ratio = 4.26
 ###################################################################
  =#
 
-function how_scaleable(fns::Vector{Function}, nr::Integer, ncs::Vector{<:Integer}, 
+function how_scaleable(fns, nr::Integer, ncs::Vector{<:Integer}, 
     with_missings::Bool,use_benchmark_tools::Bool)
 
     just_tweaking_plot = false
