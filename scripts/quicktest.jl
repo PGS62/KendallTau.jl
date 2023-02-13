@@ -53,16 +53,18 @@ res = @time KendallTau.corkendall(xm;skipmissing=:pairwise)
 =#
 
 #=
+julia> using StatsBase,KendallTau,Random
+
 julia> x = rand(1000,10);StatsBase.corkendall(x)==KendallTau.corkendall(x)#compile
 true
 
 julia> x = rand(1000,1000);
 
 julia> @time res_sb = StatsBase.corkendall(x);
- 20.258851 seconds (3.00 M allocations: 17.082 GiB, 4.80% gc time)
+ 21.025099 seconds (3.00 M allocations: 17.082 GiB, 4.39% gc time)
 
 julia> @time res_kt = KendallTau.corkendall(x);
-  1.825272 seconds (2.28 k allocations: 8.876 MiB)
+  1.771583 seconds (2.28 k allocations: 8.876 MiB)
 
 julia> res_sb == res_kt
 true
