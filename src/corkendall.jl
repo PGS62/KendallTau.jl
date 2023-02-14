@@ -65,15 +65,24 @@ end
 
 function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:none) where {T,U}
     symmetric = x === y
+    size(x,1) == size(y,1) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
+
+    #Swapping x and y can be more efficient in the threaded loop.
+    swapxy = false
+    if size(x, 2) < size(y, 2)
+        x, y = y, x
+        swapxy = true
+    end
+
     x, y = handlelistwise(x, y, skipmissing)
-    m, nr = size(x)
-    m2, nc = size(y)
-    m == m2 || throw(DimensionMismatch("x and y have inconsistent dimensions"))
+    m,nr = size(x)
+    nc = size(y,2)
+
     C = ones(Float64, nr, nc)
 
-    #T is not defined if x is Matrix{Missing}. Does this introduce type instability?
-    T2 = @isdefined(T) ? T : Missing
-    U2 = @isdefined(U) ? U : Missing
+    #T is not defined if x is Matrix{Missing}
+    T2 = x isa Matrix{Missing} ? Missing : T
+    U2 = y isa Matrix{Missing} ? Missing : U
 
     #Create scratch vectors that enable threaded code to be non-allocating
     scratchyvectors = duplicate(Vector{eltype(y)}(undef, m))
@@ -105,6 +114,9 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
             C[j, i] = corkendall_sorted!(xcoljsorted, ycoli, permx, scratchyvector, sortyspace, tx, ty)
             symmetric && (C[i, j] = C[j, i])
         end
+    end
+    if swapxy
+        C = collect(transpose(C))
     end
     return C
 end
@@ -182,7 +194,7 @@ end
 function corkendall!(x::RoMVector, y::RoMVector, permx::AbstractVector{<:Integer}=sortperm(x))
     permute!(x, permx)
     permute!(y, permx)
-    x, y = handlemissings(x, y, similar(x), similar(y))
+    x, y = handlemissings(x, y)
     corkendall_sortedshuffled!(x, y, similar(y))
 end
 

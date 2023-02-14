@@ -1,4 +1,36 @@
 """
+    handlemissings(x::RoMVector, y::RoMVector)
+Returns a pair `(a,b)`, filtered copies of `x` and `y`, in which elements `x[i]` and `y[i]`
+are filtered out if  `ismissing(x[i])||ismissing(y[i])`.
+"""
+function handlemissings(x::RoMVector{T}, y::RoMVector{U}) where {T} where {U}
+
+    length(x) == length(y) || error("Vectors must have same length")
+
+    T2 = x isa Vector{Missing} ? Missing : T
+    U2 = y isa Vector{Missing} ? Missing : U
+    n = length(x)
+
+    a = Vector{T2}(undef, n)
+    b = Vector{U2}(undef, n)
+    j::Int = 0
+
+    @inbounds for i in eachindex(x)
+        if !(ismissing(x[i]) || ismissing(y[i]))
+            j += 1
+            a[j] = x[i]
+            b[j] = y[i]
+        end
+    end
+
+    resize!(a, j)
+    resize!(b, j)
+
+    a, b
+end
+
+
+"""
     handlemissings(x::RoMVector, y::RoMVector,tx::AbstractVector,ty::AbstractVector)
 Returns a pair `(a,b)`, filtered copies of `x` and `y`, in which elements `x[i]` and `y[i]`
 are filtered out if  `ismissing(x[i])||ismissing(y[i])`.

@@ -1,0 +1,59 @@
+Note KT version no faster than SB versio in vector-matrix case. Fixed via swapxy idea.
+julia> using StatsBase;speedtest([StatsBase.corkendall,KendallTau.corkendall],2000,500,false)
+###################################################################
+Executing speedtest 2023-02-14T13:16:46.806
+ComputerName = DESKTOP-HSGAM5S
+Threads.nthreads() = 20
+--------------------------------------------------
+size(matrix1) = (2000, 500)
+typeof(matrix1) = Matrix{Float64}
+StatsBase.corkendall(matrix1)
+  9.711 s (749999 allocations: 8.46 GiB)
+KendallTau.corkendall(matrix1)
+typeof(matrix1) = Matrix{Float64}
+size(matrix2) = (2000, 500)
+typeof(matrix2) = Matrix{Float64}
+StatsBase.corkendall(matrix1,matrix2)
+  19.590 s (1501502 allocations: 16.93 GiB)
+KendallTau.corkendall(matrix1,matrix2)
+  1.287 s (1278 allocations: 4.23 MiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 15.223544378496365
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.0002439898121726281
+Results from both functions identical? true
+--------------------------------------------------
+size(vector1) = (2000,)
+typeof(vector1) = Vector{Float64}
+size(matrix1) = (2000, 500)
+typeof(matrix1) = Matrix{Float64}
+StatsBase.corkendall(vector1,matrix1)
+  37.188 ms (3005 allocations: 34.66 MiB)
+KendallTau.corkendall(vector1,matrix1)
+  32.790 ms (280 allocations: 2.28 MiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 1.1341362252895717
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.06580973241901575
+Results from both functions identical? true
+--------------------------------------------------
+size(matrix1) = (2000, 500)
+typeof(matrix1) = Matrix{Float64}
+size(vector1) = (2000,)
+typeof(vector1) = Vector{Float64}
+StatsBase.corkendall(matrix1,vector1)
+  37.118 ms (3003 allocations: 34.66 MiB)
+KendallTau.corkendall(matrix1,vector1)
+  5.352 ms (1280 allocations: 2.33 MiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 6.935777416521853
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.06713031349435052
+Results from both functions identical? true
+--------------------------------------------------
+size(vector1) = (2000,)
+typeof(vector1) = Vector{Float64}
+size(vector2) = (2000,)
+typeof(vector2) = Vector{Float64}
+StatsBase.corkendall(vector1,vector2)
+  104.800 μs (8 allocations: 86.70 KiB)
+KendallTau.corkendall(vector1,vector2)
+  103.800 μs (7 allocations: 94.52 KiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 1.0096339113680155
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 1.0901063254640475
+Results from both functions identical? true
+###################################################################
