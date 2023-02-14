@@ -386,101 +386,12 @@ function impactofmissings(nr::Int, nc::Int, proportionmissing::Float64=0.1)
     println("#"^67)
 end
 
-
-function sm1(x, y)
-    mx, my = Missings.skipmissings(x, y)
-    collect(mx), collect(my)
-end
-
-function testmissings()
-    x = [missing; 1:1000]
-    y = [1:1000; missing]
-    @benchmark handlemissings($x, $y)
-end
-
-#= test different ways of "skipping missing pairs".
-julia> KendallTau.test_skipmissings(10000)
-  46.700 μs (7 allocations: 181.58 KiB)
-  151.800 μs (46 allocations: 514.88 KiB)
-  25.400 μs (4 allocations: 156.41 KiB) =#
-function test_skipmissings(n=10000)
-
-    x = [missing; 1:n]
-    y = [1:n; missing]
-
-    # simplest approach I could think of
-    @btime begin
-        keep = .!(ismissing.($x) .| ismissing.($y))
-        x2 = $x[keep]
-        y2 = $y[keep]
-    end
-
-    # using Missings.skipmissings
-    @btime begin
-        itrx, itry = Missings.skipmissings($x, $y)
-        # I think I may be misusing Missings.skipmissings by calling collect here
-        x3 = collect(itrx)
-        y3 = collect(itry)
-    end
-
-    # use KendallTau.handlemissings
-    @btime x4, y4 = KendallTau.handlemissings($x, $y)
-
-    nothing
-end
-
-
-#=
-
-julia> KT = KendallTau;KT.how_scaleable([KT.corkendall_unthreaded,KT.corkendall_threaded,KT.corkendall_experimental],1000,2 .^(1:9),false)
-###################################################################
-Executing how_scaleable 2023-01-30T16:55:45.911
-ComputerName = DESKTOP-HSGAM5S
-fns[1] = corkendall_unthreaded
-fns[2] = corkendall_threaded
-fns[3] = corkendall_experimental
-ncs = [2, 4, 8, 16, 32, 64, 128, 256, 512]
-with_missings = false
-use_benchmark_tools = true
-Threads.nthreads() = 20
-nc = 2, nr = 1000, f = corkendall_unthreaded,  time = 3.15e-5
-nc = 2, nr = 1000, f = corkendall_threaded,  time = 4.89e-5, ratio = 0.6441717791411042
-nc = 2, nr = 1000, f = corkendall_experimental,  time = 4.3e-5, ratio = 0.7325581395348837
-nc = 4, nr = 1000, f = corkendall_unthreaded,  time = 0.0002538
-nc = 4, nr = 1000, f = corkendall_threaded,  time = 0.0001413, ratio = 1.7961783439490446
-nc = 32, nr = 1000, f = corkendall_experimental,  time = 0.0018497, ratio = 8.814726712439855
-nc = 64, nr = 1000, f = corkendall_unthreaded,  time = 0.0662705
-nc = 64, nr = 1000, f = corkendall_threaded,  time = 0.0073268, ratio = 9.044944586995687
-nc = 64, nr = 1000, f = corkendall_experimental,  time = 0.0060442, ratio = 10.964312895006783
-nc = 128, nr = 1000, f = corkendall_unthreaded,  time = 0.2677632
-nc = 128, nr = 1000, f = corkendall_threaded,  time = 0.029432, ratio = 9.09768958956238
-nc = 128, nr = 1000, f = corkendall_experimental,  time = 0.0243275, ratio = 11.006605693145618
-nc = 256, nr = 1000, f = corkendall_unthreaded,  time = 1.0604601
-nc = 256, nr = 1000, f = corkendall_threaded,  time = 0.2023788, ratio = 5.2399762228059465
-nc = 256, nr = 1000, f = corkendall_experimental,  time = 0.1587403, ratio = 6.680471814655761
-nc = 512, nr = 1000, f = corkendall_unthreaded,  time = 4.3017802
-nc = 512, nr = 1000, f = corkendall_threaded,  time = 1.0040729, ratio = 4.284330550102488
-nc = 512, nr = 1000, f = corkendall_experimental,  time = 1.008708, ratio = 4.26464368281009
-9×4 Matrix{Float64}:
-   2.0  3.15e-5    4.89e-5    4.3e-5
-   4.0  0.0002538  0.0001413  0.0001434
-   8.0  0.0010675  0.0002849  0.0003475
-  16.0  0.0042129  0.0006095  0.0007639
-  32.0  0.0163046  0.0017572  0.0018497
-  64.0  0.0662705  0.0073268  0.0060442
- 128.0  0.267763   0.029432   0.0243275
- 256.0  1.06046    0.202379   0.15874
- 512.0  4.30178    1.00407    1.00871
-###################################################################
- =#
-
 """
     how_scaleable(fns, nr::Integer, ncs::Vector{<:Integer},
     with_missings::Bool, use_benchmark_tools::Bool)
 
 Investigate the performance of corkendall(x) as a function of the number of columns in x. A\
 plot is generated using Plotly.
-
 
 # Example
 ```
@@ -525,7 +436,6 @@ nc = 64, nr = 1000, f = KendallTau.corkendall,  time = 0.006885, ratio = 10.8311
  64.0  0.0745725  0.006885
 ###################################################################
 ```
-
 """
 function how_scaleable(fns, nr::Integer, ncs::Vector{<:Integer},
     with_missings::Bool, use_benchmark_tools::Bool, test_returns_equal::Bool=true)
@@ -597,7 +507,4 @@ function how_scaleable(fns, nr::Integer, ncs::Vector{<:Integer},
             scatter(x=ncs, y=datatoplot[:, i], mode="line", name=fullnameof(fns[i])) for i in 1:length(fns)], Layout(; title="Time to evaluate corkendall(x) vs num cols in x",
             xaxis=attr(title="Num cols (num rows = $nr)", type="log"),
             yaxis=attr(title="Seconds", type="log")))
-
 end
-
-
