@@ -66,33 +66,32 @@ help?> KendallTau.corkendall
 
 ### Help for `KendallTau.corkendall_fromfile`
 ```julia
-help?> corkendall_fromfile
-search: corkendall_fromfile
-
+help?> KendallTau.corkendall_fromfile
   corkendall_fromfile(inputfile::String, outputfile::String, inputhasheaderrow::Bool,
   inputhasheadercol::Bool, outputhasheaderrow::Bool, outputhasheadercol::Bool)
 
 
-  Calculate the KendallTau correlation matrix for data given as a csv file.
+  Compute Kendall's rank correlation coefficient, τ(x) where x is read from a csv file, writing the
+  result to another csv file.
 
   Arguments
   ≡≡≡≡≡≡≡≡≡≡≡
 
-    •  inputfile::String: Full path to a csv file containing the input data.
+    •  inputfile::String: Path to a csv file containing the input data.
 
-    •  outputfile::String: Full path to an output csv file.
+    •  outputfile::String: Path to an output csv file.
 
-    •  inputhasheaderrow::Bool: Pass in true if the input file has a header row. If so,
-       row and column headers of outputfile match the input header row.
+    •  inputhasheaderrow::Bool: Pass in true if the input file has a header row. If so, row and
+       column headers of outputfile match the input header row.
 
     •  inputhasheadercol::Bool: Pass in true if the input file has a header column. The
        contents of the header column have no effect on the output correlations.
 
-    •  outputhasheaderrow::Bool: Pass in true if outputfile is to be written with a header       
-       row. If true but inputhasheaderrow is false then the header row written is
-       Column1,Column2 etc.
+    •  outputhasheaderrow::Bool: Pass in true if outputfile is to be written with a header row.
+       If true but inputhasheaderrow is false then the header row written is Column1,Column2
+       etc.
 
-    •  outputhasheadercol::Bool: Pass in true if outputfile is to be written with a header       
+    •  outputhasheaderrow::Bool: Pass in true if outputfile is to be written with a header
        column. If true but inputhasheaderrow is false then the header column written is
        Column1,Column2 etc.
 ```
