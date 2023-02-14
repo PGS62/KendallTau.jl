@@ -43,26 +43,25 @@ julia> Threads.nthreads()#12 cores, 20 logical processors
 ```
 ### Help for `KendallTau.corkendall`
 ```julia
-help?> corkendall
-search: corkendall corkendall_fromfile
-
+help?> KendallTau.corkendall
   corkendall(x, y=x; skipmissing::Symbol=:none)
 
 
-  Compute Kendall's rank correlation coefficient, τ. x and y must both be either vectors or matrices,   
-  with elements that are either real numbers or missing values.
+  Compute Kendall's rank correlation coefficient, τ. x and y must both be either vectors or
+  matrices, with elements that are either real numbers or missing values.
 
-  For matrix inputs, τ is calculated column against column, so that the [i,j] element of the result is  
-  the Kendall correlation between column i of x and column j of y.
+  For matrix inputs, τ is calculated column against column, so that the [i,j] element of the result
+  is the Kendall correlation between column i of x and column j of y.
 
   Keyword arguments
   ≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
 
-    •  skipmissing::Symbol=:none If :none, missing values in either x or y cause the function to        
-       raise an error. Use :pairwise to skip entries with a missing value in either of the two
-       vectors used to calculate (an element of) the return. Use :listwise to skip entries where        
-       a missing value appears anywhere in a given row of x or y; note that this might drop a
-       high proportion of entries.
+    •  skipmissing::Symbol=:none If :none, missing values in either x or y cause the function
+       to raise an error. Use :pairwise to skip entries with a missing value in either of the
+       two vectors used to calculate (an element of) the return. Use :listwise to skip entries
+       where a missing value appears anywhere in a given row of x or y; note that this might
+       drop a high proportion of entries.
+
 ```
 
 ### Help for `KendallTau.corkendall_fromfile`
