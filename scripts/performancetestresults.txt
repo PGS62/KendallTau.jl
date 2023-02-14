@@ -57,3 +57,74 @@ Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 1.0096339113680155
 Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 1.0901063254640475
 Results from both functions identical? true
 ###################################################################
+
+julia> using StatsBase,KendallTau;how_scaleable([StatsBase.corkendall,KendallTau.corkendall],1000,2 .^(1:12),false,true,true)
+###################################################################
+Executing how_scaleable 2023-02-14T16:14:20.042
+ComputerName = DESKTOP-HSGAM5S
+fns[1] = StatsBase.corkendall
+fns[2] = KendallTau.corkendall
+ncs = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096]
+with_missings = false
+use_benchmark_tools = true
+Threads.nthreads() = 20
+  34.300 μs (10 allocations: 51.80 KiB)
+nc = 2, nr = 1000, f = StatsBase.corkendall,  time = 3.43e-5
+  160.900 μs (2277 allocations: 1.19 MiB)
+nc = 2, nr = 1000, f = KendallTau.corkendall,  time = 0.0001609, ratio = 0.21317588564325668
+  270.800 μs (46 allocations: 262.73 KiB)
+nc = 4, nr = 1000, f = StatsBase.corkendall,  time = 0.0002708
+  242.500 μs (6271 allocations: 1.25 MiB)
+nc = 4, nr = 1000, f = KendallTau.corkendall,  time = 0.0002425, ratio = 1.1167010309278351
+  1.119 ms (190 allocations: 1.09 MiB)
+nc = 8, nr = 1000, f = StatsBase.corkendall,  time = 0.001119
+  389.300 μs (14331 allocations: 1.37 MiB)
+nc = 8, nr = 1000, f = KendallTau.corkendall,  time = 0.0003893, ratio = 2.874389930644747
+  4.429 ms (766 allocations: 4.43 MiB)
+nc = 16, nr = 1000, f = StatsBase.corkendall,  time = 0.0044292
+  18.177 ms (3070 allocations: 17.84 MiB)
+nc = 32, nr = 1000, f = StatsBase.corkendall,  time = 0.0181775
+  1.808 ms (64707 allocations: 2.19 MiB)
+nc = 32, nr = 1000, f = KendallTau.corkendall,  time = 0.0018085, ratio = 10.05114735969035
+  75.745 ms (12287 allocations: 71.51 MiB)
+nc = 64, nr = 1000, f = StatsBase.corkendall,  time = 0.075745
+  7.646 ms (137252 allocations: 3.47 MiB)
+nc = 64, nr = 1000, f = KendallTau.corkendall,  time = 0.0076462, ratio = 9.906227930213703
+  329.361 ms (49151 allocations: 286.36 MiB)
+nc = 128, nr = 1000, f = StatsBase.corkendall,  time = 0.3293615
+  29.084 ms (300772 allocations: 6.62 MiB)
+nc = 128, nr = 1000, f = KendallTau.corkendall,  time = 0.0290844, ratio = 11.324335382541843
+  1.389 s (196607 allocations: 1.12 GiB)
+nc = 256, nr = 1000, f = StatsBase.corkendall,  time = 1.3886278
+  116.684 ms (701540 allocations: 15.37 MiB)
+nc = 256, nr = 1000, f = KendallTau.corkendall,  time = 0.116684, ratio = 11.900755887696686
+  5.688 s (786431 allocations: 4.48 GiB)
+nc = 512, nr = 1000, f = StatsBase.corkendall,  time = 5.6878155
+  487.307 ms (1800528 allocations: 42.65 MiB)
+nc = 512, nr = 1000, f = KendallTau.corkendall,  time = 0.4873072, ratio = 11.671929944806891
+  21.309 s (3145727 allocations: 17.91 GiB)
+nc = 1024, nr = 1000, f = StatsBase.corkendall,  time = 21.3085117
+  2.001 s (7521616 allocations: 171.97 MiB)
+nc = 1024, nr = 1000, f = KendallTau.corkendall,  time = 2.0009986, ratio = 10.648938834839765
+  77.748 s (12582911 allocations: 71.65 GiB)
+nc = 2048, nr = 1000, f = StatsBase.corkendall,  time = 77.7478732
+  9.051 s (29973839 allocations: 682.61 MiB)
+nc = 2048, nr = 1000, f = KendallTau.corkendall,  time = 9.050901, ratio = 8.590070005185119
+  377.481 s (50331647 allocations: 286.62 GiB)
+nc = 4096, nr = 1000, f = StatsBase.corkendall,  time = 377.4813468
+  42.907 s (118918482 allocations: 2.65 GiB)
+nc = 4096, nr = 1000, f = KendallTau.corkendall,  time = 42.9068747, ratio = 8.797689168444608
+12×3 Matrix{Float64}:
+    2.0    3.43e-5     0.0001609
+    4.0    0.0002708   0.0002425
+    8.0    0.001119    0.0003893
+   16.0    0.0044292   0.0006924
+   32.0    0.0181775   0.0018085
+   64.0    0.075745    0.0076462
+  128.0    0.329361    0.0290844
+  256.0    1.38863     0.116684
+  512.0    5.68782     0.487307
+ 1024.0   21.3085      2.001
+ 2048.0   77.7479      9.0509
+ 4096.0  377.481      42.9069
+###################################################################
