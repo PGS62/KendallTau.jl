@@ -37,7 +37,7 @@ function corkendall_fromfile(inputfile::String, outputfile::String, inputhashead
     filedata = CSV.File(inputfile; header, drop)
     names = CSV.getnames(filedata)
     data = Tables.matrix(filedata)
-    
+
     res = corkendall(data, skipmissing=:pairwise)
     datatowrite = DataFrame(res, names)
 
