@@ -451,7 +451,7 @@ function how_scaleable(fns, nr::Integer, ncs::Vector{<:Integer},
     println("ComputerName = $(ENV["COMPUTERNAME"])")
 
     for i in eachindex(fns)
-        println("fns[$i] = $(fns[i])")
+        println("fns[$i] = $(fullnameof(fns[i]))")
     end
 
     @show ncs
