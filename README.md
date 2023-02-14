@@ -20,7 +20,7 @@ More recently I have made further changes to `corkendall`:
 3) For convenience, there is a new function `corkendall_fromfile` which takes arguments in the form of names of csv files containing the input and output data.
  
 ### Performance relative to `StatsBase.corkendall`
-Note the greatly reduced number and size of allocations. Reducing allocations was key to making multi-threading effective.
+Note the greatly (x1000) reduced number and size of allocations. My experience was that reduced allocations led to the performance advantage of the multi-threaded code being maintained independent of the size of the input data.
 ```julia
 julia> using StatsBase,KendallTau,Random
 
