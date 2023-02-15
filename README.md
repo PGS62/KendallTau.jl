@@ -15,7 +15,7 @@ The code of `corkendall` from this package was incorporated in Julia StatsBase o
 
 More recently I have made further changes to `corkendall`:
 
-1) The function is now multi-threaded. On a PC with 12 cores and 20 logical processors this gives an approximate 11 times speed-up relative to `StatsBase.corkendall`
+1) The function is now multi-threaded. On a PC with 12 cores and 20 logical processors this gives an approximate 12 times speed-up relative to `StatsBase.corkendall`
 2) `KendallTau.corkendall` now has a `skipmissings` keyword argument, to control the treatment of missing values.
 3) For convenience, there is a new function `corkendall_fromfile` which takes arguments in the form of names of csv files containing the input and output data.
  
