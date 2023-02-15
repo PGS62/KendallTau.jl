@@ -4,10 +4,22 @@ using Random
 include("corkendall_naive.jl")
 include("compare_implementations.jl")
 
+function equal_with_nan(x, y)
+    if isnan(x) && isnan(y)
+        return (true)
+    elseif isnan(x) || isnan(y)
+        return (false)
+    else
+        return x == y
+    end
+end
+
 x = Float64[1 0; 2 1; 3 0; 4 1; 5 10]
 Y = Float64[5 5 6; 3 4 1; 4 0 4; 2 6 1; 5 7 10]
 Xm = [1 0; missing 1; 2 1; 3 0; 4 1; 5 10]
 Ym = [5 5 6; 1 2 3; 3 4 1; 4 0 4; 2 6 1; 5 7 10]
+xm = [missing, missing, missing, missing, missing]
+xmm = hcat(xm, xm)
 
 x1 = x[:, 1]
 x2 = x[:, 2]
@@ -58,6 +70,10 @@ for f in (KendallTau.corkendall, corkendall_naive)
     @test f(Xm, Ym, skipmissing=:listwise) == f(x, Y)
     @test f(Xm, Ym, skipmissing=:pairwise) ≈ [-1/√90 0.4 1/√90
         -2/√154 7/√165 -1/√154]
+    @test isnan(f(1:5, xm, skipmissing=:pairwise))
+    @test isnan(f(xm, 1:5, skipmissing=:pairwise))
+    @test all(equal_with_nan.(f(xmm, skipmissing=:pairwise), [1.0 NaN; NaN 1.0]))
+    @test all(equal_with_nan.(f(xmm, copy(xmm), skipmissing=:pairwise), [NaN NaN; NaN NaN]))
 
     # Test not-correct values of skipmissing
     if !(f === corkendall_naive)
@@ -149,9 +165,9 @@ for f in (KendallTau.corkendall, corkendall_naive)
     advantage of simplicity.
     =#
     if f !== corkendall_naive
-        @test compare_implementations(f, corkendall_naive, abstol=0.0, maxcols=10, maxrows=10, numtests=200, fns_handle_missings=true) == true
-        @test compare_implementations(f, corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=200, fns_handle_missings=true) == true
-        @test compare_implementations(f, corkendall_naive, abstol=1e14, maxcols=2, maxrows=20000, numtests=5, fns_handle_missings=true) == true
+             @test compare_implementations(f, corkendall_naive, abstol=0.0, maxcols=10, maxrows=10, numtests=200, fns_handle_missings=true) == true
+             @test compare_implementations(f, corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=200, fns_handle_missings=true) == true
+             @test compare_implementations(f, corkendall_naive, abstol=1e14, maxcols=2, maxrows=20000, numtests=5, fns_handle_missings=true) == true
     end
 
 end

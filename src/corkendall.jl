@@ -4,16 +4,18 @@
 # 
 #######################################
 
+#RoM stands for "Real or Missing"
+const RoMVector{T<:Real} = AbstractVector{<:Union{T,Missing}}
+const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
+
 #=
 TODO 15 Feb 2023
-0) Move speedtest.jl and friends to the test folder and add necessary test dependencies.
-1) Refactor - Currently too many mutating functions - corkendall!, corkendall_sorted!, corkendall_sortedshuffled!
-2) Does corkendall_sorted! need two scratch arguments?
-3) Add tests for missing elements.
-4) Rework docstrings.
-5) Ask for code review?
-6) Update README.
-7) Suggest PR to StatsBase?
+1) Move speedtest.jl and friends to the test folder and add necessary test dependencies.
+2) Check all lines of code covered by tests
+3) Rework docstrings.
+4) Ask for code review?
+5) Update README.
+6) Suggest PR to StatsBase?
 =#
 
 """
@@ -48,16 +50,16 @@ function corkendall(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none)
     y = copy(y)
     permx = sortperm(x)
     permute!(x, permx)
-    x, y = handlemissings(x, y)
-    tx = Vector{T}(undef, length(x))
-    ty = Vector{U}(undef, length(y))
+    if missing isa eltype(x) || missing isa eltype(y)
+        x, y = handlemissings(x, y)
+    end
 
-    corkendall_sorted!(x, y, permx, similar(y), similar(y), tx, ty)
+    return (corkendall_sorted!(x, y, permx, similar(y), similar(y), T[], U[]))
 
 end
 
-#= It is idiosyncratic that this method returns a vector, not a matrix, i.e. not consistent
-with Statistics.cor or StatsBase.corspearman. But fixing that is a breaking change. =#
+#= Function returns a vector in this case, inconsistent with with Statistics.cor and 
+StatsBase.corspearman. Fixing that is a breaking change. =#
 function corkendall(x::RoMMatrix, y::RoMVector; skipmissing::Symbol=:none)
     return (vec(corkendall(x, reshape(y, (length(y), 1)); skipmissing)))
 end
@@ -90,7 +92,7 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
 
     if x isa Matrix{Missing} || y isa Matrix{Missing}
         if symmetric
-            return (ifelse.((1:nr) == (1:nc)', 1.0, NaN))
+            return (ifelse.((1:nr) .== (1:nc)', 1.0, NaN))
         else
             return (fill(NaN, nr, nc))
         end
@@ -98,7 +100,8 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
 
     C = ones(Float64, nr, nc)
 
-    #Create scratch vectors so that threaded code can be non-allocating
+    #= Create scratch vectors so that threaded code can be non-allocating. Need one vector
+    per thread to avoid cross-talk between threads.=#
     scratchyvectors = duplicate(similar(y, m))
     ycolis = duplicate(similar(y, m))
     xcoljsorteds = duplicate(similar(x, m))
@@ -320,4 +323,137 @@ function insertion_sort!(v::AbstractVector, lo::Integer, hi::Integer)
         v[j] = x
     end
     return nswaps
+end
+
+"""
+    handlemissings(x::RoMVector, y::RoMVector)
+Returns a pair `(a,b)`, filtered copies of `x` and `y`, in which elements `x[i]` and `y[i]`
+are filtered out if  `ismissing(x[i])||ismissing(y[i])`.
+"""
+function handlemissings(x::RoMVector{T}, y::RoMVector{U}) where {T,U}
+
+    n = length(x)
+    a = Vector{T}(undef, n)
+    b = Vector{U}(undef, n)
+    j::Int = 0
+
+    @inbounds for i in eachindex(x)
+        if !(ismissing(x[i]) || ismissing(y[i]))
+            j += 1
+            a[j] = x[i]
+            b[j] = y[i]
+        end
+    end
+
+    return (resize!(a, j), resize!(b, j))
+end
+
+"""
+    handlemissings(x::RoMVector, y::RoMVector,tx::AbstractVector,ty::AbstractVector)
+Returns a pair `(a,b)`, filtered copies of `x` and `y`, in which elements `x[i]` and `y[i]`
+are filtered out if  `ismissing(x[i])||ismissing(y[i])`.
+"""
+function handlemissings(x::RoMVector{T}, y::RoMVector{U},
+    tx::AbstractVector{T}, ty::AbstractVector{U}) where {T,U}
+
+    j = 0
+
+    @inbounds for i in eachindex(x)
+        if !(ismissing(x[i]) || ismissing(y[i]))
+            j += 1
+            tx[j] = x[i]
+            ty[j] = y[i]
+        end
+    end
+
+    return (view(tx, 1:j), view(ty, 1:j))
+end
+
+"""
+    handlemissings(x::RoMMatrix,y::RoMMatrix)
+Returns a pair `(a,b)`, filtered copies of `x` and `y`, in which the rows `x[i,:]` and
+`y[i,:]` are both filtered out if `any(ismissing,x[i,:])||any(ismissing,y[i,:])`.
+"""
+function handlemissings(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T,U}
+
+    nr, ncx = size(x)
+    ncy = size(y, 2)
+
+    chooser = fill(true, nr)
+
+    nrout = nr
+    @inbounds for i = 1:nr
+        for j = 1:ncx
+            if ismissing(x[i, j])
+                chooser[i] = false
+                nrout -= 1
+                break
+            end
+        end
+        if chooser[i]
+            for j = 1:ncy
+                if ismissing(y[i, j])
+                    chooser[i] = false
+                    nrout -= 1
+                    break
+                end
+            end
+        end
+    end
+
+    a = Matrix{T}(undef, nrout, ncx)
+    @inbounds for j = 1:ncx
+        k = 0
+        for i = 1:nr
+            if chooser[i]
+                k += 1
+                a[k, j] = x[i, j]
+            end
+        end
+    end
+
+    b = Matrix{U}(undef, nrout, ncy)
+    @inbounds for j = 1:ncy
+        k = 0
+        for i = 1:nr
+            if chooser[i]
+                k += 1
+                b[k, j] = y[i, j]
+            end
+        end
+    end
+
+    a, b
+
+end
+
+"""
+    handlelistwise(x::AbstractArray,y::AbstractArray,skipmissing::Symbol)
+Handles the case of `skipmissing == :listwise`. This is a simpler case than `:pairwise`, we
+merely need to construct new argument(s) for `corkendall` by calling `handlelistwise`. The
+function also validates `skipmissing`, throwing an error if invalid.
+"""
+function handlelistwise(x::AbstractArray, y::AbstractArray, skipmissing::Symbol)
+    if skipmissing == :listwise
+        if x isa Matrix || y isa Matrix
+            return (handlemissings(x, y))
+        end
+    elseif skipmissing == :pairwise
+    elseif skipmissing == :none
+        if missing isa eltype(x) || missing isa eltype(y)
+            throw(ArgumentError("When missing is an allowed element type \
+                                then keyword argument skipmissing must be either\
+                                `:pairwise` or `:listwise`, but got `:$skipmissing`"))
+        end
+    else
+        if missing isa eltype(x) || missing isa eltype(y)
+            throw(ArgumentError("keyword argument skipmissing must be either \
+                                `:pairwise` or `:listwise`, but got `:$skipmissing`"))
+        else
+            throw(ArgumentError("keyword argument skipmissing must be either \
+                                `:pairwise`, `:listwise` or `:none` but got \
+                                `:$skipmissing`"))
+        end
+    end
+    return (x, y)
 end
