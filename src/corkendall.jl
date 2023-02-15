@@ -9,11 +9,10 @@ ToDo 15 Feb 2023
 0) Move speedtest.jl and friends to the test folder and add necessary test dependencies
 1) Refactor - Currently too many mutating functions - corkendall!, corkendall_sorted!, corkendall_sortedshuffled!
 2) Does corkendall_sorted! need two scratch arguments?
-3) Check for allocations in threaded code when missings are present. Mmm, problematic. Is boxing happening?
-5) Rework docstrings
-6) Ask for code review?
-7) Update README
-8) Suggest PR to StatsBase?
+3) Rework docstrings
+4) Ask for code review?
+5) Update README
+6) Suggest PR to StatsBase?
 =#
 
 """
@@ -79,9 +78,9 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
     U2 = y isa Matrix{Missing} ? Missing : U
 
     #Create scratch vectors that enable threaded code to be non-allocating
-    scratchyvectors = duplicate(Vector{eltype(y)}(undef, m))
-    ycolis = duplicate(Vector{eltype(y)}(undef, m))
-    xcoljsorteds = duplicate(Vector{eltype(x)}(undef, m))
+    scratchyvectors = duplicate(similar(y,m))
+    ycolis = duplicate(similar(y,m))
+    xcoljsorteds = duplicate(similar(x,m))
     permxs = duplicate(zeros(Int, m))
     txs = duplicate(Vector{T2}(undef, m))
     tys = duplicate(Vector{U2}(undef, m))
