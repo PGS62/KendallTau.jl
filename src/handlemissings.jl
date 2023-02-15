@@ -1,3 +1,7 @@
+function handlemissings(x::AbstractVector{<:Real},y::AbstractVector{<:Real})
+    x,y
+end
+
 """
     handlemissings(x::RoMVector, y::RoMVector)
 Returns a pair `(a,b)`, filtered copies of `x` and `y`, in which elements `x[i]` and `y[i]`
