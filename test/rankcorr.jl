@@ -18,7 +18,7 @@ for f in (KendallTau.corkendall, corkendall_naive)
 
     println("f = $(Base.parentmodule(f)).$(Base.nameof(f))")
     # Check error, handling of NaN, Inf etc
-    @test_throws DimensionMismatch("Vectors must have same length") f([1, 2, 3, 4], [1, 2, 3])
+    @test_throws DimensionMismatch f([1, 2, 3, 4], [1, 2, 3])
     @test isnan(f([1, 2], [3, NaN]))
     @test isnan(f([1, 1, 1], [1, 2, 3]))
     @test f([-Inf, -0.0, Inf], [1, 2, 3]) == 1.0

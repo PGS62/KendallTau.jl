@@ -5,14 +5,15 @@
 #######################################
 
 #=
-ToDo 15 Feb 2023
-0) Move speedtest.jl and friends to the test folder and add necessary test dependencies
+TODO 15 Feb 2023
+0) Move speedtest.jl and friends to the test folder and add necessary test dependencies.
 1) Refactor - Currently too many mutating functions - corkendall!, corkendall_sorted!, corkendall_sortedshuffled!
 2) Does corkendall_sorted! need two scratch arguments?
-3) Rework docstrings
-4) Ask for code review?
-5) Update README
-6) Suggest PR to StatsBase?
+3) Add tests for missing elements.
+4) Rework docstrings.
+5) Ask for code review?
+6) Update README.
+7) Suggest PR to StatsBase?
 =#
 
 """
@@ -34,13 +35,13 @@ result is the Kendall correlation between column `i` of `x` and column `j` of `y
 
 """
 function corkendall(x::RoMVector, y::RoMVector; skipmissing::Symbol=:none)
-    length(x) == length(y) || throw(DimensionMismatch("Vectors must have same length"))
+    length(x) == length(y) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
     x, y = handlelistwise(x, y, skipmissing)
     return (corkendall!(copy(x), copy(y)))
 end
 
 #= It is idiosyncratic that this method returns a vector, not a matrix, i.e. not consistent
-with Statistics.cor or corspearman. But fixing that is a breaking change. =#
+with Statistics.cor or StatsBase.corspearman. But fixing that is a breaking change. =#
 function corkendall(x::RoMMatrix, y::RoMVector; skipmissing::Symbol=:none)
     return (vec(corkendall(x, reshape(y, (length(y), 1)); skipmissing)))
 end
@@ -52,7 +53,7 @@ end
 """
     duplicate(x)
 
-Returns a vector with `Threads.nthreads()`, each a copy of `x`.
+Construct a vector with `Threads.nthreads()` elements, each a copy of `x`.
 """
 function duplicate(x)
     [copy(x) for _ in 1:Threads.nthreads()]
@@ -73,11 +74,11 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
 
     C = ones(Float64, nr, nc)
 
-    #T is not defined if x is Matrix{Missing}. Does this introduce type instability?
+    #T is not defined if x is Matrix{Missing}.
     T2 = x isa Matrix{Missing} ? Missing : T
     U2 = y isa Matrix{Missing} ? Missing : U
 
-    #Create scratch vectors that enable threaded code to be non-allocating
+    #Create scratch vectors so that threaded code can be non-allocating
     scratchyvectors = duplicate(similar(y,m))
     ycolis = duplicate(similar(y,m))
     xcoljsorteds = duplicate(similar(x,m))

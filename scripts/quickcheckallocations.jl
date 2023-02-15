@@ -20,6 +20,8 @@ println("="^100)
 @show typeof(x)
 println("res_kt = @time KendallTau.corkendall(x)")
 @time res_kt = KendallTau.corkendall(x)
+@time res_kt = KendallTau.corkendall(xm;skipmissing = :pairwise)
+@time res_kt = KendallTau.corkendall(xm;skipmissing = :listwise)
 
 #=
 println("res_sb = @time StatsBase.corkendall(x)")
