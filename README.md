@@ -97,7 +97,6 @@ help?> KendallTau.corkendall_fromfile
        Column1,Column2 etc.
 ```
 
-
 ### Performance chart
 <img width="652" alt="image" src="https://user-images.githubusercontent.com/18028484/218805079-5aa7ef02-f89b-4309-8f20-007541ee1005.png">
 
@@ -110,8 +109,6 @@ julia> x = rand(1040,32000);
 julia> @time KendallTau.corkendall(x);
 2524.754279 seconds (64.28 k allocations: 7.633 GiB, 0.00% gc time)
 ```
-
-
 
 Philip Swannell  
 15 February 2023

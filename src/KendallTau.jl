@@ -5,4 +5,4 @@ include("corkendall_fromfile.jl")
 
 export corkendall, corkendall_fromfile
 
-end # module
+end

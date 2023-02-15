@@ -2,11 +2,6 @@ using CSV
 using DataFrames
 using Tables
 
-function test_corkendall_fromfile()
-    corkendall_fromfile(raw"C:\Users\phili\OneDrive\ISDA SIMM\Solum Validation C-VIII 2023\EQ_delta\7_returns_relevant_period\returns-10d_recent_1.csv", 
-    "c:/temp/examplecor.csv", true, true, true, true)
-end
-
 """
     corkendall_fromfile(inputfile::String, outputfile::String, inputhasheaderrow::Bool,
     inputhasheadercol::Bool, outputhasheaderrow::Bool, outputhasheadercol::Bool)
@@ -45,6 +40,5 @@ function corkendall_fromfile(inputfile::String, outputfile::String, inputhashead
         insertcols!(datatowrite, 1, Symbol("") => String.(names))
     end
 
-    CSV.write(outputfile, datatowrite, writeheader=outputhasheaderrow)
-
+    return(CSV.write(outputfile, datatowrite, writeheader=outputhasheaderrow))
 end
