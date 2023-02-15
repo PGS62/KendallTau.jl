@@ -34,10 +34,25 @@ result is the Kendall correlation between column `i` of `x` and column `j` of `y
     or `y`; note that this might drop a high proportion of entries.
 
 """
-function corkendall(x::RoMVector, y::RoMVector; skipmissing::Symbol=:none)
+function corkendall(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none) where {T,U}
     length(x) == length(y) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
+
     x, y = handlelistwise(x, y, skipmissing)
-    return (corkendall!(copy(x), copy(y)))
+
+    #T is not defined if x is Matrix{Missing}.
+    T2 = x isa Matrix{Missing} ? Missing : T
+    U2 = y isa Matrix{Missing} ? Missing : U
+
+    tx = Vector{T2}(undef, length(x))
+    ty = Vector{U2}(undef, length(y))
+    x = copy(x)
+    y = copy(y)
+    permx = sortperm(x)
+    permute!(x, permx)
+
+    x, y = handlemissings(x, y)
+    corkendall_sorted!(x, y, permx, similar(y), similar(y), tx, ty)
+
 end
 
 #= It is idiosyncratic that this method returns a vector, not a matrix, i.e. not consistent
@@ -112,25 +127,46 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
     return C
 end
 
+
+# Auxiliary functions for Kendall's rank correlation
+
 # Knight, William R. “A Computer Method for Calculating Kendall's Tau with Ungrouped Data.”
 # Journal of the American Statistical Association, vol. 61, no. 314, 1966, pp. 436–439.
 # JSTOR, www.jstor.org/stable/2282833.
 """
-    corkendall_sortedshuffled!(sortedx::AbstractVector{<:Real},
-    shuffledy::AbstractVector{<:Real}, sortyspace::AbstractVector{<:Real})
+    corkendall_sorted!(sortedx::RoMVector, y::RoMVector,
+    permx::AbstractVector{<:Integer}, scratchyvector::RoMVector, sortyspace::RoMVector,
+    tx, ty)
 
-Kendall correlation between two vectors but this function omits the initial sorting and 
-permuting of arguments. So calculating Kendall correlation between `x` and `y` is a three
-stage process (as implemented by function `corkendall!`).
+    Kendall correlation between two vectors but this function omits the initial sorting of the
+first argument. So calculating Kendall correlation between `x` and `y` is a two stage
+process: a) sort `x` to get `sortedx`; b) call this function on `sortedx` and `y`, with
+subsequent arguments being:
+- `permx::AbstractVector{<:Integer}`: The permutation that achieved the sorting of `x` to
+yield `sortedx`
+- `scratchyvector::RoMVector`: A vector of the same element type and length as `y`; used\
+to permute `y` without allocations.
+- `sortyspace::RoMVector`: A vector of the same element type and length as `y`; used\
+(in the call to `merge_sort!`) as a means of avoiding allocations.
 
-a) Sort `x` to get `sortedx`;
 
-b) Apply the same permutation to `y` to get `shuffledy`;
 
-c) Call `corkendall_sortedshuffled!` on `sortedx` and `shuffledy`.
+
+
 """
-function corkendall_sortedshuffled!(sortedx::AbstractVector{<:Real},
-    shuffledy::AbstractVector{<:Real}, sortyspace::AbstractVector{<:Real})
+function corkendall_sorted!(sortedx::RoMVector, y::RoMVector,
+    permx::AbstractVector{<:Integer}, scratchyvector::RoMVector, sortyspace::RoMVector,
+    tx, ty)
+
+    @inbounds for i in eachindex(y)
+        scratchyvector[i] = y[permx[i]]
+    end
+    if missing isa eltype(sortedx) || missing isa eltype(scratchyvector)
+        sortedx, scratchyvector = handlemissings(sortedx, scratchyvector, tx, ty)
+    end
+    length(sortedx) >= 2 || return (NaN)
+
+    shuffledy = scratchyvector
 
     if any(isnan, sortedx) || any(isnan, shuffledy)
         return NaN
@@ -171,53 +207,6 @@ function corkendall_sortedshuffled!(sortedx::AbstractVector{<:Real},
 
     (npairs + ndoubleties - ntiesx - ntiesy - 2 * nswaps) /
     sqrt(float(npairs - ntiesx) * float(npairs - ntiesy))
-end
-
-# Auxiliary functions for Kendall's rank correlation
-"""
-    corkendall!(x::AbstractVector{<:Real}, y::AbstractVector{<:Real}, permx::AbstractVector{<:Integer}=sortperm(x))
-Kendall correlation between two vectors `x` and `y`. Third argument `permx` is the
-permutation that must be applied to `x` to sort it.
-"""
-function corkendall!(x::RoMVector, y::RoMVector, 
-    permx::AbstractVector{<:Integer}=sortperm(x))
-
-    permute!(x, permx)
-    permute!(y, permx)
-    x, y = handlemissings(x, y)
-    corkendall_sortedshuffled!(x, y, similar(y))
-end
-
-"""
-    corkendall_sorted!(sortedx::AbstractVector{<:Real}, y::AbstractVector{<:Real}, 
-    permx::AbstractVector{<:Integer}, scratchyvector::AbstractVector{<:Real}, 
-    sortyspace::AbstractVector{<:Real}, tx, ty)
-
-    Kendall correlation between two vectors but this function omits the initial sorting of the
-first argument. So calculating Kendall correlation between `x` and `y` is a two stage
-process: a) sort `x` to get `sortedx`; b) call this function on `sortedx` and `y`, with the
-third argument being the permutation that achieved the sorting of `x`.
-"""
-function corkendall_sorted!(sortedx::AbstractVector{<:Real}, y::AbstractVector{<:Real}, 
-    permx::AbstractVector{<:Integer}, scratchyvector::AbstractVector{<:Real}, 
-    sortyspace::AbstractVector{<:Real}, tx, ty)
-
-    @inbounds for i in eachindex(y)
-        scratchyvector[i] = y[permx[i]]
-    end
-    corkendall_sortedshuffled!(sortedx, scratchyvector, sortyspace)
-end
-# method for when missings appear, so call handlemissings.
-function corkendall_sorted!(sortedx::RoMVector, y::RoMVector, 
-    permx::AbstractVector{<:Integer}, scratchyvector::RoMVector, sortyspace::RoMVector, 
-    tx, ty)
-    
-    @inbounds for i in eachindex(y)
-        scratchyvector[i] = y[permx[i]]
-    end
-    sortedx, scratchyvector = handlemissings(sortedx, scratchyvector, tx, ty)
-    length(sortedx) >= 2 || return (NaN)
-    corkendall_sortedshuffled!(sortedx, scratchyvector, sortyspace)
 end
 
 """
