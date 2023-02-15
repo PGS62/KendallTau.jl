@@ -102,7 +102,7 @@ help?> KendallTau.corkendall_fromfile
 <img width="652" alt="image" src="https://user-images.githubusercontent.com/18028484/218805079-5aa7ef02-f89b-4309-8f20-007541ee1005.png">
 
 ### Performance for large `x`
-For a current project,  I wish to compute Kendall Tau for a set of 32,000 time series, each having observations each weekday over a four year period. Such a calculation will takes about 42 minutes. Windows 11, Processor: 12th Gen Intel(R) Core(TM) i7-12700, 2100 Mhz, 12 Core(s), 20 Logical Processors.
+For a current project,  I wish to compute Kendall Tau for a set of 32,000 time series, each having observations each weekday over a four year period. Such a calculation takes about 42 minutes. Windows 11, Processor: 12th Gen Intel(R) Core(TM) i7-12700, 2100 Mhz, 12 Core(s), 20 Logical Processors.
 
 ```julia
 julia> x = rand(1040,32000);
