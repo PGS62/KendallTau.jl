@@ -67,12 +67,15 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
     symmetric = x === y
     size(x,1) == size(y,1) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
 
-    #Swapping x and y can be more efficient in the threaded loop.
+    #=Swapping x and y can be more efficient in the threaded loop. However doing the swap
+    causes there to be many more allocations, which I don't yet understand. Don't swap
+     x & y for the time being
     swapxy = false
     if size(x, 2) < size(y, 2)
         x, y = y, x
         swapxy = true
     end
+    =#
 
     x, y = handlelistwise(x, y, skipmissing)
     m,nr = size(x)
@@ -80,7 +83,7 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
 
     C = ones(Float64, nr, nc)
 
-    #T is not defined if x is Matrix{Missing}
+    #T is not defined if x is Matrix{Missing}. Does this introduce type instability?
     T2 = x isa Matrix{Missing} ? Missing : T
     U2 = y isa Matrix{Missing} ? Missing : U
 
@@ -115,9 +118,9 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
             symmetric && (C[i, j] = C[j, i])
         end
     end
-    if swapxy
-        C = collect(transpose(C))
-    end
+  #  if swapxy
+  #      C = collect(transpose(C))
+  #  end
     return C
 end
 
