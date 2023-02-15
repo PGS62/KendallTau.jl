@@ -22,7 +22,8 @@ More recently I have made further changes to `corkendall`:
 ### Performance relative to `StatsBase.corkendall`
 Note the greatly (x1000) reduced number and size of allocations. My experience was that reduced allocations led to the performance advantage of the multi-threaded code being maintained independent of the size of the input data.
 ```julia
-julia> using StatsBase,KendallTau,Random
+julia> using StatsBase,KendallTau,Random #StatsBase v0.33.21
+[ Info: Precompiling KendallTau [aff0c2a8-f755-4235-a8c7-7336d8be0b73]
 
 julia> x = rand(1000,10);StatsBase.corkendall(x)==KendallTau.corkendall(x)#compile
 true
@@ -30,10 +31,10 @@ true
 julia> x = rand(1000,1000);
 
 julia> @time res_sb = StatsBase.corkendall(x);
- 21.025099 seconds (3.00 M allocations: 17.082 GiB, 4.39% gc time)
+ 21.393938 seconds (3.00 M allocations: 17.082 GiB, 5.36% gc time)
 
 julia> @time res_kt = KendallTau.corkendall(x);
-  1.771583 seconds (2.28 k allocations: 8.876 MiB)
+  1.780313 seconds (2.28 k allocations: 8.876 MiB, 0.14% gc time)
 
 julia> res_sb == res_kt
 true
