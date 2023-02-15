@@ -10,7 +10,7 @@ This (unregistered) Julia package exposes a function `corkendall` that is a cand
 
 The package also contains a function `speedtest` that prints a comparison of the execution speed of two (or more) implementations of Kendall Tau. `speedtest` demonstrates that the new version of `corkendall` is about ~~five~~ ~~six~~ seven times faster than the existing StatsBase version. See [# 634](https://github.com/JuliaStats/StatsBase.jl/issues/634).
 
-## Update 13 Feb 2023
+## Update February 2023
 The code of `corkendall` from this package was incorporated in Julia StatsBase on 8 February 2021 (see [this](https://github.com/JuliaStats/StatsBase.jl/commit/11ac5b596405367b3217d3d962e22523fef9bb0d) commit).
 
 More recently I have made further changes to `corkendall`:
@@ -114,4 +114,4 @@ julia> @time KendallTau.corkendall(x);
 
 
 Philip Swannell  
-13 February 2023
+15 February 2023
