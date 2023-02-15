@@ -107,7 +107,7 @@ For a current project,  I wish to compute Kendall Tau for a set of 32,000 time s
 ```julia
 julia> x = rand(1040,32000);
 
-julia> @time corkendall(x);
+julia> @time KendallTau.corkendall(x);
 2524.754279 seconds (64.28 k allocations: 7.633 GiB, 0.00% gc time)
 ```
 
