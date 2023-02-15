@@ -43,21 +43,17 @@ end
 #= It is idiosyncratic that this method returns a vector, not a matrix, i.e. not consistent
 with Statistics.cor or corspearman. But fixing that is a breaking change. =#
 function corkendall(x::RoMMatrix, y::RoMVector; skipmissing::Symbol=:none)
-    size(x, 1) == length(y) ||
-        throw(DimensionMismatch("x and y have inconsistent dimensions"))
     return (vec(corkendall(x, reshape(y, (length(y), 1)); skipmissing)))
 end
 
 function corkendall(x::RoMVector, y::RoMMatrix; skipmissing::Symbol=:none)
-    size(y, 1) == length(x) ||
-        throw(DimensionMismatch("x and y have inconsistent dimensions"))
     return (corkendall(reshape(x, (length(x), 1)), y; skipmissing))
 end
 
 """
     duplicate(x)
 
-Returns a vector, each of whose `Threads.nthreads()` elements is a copy of `x`.
+Returns a vector with `Threads.nthreads()`, each a copy of `x`.
 """
 function duplicate(x)
     [copy(x) for _ in 1:Threads.nthreads()]
@@ -67,15 +63,10 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
     symmetric = x === y
     size(x,1) == size(y,1) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
 
-    #=Swapping x and y can be more efficient in the threaded loop. However doing the swap
-    causes there to be many more allocations, which I don't yet understand. Don't swap
-     x & y for the time being
-    swapxy = false
+    #Swapping x and y can be more efficient in the threaded loop.
     if size(x, 2) < size(y, 2)
-        x, y = y, x
-        swapxy = true
+        return(collect(transpose(corkendall(y,x;skipmissing))))
     end
-    =#
 
     x, y = handlelistwise(x, y, skipmissing)
     m,nr = size(x)
@@ -118,9 +109,6 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
             symmetric && (C[i, j] = C[j, i])
         end
     end
-  #  if swapxy
-  #      C = collect(transpose(C))
-  #  end
     return C
 end
 
