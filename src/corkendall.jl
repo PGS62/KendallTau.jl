@@ -5,10 +5,10 @@
 #######################################
 
 #=
-ToDo 13 Feb 2023
+ToDo 15 Feb 2023
 0) Move speedtest.jl and friends to the test folder and add necessary test dependencies
-1) Refactor - Currently too may mutating functions - corkendall!, corkendall_sorted!, corkendall_sortedshuffled!
-2) Does corkendall_sorted!need two scratch arguments?
+1) Refactor - Currently too many mutating functions - corkendall!, corkendall_sorted!, corkendall_sortedshuffled!
+2) Does corkendall_sorted! need two scratch arguments?
 3) Check for allocations in threaded code when missings are present. Mmm, problematic. Is boxing happening?
 5) Rework docstrings
 6) Ask for code review?

@@ -21,6 +21,7 @@ println("="^100)
 println("res_kt = @time KendallTau.corkendall(x)")
 @time res_kt = KendallTau.corkendall(x)
 
+#=
 println("res_sb = @time StatsBase.corkendall(x)")
 @time res_sb = StatsBase.corkendall(x)
 @show res_sb == res_kt
@@ -29,6 +30,7 @@ println("")
 @show typeof(xm)
 println("res = @time KendallTau.corkendall(xm;skipmissing=:pairwise)")
 @time res = KendallTau.corkendall(xm; skipmissing=:pairwise)
+=#
 println("="^100)
 nothing
 

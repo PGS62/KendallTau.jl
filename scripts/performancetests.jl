@@ -49,18 +49,18 @@ containing missing values.
 ```
 julia> using StatsBase;speedtest([StatsBase.corkendall,KendallTau.corkendall],2000,500,false)
 ###################################################################
-Executing speedtest 2023-02-14T14:18:05.077
+Executing speedtest 2023-02-15T11:57:38.666
 ComputerName = DESKTOP-HSGAM5S
 Threads.nthreads() = 20
 --------------------------------------------------
 size(matrix1) = (2000, 500)
 typeof(matrix1) = Matrix{Float64}
 StatsBase.corkendall(matrix1)
-  9.892 s (749999 allocations: 8.46 GiB)
+  9.751 s (749999 allocations: 8.46 GiB)
 KendallTau.corkendall(matrix1)
-  984.733 ms (3234809 allocations: 65.01 MiB)
-Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 10.044958361318912
-Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.00750709318048535
+  946.081 ms (1276 allocations: 4.23 MiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 10.306240732825048
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.0004884594122403077
 Results from both functions identical? true
 --------------------------------------------------
 size(matrix1) = (2000, 500)
@@ -68,10 +68,11 @@ typeof(matrix1) = Matrix{Float64}
 size(matrix2) = (2000, 500)
 typeof(matrix2) = Matrix{Float64}
 StatsBase.corkendall(matrix1,matrix2)
-  22.280 s (1501502 allocations: 16.93 GiB)
-  1.331 s (3741291 allocations: 84.20 MiB)
-Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 16.74038821693665
-Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.00485703219333723
+  19.565 s (1501502 allocations: 16.93 GiB)
+KendallTau.corkendall(matrix1,matrix2)
+  1.275 s (1279 allocations: 4.23 MiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 15.34515013811483
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.00024399157252913084
 Results from both functions identical? true
 --------------------------------------------------
 size(vector1) = (2000,)
@@ -79,11 +80,11 @@ typeof(vector1) = Vector{Float64}
 size(matrix1) = (2000, 500)
 typeof(matrix1) = Matrix{Float64}
 StatsBase.corkendall(vector1,matrix1)
-  37.288 ms (3005 allocations: 34.66 MiB)
+  37.614 ms (3005 allocations: 34.66 MiB)
 KendallTau.corkendall(vector1,matrix1)
-  9.850 ms (2493793 allocations: 40.42 MiB)
-Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 3.785747644574399
-Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 1.1664193019339357
+  5.257 ms (1279 allocations: 2.33 MiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 7.1553796986760005
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.06724240789864723
 Results from both functions identical? true
 --------------------------------------------------
 size(matrix1) = (2000, 500)
@@ -91,11 +92,11 @@ typeof(matrix1) = Matrix{Float64}
 size(vector1) = (2000,)
 typeof(vector1) = Vector{Float64}
 StatsBase.corkendall(matrix1,vector1)
-  37.291 ms (3003 allocations: 34.66 MiB)
+  37.168 ms (3003 allocations: 34.66 MiB)
 KendallTau.corkendall(matrix1,vector1)
-  9.609 ms (2493793 allocations: 40.42 MiB)
-Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 3.880930823108225
-Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 1.1663096709372602
+  5.242 ms (1280 allocations: 2.33 MiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 7.090926434676435
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.06713031349435052
 Results from both functions identical? true
 --------------------------------------------------
 size(vector1) = (2000,)
@@ -103,16 +104,32 @@ typeof(vector1) = Vector{Float64}
 size(vector2) = (2000,)
 typeof(vector2) = Vector{Float64}
 StatsBase.corkendall(vector1,vector2)
-  105.300 μs (8 allocations: 86.70 KiB)
+  103.200 μs (8 allocations: 86.70 KiB)
 KendallTau.corkendall(vector1,vector2)
-  103.200 μs (7 allocations: 94.52 KiB)
-Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 1.0203488372093024
+  105.400 μs (7 allocations: 94.52 KiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 0.9791271347248577
 Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 1.0901063254640475
 Results from both functions identical? true
 ###################################################################
 ```
 """
 function speedtest(functions, nr::Int, nc::Int, fns_handle_missings::Bool)
+
+    #Ensure compiled
+    for f in functions
+        f(rand(100), rand(100))
+        f(rand(100), rand(100, 2))
+        f(rand(100, 2), rand(100))
+        f(rand(100, 2), rand(100, 2))
+    end
+    if fns_handle_missings
+        for f in functions, skipmissing in [:pairwise, :listwise]
+            f(vcat(rand(100), missing), vcat(rand(100), missing); skipmissing)
+            f(vcat(rand(100), missing), vcat(rand(100, 2), [missing missing]); skipmissing)
+            f(vcat(rand(100, 2), [missing missing]), vcat(rand(100), missing); skipmissing)
+            f(vcat(rand(100, 2), [missing missing]), vcat(rand(100, 2), [missing missing]); skipmissing)
+        end
+    end
 
     rng = MersenneTwister(1)# make the contents of matrix1 etc. deterministic so successive calls with given nc & nr are fully comparable
     results = Array{Any}(undef, length(functions))
