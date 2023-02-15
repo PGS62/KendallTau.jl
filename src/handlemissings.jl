@@ -9,14 +9,9 @@ are filtered out if  `ismissing(x[i])||ismissing(y[i])`.
 """
 function handlemissings(x::RoMVector{T}, y::RoMVector{U}) where {T} where {U}
 
-    length(x) == length(y) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
-
-    T2 = x isa Vector{Missing} ? Missing : T
-    U2 = y isa Vector{Missing} ? Missing : U
     n = length(x)
-
-    a = Vector{T2}(undef, n)
-    b = Vector{U2}(undef, n)
+    a = Vector{T}(undef, n)
+    b = Vector{U}(undef, n)
     j::Int = 0
 
     @inbounds for i in eachindex(x)
@@ -27,10 +22,7 @@ function handlemissings(x::RoMVector{T}, y::RoMVector{U}) where {T} where {U}
         end
     end
 
-    resize!(a, j)
-    resize!(b, j)
-
-    a, b
+    return(resize!(a, j), resize!(b, j))
 end
 
 """
@@ -38,12 +30,10 @@ end
 Returns a pair `(a,b)`, filtered copies of `x` and `y`, in which elements `x[i]` and `y[i]`
 are filtered out if  `ismissing(x[i])||ismissing(y[i])`.
 """
-function handlemissings(x::RoMVector, y::RoMVector, tx::AbstractVector, ty::AbstractVector)
+function handlemissings(x::RoMVector{T}, y::RoMVector{U}, 
+    tx::AbstractVector{T}, ty::AbstractVector{U}) where {T,U}
 
-    length(x) == length(y) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
-    length(y) == length(tx) == length(ty) || throw(DimensionMismatch("vectors must have same length"))
-
-    j::Int = 0
+    j = 0
 
     @inbounds for i in eachindex(x)
         if !(ismissing(x[i]) || ismissing(y[i]))
@@ -53,7 +43,7 @@ function handlemissings(x::RoMVector, y::RoMVector, tx::AbstractVector, ty::Abst
         end
     end
 
-    view(tx, 1:j), view(ty, 1:j)
+    return(view(tx, 1:j), view(ty, 1:j))
 end
 
 """

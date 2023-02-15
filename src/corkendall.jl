@@ -35,22 +35,23 @@ result is the Kendall correlation between column `i` of `x` and column `j` of `y
 
 """
 function corkendall(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none) where {T,U}
+
     length(x) == length(y) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
 
     x, y = handlelistwise(x, y, skipmissing)
 
-    #T is not defined if x is Matrix{Missing}.
-    T2 = x isa Matrix{Missing} ? Missing : T
-    U2 = y isa Matrix{Missing} ? Missing : U
+    if x isa Vector{Missing} || y isa Vector{Missing}
+        return (NaN)
+    end
 
-    tx = Vector{T2}(undef, length(x))
-    ty = Vector{U2}(undef, length(y))
     x = copy(x)
     y = copy(y)
     permx = sortperm(x)
     permute!(x, permx)
-
     x, y = handlemissings(x, y)
+    tx = Vector{T}(undef, length(x))
+    ty = Vector{U}(undef, length(y))
+
     corkendall_sorted!(x, y, permx, similar(y), similar(y), tx, ty)
 
 end
@@ -87,20 +88,24 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
     m, nr = size(x)
     nc = size(y, 2)
 
-    C = ones(Float64, nr, nc)
+    if x isa Matrix{Missing} || y isa Matrix{Missing}
+        if symmetric
+            return (ifelse.((1:nr) == (1:nc)', 1.0, NaN))
+        else
+            return (fill(NaN, nr, nc))
+        end
+    end
 
-    #T is not defined if x is Matrix{Missing}.
-    T2 = x isa Matrix{Missing} ? Missing : T
-    U2 = y isa Matrix{Missing} ? Missing : U
+    C = ones(Float64, nr, nc)
 
     #Create scratch vectors so that threaded code can be non-allocating
     scratchyvectors = duplicate(similar(y, m))
     ycolis = duplicate(similar(y, m))
     xcoljsorteds = duplicate(similar(x, m))
     permxs = duplicate(zeros(Int, m))
-    txs = duplicate(Vector{T2}(undef, m))
-    tys = duplicate(Vector{U2}(undef, m))
-    sortyspaces = duplicate(Vector{U2}(undef, m))
+    txs = duplicate(Vector{T}(undef, m))
+    tys = duplicate(Vector{U}(undef, m))
+    sortyspaces = duplicate(Vector{U}(undef, m))
 
     Threads.@threads for j = (symmetric ? 2 : 1):nr
 
@@ -127,36 +132,33 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
     return C
 end
 
-
 # Auxiliary functions for Kendall's rank correlation
 
 # Knight, William R. “A Computer Method for Calculating Kendall's Tau with Ungrouped Data.”
 # Journal of the American Statistical Association, vol. 61, no. 314, 1966, pp. 436–439.
 # JSTOR, www.jstor.org/stable/2282833.
 """
-    corkendall_sorted!(sortedx::RoMVector, y::RoMVector,
+    corkendall_sorted!(sortedx::RoMVector{T}, y::RoMVector{U},
     permx::AbstractVector{<:Integer}, scratchyvector::RoMVector, sortyspace::RoMVector,
-    tx, ty)
+    tx::AbstractVector{T}, ty::AbstractVector{U}) where {T,U}
 
-    Kendall correlation between two vectors but this function omits the initial sorting of the
-first argument. So calculating Kendall correlation between `x` and `y` is a two stage
-process: a) sort `x` to get `sortedx`; b) call this function on `sortedx` and `y`, with
-subsequent arguments being:
+    Kendall correlation between two vectors but this function omits the initial sorting of
+    the first argument. So calculating Kendall correlation between `x` and `y` is a two stage
+    process: a) sort `x` to get `sortedx`; b) call this function on `sortedx` and `y`, with
+    subsequent arguments being:
 - `permx::AbstractVector{<:Integer}`: The permutation that achieved the sorting of `x` to
-yield `sortedx`
-- `scratchyvector::RoMVector`: A vector of the same element type and length as `y`; used\
-to permute `y` without allocations.
-- `sortyspace::RoMVector`: A vector of the same element type and length as `y`; used\
-(in the call to `merge_sort!`) as a means of avoiding allocations.
-
-
-
-
-
+    yield `sortedx`.
+- `scratchyvector::RoMVector`: A vector of the same element type and length as `y`; used
+    to permute `y` without allocation.
+- `sortyspace::RoMVector`: A vector of the same element type and length as `y`; used
+    (in the call to `merge_sort!`) as a means of avoiding allocations.
+- `tx, ty`: Vectors of the same length as `x` and `y` whose element types match the types
+    of the non-missing elements of `x` and `y` respectively; used (in the call to 
+    `handlemissings`) to avoid allocations.
 """
-function corkendall_sorted!(sortedx::RoMVector, y::RoMVector,
+function corkendall_sorted!(sortedx::RoMVector{T}, y::RoMVector{U},
     permx::AbstractVector{<:Integer}, scratchyvector::RoMVector, sortyspace::RoMVector,
-    tx, ty)
+    tx::AbstractVector{T}, ty::AbstractVector{U}) where {T,U}
 
     @inbounds for i in eachindex(y)
         scratchyvector[i] = y[permx[i]]
