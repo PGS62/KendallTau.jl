@@ -49,11 +49,11 @@ function corkendall(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none)
 
     x = copy(x)
     y = copy(y)
-    permx = sortperm(x)
-    permute!(x, permx)
     if missing isa eltype(x) || missing isa eltype(y)
         x, y = handlepairwise(x, y)
     end
+    permx = sortperm(x)
+    permute!(x, permx)
 
     return (corkendall_sorted!(x, y, permx, similar(y), similar(y), T[], U[]))
 end
