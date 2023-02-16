@@ -10,16 +10,14 @@ const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
 
 #=
 TODO 16 Feb 2023
-1) Check test code coverage.
-2) Should the default value of skipmissing be :none or :pairwise? :none forces the user to
-   address question of how missings should be handled, but at least for REPL use it's rather
-   inconvenient.
-3) KendallTau.corkendall currently slower than StatsBase.corkendall for very small
-   vector\matrix output, presumably thanks to overhead of threading and populating the 
-   "scratch-space" vectors. Does this matter?
-4) Review docstrings.
-5) Ask for code review?
-6) Make PR to StatsBase?
+1) Should the default value of skipmissing be :none or :pairwise? :none forces the user to
+   address question of how missings should be handled, but at least for REPL use, it's 
+   rather inconvenient.
+2) KendallTau.corkendall currently slower than StatsBase.corkendall for very small
+   vector\matrix output(4x4 or smaller, assuming vector length 1000) , presumably thanks to
+   overhead of threading and populating the "scratch-space" vectors. Does this matter?
+3) Ask for code review?
+4) Make PR to StatsBase?
 =#
 
 """
@@ -30,12 +28,11 @@ vectors or matrices, with elements that are either real numbers or missing value
 
 # Keyword argument
 
-- `skipmissing::Symbol=:none` If `:none`, missing values in either `x` or `y`
+- `skipmissing::Symbol=:none`: if `:none`, missing values in either `x` or `y`
     cause the function to raise an error. Use `:pairwise` to skip entries with a missing 
     value in either of the two vectors used to calculate (an element of) the return. Use 
     `:listwise` to skip entries where a missing value appears anywhere in a given row of `x`
     or `y`; note that this might drop a high proportion of entries.
-
 """
 function corkendall(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none) where {T,U}
 
@@ -152,15 +149,15 @@ Kendall correlation between two vectors but this function omits the initial sort
 the first argument. So calculating Kendall correlation between `x` and `y` is a two stage
 process: a) sort `x` to get `sortedx`; b) call this function on `sortedx` and `y`, with
 subsequent arguments being:
-- `permx::AbstractVector{<:Integer}`: The permutation that achieved the sorting of `x` to
+- `permx::AbstractVector{<:Integer}`: the permutation that achieved the sorting of `x` to
     yield `sortedx`.
-- `scratchyvector::RoMVector`: A vector of the same element type and length as `y`; used
+- `scratchyvector::RoMVector`: a vector of the same element type and length as `y`; used
     to permute `y` without allocation.
-- `sortyspace::RoMVector`: A vector of the same element type and length as `y`; used
+- `sortyspace::RoMVector`: a vector of the same element type and length as `y`; used
     (in the call to `merge_sort!`) to avoid allocations.
-- `tx, ty`: Vectors of the same length as `x` and `y` whose element types match the types
+- `tx, ty`: vectors of the same length as `x` and `y` whose element types match the types
     of the non-missing elements of `x` and `y` respectively; used (in the call to 
-    `handlepairwise`) to avoid allocations.
+    `handlepairwise!`) to avoid allocations.
 """
 function corkendall_sorted!(sortedx::RoMVector{T}, y::RoMVector{U},
     permx::AbstractVector{<:Integer}, scratchyvector::RoMVector, sortyspace::RoMVector,
@@ -170,7 +167,7 @@ function corkendall_sorted!(sortedx::RoMVector{T}, y::RoMVector{U},
         scratchyvector[i] = y[permx[i]]
     end
     if missing isa eltype(sortedx) || missing isa eltype(scratchyvector)
-        sortedx, scratchyvector = handlepairwise(sortedx, scratchyvector, tx, ty)
+        sortedx, scratchyvector = handlepairwise!(sortedx, scratchyvector, tx, ty)
     end
     length(sortedx) >= 2 || return (NaN)
 
@@ -334,7 +331,7 @@ end
 """
     handlepairwise(x::RoMVector{T}, y::RoMVector{U}) where {T,U}
 
-Returns a pair `(a,b)`, filtered copies of `x` and `y`, in which elements `x[i]` and `y[i]`
+Return a pair `(a,b)`, filtered copies of `x` and `y`, in which elements `x[i]` and `y[i]`
 are filtered out if  `ismissing(x[i])||ismissing(y[i])`.
 """
 function handlepairwise(x::RoMVector{T}, y::RoMVector{U}) where {T,U}
@@ -356,13 +353,13 @@ function handlepairwise(x::RoMVector{T}, y::RoMVector{U}) where {T,U}
 end
 
 """
-    handlepairwise(x::RoMVector{T}, y::RoMVector{U},
+    handlepairwise!(x::RoMVector{T}, y::RoMVector{U},
     tx::AbstractVector{T}, ty::AbstractVector{U}) where {T,U}
 
 Return a pair `(a,b)`, filtered copies of `(x,y)`, in which elements `x[i]` and
 `y[i]` are filtered out if  `ismissing(x[i])||ismissing(y[i])`.
 """
-function handlepairwise(x::RoMVector{T}, y::RoMVector{U},
+function handlepairwise!(x::RoMVector{T}, y::RoMVector{U},
     tx::AbstractVector{T}, ty::AbstractVector{U}) where {T,U}
 
     j = 0
@@ -382,7 +379,7 @@ end
     handlelistwise(x::AbstractArray,y::AbstractArray,skipmissing::Symbol)
 
 If `skipmissing` is `:listwise` and `x` and `y` are both matrices then do listwise filtering
-of `x` and `y`. Otherwise merely validate skipmissing.
+of `x` and `y`. Otherwise merely validate `skipmissing` argument.
 """
 function handlelistwise(x::AbstractArray, y::AbstractArray, skipmissing::Symbol)
     if skipmissing == :listwise
@@ -417,13 +414,14 @@ Return a pair `(a,b)`, filtered copies of `(x,y)`, in which the rows `x[i,:]` an
 """
 function handlelistwise(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T,U}
 
-    nr, ncx = size(x)
-    ncy = size(y, 2)
+    nrx, ncx = size(x)
+    nry, ncy = size(y)
 
-    chooser = fill(true, nr)
+    nrx == nry || throw(DimensionMismatch("x and y have inconsistent dimensions"))
+    chooser = fill(true, nrx)
 
-    nrout = nr
-    @inbounds for i = 1:nr
+    nrout = nrx
+    @inbounds for i = 1:nrx
         for j = 1:ncx
             if ismissing(x[i, j])
                 chooser[i] = false
@@ -445,7 +443,7 @@ function handlelistwise(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T,U}
     a = Matrix{T}(undef, nrout, ncx)
     @inbounds for j = 1:ncx
         k = 0
-        for i = 1:nr
+        for i = 1:nrx
             if chooser[i]
                 k += 1
                 a[k, j] = x[i, j]
@@ -456,7 +454,7 @@ function handlelistwise(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T,U}
     b = Matrix{U}(undef, nrout, ncy)
     @inbounds for j = 1:ncy
         k = 0
-        for i = 1:nr
+        for i = 1:nrx
             if chooser[i]
                 k += 1
                 b[k, j] = y[i, j]

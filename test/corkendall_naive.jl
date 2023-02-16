@@ -86,7 +86,8 @@ end
 
 """
     handlemissings_naive(x::RoMVector,y::RoMVector)
-Simpler but slower version of handlemissings    .
+    
+Simpler but slower version of handlemissings.
 """
 function handlemissings_naive(x::RoMVector, y::RoMVector)
     length(x) == length(y) || throw(DimensionMismatch("Vectors must be same length"))

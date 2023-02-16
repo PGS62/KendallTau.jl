@@ -10,16 +10,16 @@ Compute Kendall's rank correlation coefficient, `τ(x)` where `x` is read from a
 file, writing the result to another csv file.
 
 # Arguments
-- `inputfile::String`: Path to a csv file containing the input data.
-- `outputfile::String`: Path to an output csv file.
-- `inputhasheaderrow::Bool`: Pass in `true` if the input file has a header row. If so, row \
+- `inputfile::String`: path to a csv file containing the input data.
+- `outputfile::String`: path to an output csv file.
+- `inputhasheaderrow::Bool`: pass in `true` if the input file has a header row. If so, row \
  and column headers of `outputfile` match the input header row.
-- `inputhasheadercol::Bool`: Pass in `true` if the input file has a header column. The \
+- `inputhasheadercol::Bool`: pass in `true` if the input file has a header column. The \
 contents of the header column have no effect on the output correlations.
-- `outputhasheaderrow::Bool`: Pass in `true` if `outputfile` is to be written with a header \
+- `outputhasheaderrow::Bool`: pass in `true` if `outputfile` is to be written with a header \
 row. If `true` but `inputhasheaderrow` is `false` then the header row written is `Column1,`\
 `Column2` etc.
-- `outputhasheaderrow::Bool`: Pass in `true` if `outputfile` is to be written with a header \
+- `outputhasheaderrow::Bool`: pass in `true` if `outputfile` is to be written with a header \
 column. If `true` but `inputhasheaderrow` is `false` then the header column written is \
 `Column1,Column2` etc.
 """

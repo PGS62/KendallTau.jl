@@ -1,24 +1,29 @@
-Note KT version no faster than SB versio in vector-matrix case. Fixed via swapxy idea.
-julia> using StatsBase;speedtest([StatsBase.corkendall,KendallTau.corkendall],2000,500,false)
+julia> using StatsBase,KendallTau;include("scripts/performancetests.jl");speedtest([StatsBase.corkendall,KendallTau.corkendall],2000,500,false)
 ###################################################################
-Executing speedtest 2023-02-14T13:16:46.806
+Executing speedtest 2023-02-16T14:33:53.193
 ComputerName = DESKTOP-HSGAM5S
 Threads.nthreads() = 20
 --------------------------------------------------
 size(matrix1) = (2000, 500)
 typeof(matrix1) = Matrix{Float64}
 StatsBase.corkendall(matrix1)
-  9.711 s (749999 allocations: 8.46 GiB)
+  9.863 s (749999 allocations: 8.46 GiB)
 KendallTau.corkendall(matrix1)
+  957.019 ms (1275 allocations: 4.23 MiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 10.305753435536058
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.0004884558879894104
+Results from both functions identical? true
+--------------------------------------------------
+size(matrix1) = (2000, 500)
 typeof(matrix1) = Matrix{Float64}
 size(matrix2) = (2000, 500)
 typeof(matrix2) = Matrix{Float64}
 StatsBase.corkendall(matrix1,matrix2)
-  19.590 s (1501502 allocations: 16.93 GiB)
+  19.638 s (1501502 allocations: 16.93 GiB)
 KendallTau.corkendall(matrix1,matrix2)
-  1.287 s (1278 allocations: 4.23 MiB)
-Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 15.223544378496365
-Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.0002439898121726281
+  1.263 s (1279 allocations: 4.23 MiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 15.551004568918353
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.00024399157252913084
 Results from both functions identical? true
 --------------------------------------------------
 size(vector1) = (2000,)
@@ -26,11 +31,11 @@ typeof(vector1) = Vector{Float64}
 size(matrix1) = (2000, 500)
 typeof(matrix1) = Matrix{Float64}
 StatsBase.corkendall(vector1,matrix1)
-  37.188 ms (3005 allocations: 34.66 MiB)
+  37.793 ms (3005 allocations: 34.66 MiB)
 KendallTau.corkendall(vector1,matrix1)
-  32.790 ms (280 allocations: 2.28 MiB)
-Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 1.1341362252895717
-Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.06580973241901575
+  5.277 ms (1279 allocations: 2.33 MiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 7.161408295908893
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.06724240789864723
 Results from both functions identical? true
 --------------------------------------------------
 size(matrix1) = (2000, 500)
@@ -38,10 +43,10 @@ typeof(matrix1) = Matrix{Float64}
 size(vector1) = (2000,)
 typeof(vector1) = Vector{Float64}
 StatsBase.corkendall(matrix1,vector1)
-  37.118 ms (3003 allocations: 34.66 MiB)
+  37.929 ms (3003 allocations: 34.66 MiB)
 KendallTau.corkendall(matrix1,vector1)
-  5.352 ms (1280 allocations: 2.33 MiB)
-Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 6.935777416521853
+  5.263 ms (1280 allocations: 2.33 MiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 7.206726201786053
 Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 0.06713031349435052
 Results from both functions identical? true
 --------------------------------------------------
@@ -50,15 +55,15 @@ typeof(vector1) = Vector{Float64}
 size(vector2) = (2000,)
 typeof(vector2) = Vector{Float64}
 StatsBase.corkendall(vector1,vector2)
-  104.800 μs (8 allocations: 86.70 KiB)
+  106.800 μs (8 allocations: 86.70 KiB)
 KendallTau.corkendall(vector1,vector2)
-  103.800 μs (7 allocations: 94.52 KiB)
-Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 1.0096339113680155
-Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 1.0901063254640475
+  101.900 μs (9 allocations: 94.64 KiB)
+Speed ratio KendallTau.corkendall vs StatsBase.corkendall: 1.0480863591756624
+Ratio of memory allocated KendallTau.corkendall vs StatsBase.corkendall: 1.0915480266714723
 Results from both functions identical? true
 ###################################################################
 
-julia> using StatsBase,KendallTau;how_scaleable([StatsBase.corkendall,KendallTau.corkendall],1000,2 .^(1:12),false,true,true)
+julia> using StatsBase,KendallTau;include("scripts/performancetests.jl");how_scaleable([StatsBase.corkendall,KendallTau.corkendall],1000,2 .^(1:12),false,true,true)
 ###################################################################
 Executing how_scaleable 2023-02-14T16:14:20.042
 ComputerName = DESKTOP-HSGAM5S
@@ -127,4 +132,54 @@ nc = 4096, nr = 1000, f = KendallTau.corkendall,  time = 42.9068747, ratio = 8.7
  1024.0   21.3085      2.001
  2048.0   77.7479      9.0509
  4096.0  377.481      42.9069
+###################################################################
+
+julia> using KendallTau;include("scripts/performancetests.jl");impactofmissings(1000,1000,0.1)
+###################################################################
+Executing impactofmissings 2023-02-14T14:30:14.035
+ComputerName = DESKTOP-HSGAM5S
+Threads.nthreads() = 20
+--------------------------------------------------
+size(matrix1) = (1000, 1000)
+KendallTau.corkendall(matrix1) no missings in argument(s)
+  1.843 s (7171457 allocations: 164.03 MiB)
+KendallTau.corkendall(matrix1) argument(s) amended to contain 10.0% missings
+  1.820 s (7071209 allocations: 162.56 MiB)
+Speed ratio KendallTau.corkendall (10.0% missings) vs KendallTau.corkendall (no missings): 1.0130178631467728
+Ratio of memory allocated KendallTau.corkendall (10.0% missings) vs KendallTau.corkendall (no missings): 0.9910494964696409
+--------------------------------------------------
+size(matrix1) = (1000, 1000)
+size(matrix2) = (1000, 1000)
+KendallTau.corkendall(matrix1,matrix2) no missings in argument(s)
+  2.912 s (9327928 allocations: 242.82 MiB)
+KendallTau.corkendall(matrix1,matrix2) argument(s) amended to contain 10.0% missings
+  2.970 s (9238315 allocations: 241.45 MiB)
+Speed ratio KendallTau.corkendall (10.0% missings) vs KendallTau.corkendall (no missings): 0.9803929735298779
+Ratio of memory allocated KendallTau.corkendall (10.0% missings) vs KendallTau.corkendall (no missings): 0.9943687109637357
+--------------------------------------------------
+size(vector1) = (1000,)
+size(matrix1) = (1000, 1000)
+KendallTau.corkendall(vector1,matrix1) no missings in argument(s)
+  10.404 ms (2287802 allocations: 36.37 MiB)
+KendallTau.corkendall(vector1,matrix1) argument(s) amended to contain 10.0% missings
+  9.578 ms (2207034 allocations: 35.13 MiB)
+Speed ratio KendallTau.corkendall (10.0% missings) vs KendallTau.corkendall (no missings): 1.086183496199783
+Ratio of memory allocated KendallTau.corkendall (10.0% missings) vs KendallTau.corkendall (no missings): 0.9661107836000159
+KendallTau.corkendall(matrix1,vector1) argument(s) amended to contain 10.0% missings
+  9.155 ms (2134144 allocations: 34.01 MiB)
+Speed ratio KendallTau.corkendall (10.0% missings) vs KendallTau.corkendall (no missings): 0.9606898660899579
+Ratio of memory allocated KendallTau.corkendall (10.0% missings) vs KendallTau.corkendall (no missings): 0.9683365457252164
+--------------------------------------------------
+size(vector1) = (1000,)
+size(vector2) = (1000,)
+typeof(vector1) = Vector{Union{Missing, Float64}}
+typeof(vector2) = Vector{Union{Missing, Float64}}
+KendallTau.corkendall(vector1,vector2) no missings in argument(s)
+  24.200 μs (9 allocations: 61.27 KiB)
+typeof(vector1) = Vector{Union{Missing, Float64}}
+typeof(vector2) = Vector{Union{Missing, Float64}}
+KendallTau.corkendall(vector1,vector2) argument(s) amended to contain 10.0% missings
+  21.900 μs (9 allocations: 60.64 KiB)
+Speed ratio KendallTau.corkendall (10.0% missings) vs KendallTau.corkendall (no missings): 1.1050228310502284
+Ratio of memory allocated KendallTau.corkendall (10.0% missings) vs KendallTau.corkendall (no missings): 0.9897985207855139
 ###################################################################

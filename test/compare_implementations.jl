@@ -23,8 +23,8 @@ The function also checks that `fn1` and `fn2` never mutate their arguments.
 - `fns_handle_missings::Bool` pass `true` if both `fn1` and `fn2` handle input arrays 
     containing missing values and have `skipmissing` keyword argument.
 """
-function compare_implementations(fn1::Function=corkendall, fn2::Function=corkendall_naive; abstol::Float64=1e-14,
-    maxcols::Integer, maxrows::Integer, numtests::Integer,
+function compare_implementations(fn1::Function=corkendall, fn2::Function=corkendall_naive;
+    abstol::Float64=1e-14, maxcols::Integer, maxrows::Integer, numtests::Integer,
     fns_handle_missings::Bool)
 
     prob_missing = 0.05
@@ -232,7 +232,9 @@ function myisapprox(x::AbstractArray, y::AbstractArray, abstol::Float64)
     end
 end
 
-function myisapprox(x::Union{Float64,Int64,Missing}, y::Union{Float64,Int64,Missing}, abstol::Float64)
+function myisapprox(x::Union{Float64,Int64,Missing}, y::Union{Float64,Int64,Missing},
+    abstol::Float64)
+    
     if x isa Real && y isa Real && !isnan(x) && !isnan(y)
         return (abs(x - y) <= abstol)
     else

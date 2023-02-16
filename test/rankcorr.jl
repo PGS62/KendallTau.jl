@@ -188,9 +188,9 @@ mx = [1 2
     missing missing
     5 6]
 
-@test KendallTau.handlepairwise(x, y, similar(x), similar(y)) == ([2, 3, 4], [1, 2, 4])
-@test KendallTau.handlepairwise(float.(x), y, similar(float.(x)), similar(y)) == ([2.0, 3.0, 4.0], [1, 2, 4])
-@test KendallTau.handlepairwise(x, float.(y), similar(x), similar(float.(y))) == ([2, 3, 4], [1.0, 2.0, 4.0])
-@test KendallTau.handlepairwise(u, v, similar(u), similar(v)) == (Int64[], Int64[])
+@test KendallTau.handlepairwise!(x, y, similar(x), similar(y)) == ([2, 3, 4], [1, 2, 4])
+@test KendallTau.handlepairwise!(float.(x), y, similar(float.(x)), similar(y)) == ([2.0, 3.0, 4.0], [1, 2, 4])
+@test KendallTau.handlepairwise!(x, float.(y), similar(x), similar(float.(y))) == ([2, 3, 4], [1.0, 2.0, 4.0])
+@test KendallTau.handlepairwise!(u, v, similar(u), similar(v)) == (Int64[], Int64[])
 @test KendallTau.handlelistwise(mx, mx) == ([1 2; 5 6], [1 2; 5 6])
 
