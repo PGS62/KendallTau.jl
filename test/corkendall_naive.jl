@@ -80,7 +80,7 @@ function corkendall_naive(x::AbstractArray, y::AbstractArray; skipmissing::Symbo
     elseif skipmissing == :none && !(missing isa eltype(x)) & !(ismissing isa eltype(y))
         return (corkendall_naive(x, y))
     else
-        throw("keyword argument skipmissing has unrecognised value `:$skipmissing`")
+        throw(ArgumentError("keyword argument skipmissing has unrecognised value `:$skipmissing`"))
     end
 end
 

@@ -1,7 +1,5 @@
-
 using BenchmarkTools
 using Dates
-using Missings
 using Plotly
 using PlotlyJS
 using Random
@@ -9,7 +7,7 @@ using Random
 """
     @btimed expression [other parameters...]
 
-An amended version of  BenchmarkTools.@btime. Identical except the return is a tuple of
+Amended version of  BenchmarkTools.@btime. Identical except the return is a tuple of
 the result of the `expression` evaluation, the trialmin (of type BenchmarkTools.TrialEstimate)
 and the memory allocated (a number of bytes).
 """
@@ -37,13 +35,13 @@ end
 """
     speedtest(functions, nr::Int, nc::Int, fns_handle_missings::Bool)
 
-Prints comparisons of execution speed between the functions in `functions`.
+Print comparisons of execution speed between the functions in `functions`.
 # Arguments
 - `functions`:  an array of functions, each an implementation of KendallTau.
 - `nr::Int`: number of rows in test matrices.
 - `nc::Int`: number of columns in test matrices.
-- `fns_handle_missings::Bool` pass yes if all elements of `functions` can handle arguments \
-containing missing values.
+- `fns_handle_missings::Bool`: Pass `true` if all functions in `functions` can handle
+arguments containing missing values.
 
 # Example
 ```
@@ -115,7 +113,7 @@ Results from both functions identical? true
 """
 function speedtest(functions, nr::Int, nc::Int, fns_handle_missings::Bool)
 
-    #Ensure compiled
+    #Compile...
     for f in functions
         f(rand(100), rand(100))
         f(rand(100), rand(100, 2))
@@ -131,7 +129,9 @@ function speedtest(functions, nr::Int, nc::Int, fns_handle_missings::Bool)
         end
     end
 
-    rng = MersenneTwister(1)# make the contents of matrix1 etc. deterministic so successive calls with given nc & nr are fully comparable
+    #= Make the contents of matrix1 etc. deterministic so successive calls with fixed 
+    nc & nr are fully comparable=#
+    rng = MersenneTwister(1)
     results = Array{Any}(undef, length(functions))
     times = Array{Float64}(undef, length(functions))
     allocations = Array{Float64}(undef, length(functions))
@@ -233,7 +233,11 @@ function speedtest(functions, nr::Int, nc::Int, fns_handle_missings::Bool)
     println("#"^67)
 end
 
-# Test for equality with absolute tolerance of `abstol` and NaN being equal to NaN (different to Julia's isapprox)
+"""
+    myapprox(x::AbstractArray, y::AbstractArray, abstol::Float64)
+
+Test for approximate equality, but with NaN == NaN being true.
+"""
 function myapprox(x::AbstractArray, y::AbstractArray, abstol::Float64)
     if size(x) ≠ size(y)
         return (false)
@@ -254,9 +258,14 @@ function myapprox(x::Float64, y::Float64, abstol::Float64)
     end
 end
 
-# Code to investigate performance impact of the presence of missings in the arguments passed to corkendall
+"""
+    sprinklemissings(x, proportionmissing, rng=MersenneTwister())
+
+Inject a proportion of missing values into an array.
+"""
 function sprinklemissings(x, proportionmissing, rng=MersenneTwister())
-    if proportionmissing <= 0
+    #Avoid near infinite loop by flooring proportionmissing at some positive epsilon
+    if proportionmissing <= 1e-6
         return (x)
     end
     while true
@@ -329,7 +338,9 @@ function impactofmissings(nr::Int, nc::Int, proportionmissing::Float64=0.1)
     fn1 = KendallTau.corkendall #fn1 executes with no missing elements in its args
     fn2 = KendallTau.corkendall #fn2 executes with missing elements in its args
 
-    rng = MersenneTwister(1)# make the contents of matrix1 etc. deterministic so successive calls with fixed nc & nr are fully comparable
+    #= Make the contents of matrix1 etc. deterministic so successive calls with fixed 
+    nc & nr are fully comparable=#
+    rng = MersenneTwister(1)
     results = Array{Any}(undef, 2)
     times = Array{Float64}(undef, 2)
     allocations = Array{Float64}(undef, 2)
@@ -405,10 +416,10 @@ end
 
 """
     how_scaleable(fns, nr::Integer, ncs::Vector{<:Integer},
-    with_missings::Bool, use_benchmark_tools::Bool)
+    with_missings::Bool, use_benchmark_tools::Bool, test_returns_equal::Bool=true)
 
-Investigate the performance of corkendall(x) as a function of the number of columns in x. A\
-plot is generated using Plotly.
+Investigate the performance of corkendall(x) as a function of the number of columns in `x``.
+A plot is also generated using Plotly.
 
 # Example
 ```

@@ -159,15 +159,34 @@ for f in (KendallTau.corkendall, corkendall_naive)
     @test_throws DimensionMismatch f([1], [1, 2])
     @test_throws DimensionMismatch f([1], [1 2; 3 4])
     @test_throws DimensionMismatch f([1 2; 3 4], [1])
-    @test_throws ArgumentError f([1 2; 3 4:4 6], [1 2; 3 4])
+    @test_throws DimensionMismatch f([1 2; 3 4; 4 6], [1 2; 3 4])
 
     #= Test functions against corkendall_naive, a "reference implementation" that has the 
     advantage of simplicity.
     =#
     if f !== corkendall_naive
-             @test compare_implementations(f, corkendall_naive, abstol=0.0, maxcols=10, maxrows=10, numtests=200, fns_handle_missings=true) == true
-             @test compare_implementations(f, corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=200, fns_handle_missings=true) == true
-             @test compare_implementations(f, corkendall_naive, abstol=1e14, maxcols=2, maxrows=20000, numtests=5, fns_handle_missings=true) == true
+        @test compare_implementations(f, corkendall_naive, abstol=0.0, maxcols=10, maxrows=10, numtests=200, fns_handle_missings=true) == true
+        @test compare_implementations(f, corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=200, fns_handle_missings=true) == true
+        @test compare_implementations(f, corkendall_naive, abstol=1e14, maxcols=2, maxrows=20000, numtests=5, fns_handle_missings=true) == true
     end
 
 end
+
+#Auxiliary functions for corkendall
+x = [1, 2, 3, missing, 4]
+y = [missing, 1, 2, 3, 4]
+u = [missing, missing, 1, 2]
+v = [3, 4, missing, missing]
+
+mx = [1 2
+    missing 3
+    4 missing
+    missing missing
+    5 6]
+
+@test KendallTau.handlepairwise(x, y, similar(x), similar(y)) == ([2, 3, 4], [1, 2, 4])
+@test KendallTau.handlepairwise(float.(x), y, similar(float.(x)), similar(y)) == ([2.0, 3.0, 4.0], [1, 2, 4])
+@test KendallTau.handlepairwise(x, float.(y), similar(x), similar(float.(y))) == ([2, 3, 4], [1.0, 2.0, 4.0])
+@test KendallTau.handlepairwise(u, v, similar(u), similar(v)) == (Int64[], Int64[])
+@test KendallTau.handlelistwise(mx, mx) == ([1 2; 5 6], [1 2; 5 6])
+

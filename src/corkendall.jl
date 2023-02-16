@@ -9,9 +9,11 @@ const RoMVector{T<:Real} = AbstractVector{<:Union{T,Missing}}
 const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
 
 #=
-TODO 15 Feb 2023
-1) Check all lines of code covered by tests.
-2) Is it possible to not use threads for _very_ small output matrices, say < 5x5 ? 
+TODO 16 Feb 2023
+1) Check test code coverage.
+2) KendallTau.corkendall currently slower than StatsBase.corkendall for very small
+   vector\matrix output, thanks to overhead of threading and populating the "scratch-space"
+   vectors. Does this matter?
 3) Review docstrings.
 4) Ask for code review?
 5) Suggest PR to StatsBase?
@@ -50,7 +52,7 @@ function corkendall(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none)
     permx = sortperm(x)
     permute!(x, permx)
     if missing isa eltype(x) || missing isa eltype(y)
-        x, y = handlemissings(x, y)
+        x, y = handlepairwise(x, y)
     end
 
     return (corkendall_sorted!(x, y, permx, similar(y), similar(y), T[], U[]))
@@ -143,10 +145,10 @@ end
     permx::AbstractVector{<:Integer}, scratchyvector::RoMVector, sortyspace::RoMVector,
     tx::AbstractVector{T}, ty::AbstractVector{U}) where {T,U}
 
-    Kendall correlation between two vectors but this function omits the initial sorting of
-    the first argument. So calculating Kendall correlation between `x` and `y` is a two stage
-    process: a) sort `x` to get `sortedx`; b) call this function on `sortedx` and `y`, with
-    subsequent arguments being:
+Kendall correlation between two vectors but this function omits the initial sorting of
+the first argument. So calculating Kendall correlation between `x` and `y` is a two stage
+process: a) sort `x` to get `sortedx`; b) call this function on `sortedx` and `y`, with
+subsequent arguments being:
 - `permx::AbstractVector{<:Integer}`: The permutation that achieved the sorting of `x` to
     yield `sortedx`.
 - `scratchyvector::RoMVector`: A vector of the same element type and length as `y`; used
@@ -155,7 +157,7 @@ end
     (in the call to `merge_sort!`) as a means of avoiding allocations.
 - `tx, ty`: Vectors of the same length as `x` and `y` whose element types match the types
     of the non-missing elements of `x` and `y` respectively; used (in the call to 
-    `handlemissings`) to avoid allocations.
+    `handlepairwise`) to avoid allocations.
 """
 function corkendall_sorted!(sortedx::RoMVector{T}, y::RoMVector{U},
     permx::AbstractVector{<:Integer}, scratchyvector::RoMVector, sortyspace::RoMVector,
@@ -165,7 +167,7 @@ function corkendall_sorted!(sortedx::RoMVector{T}, y::RoMVector{U},
         scratchyvector[i] = y[permx[i]]
     end
     if missing isa eltype(sortedx) || missing isa eltype(scratchyvector)
-        sortedx, scratchyvector = handlemissings(sortedx, scratchyvector, tx, ty)
+        sortedx, scratchyvector = handlepairwise(sortedx, scratchyvector, tx, ty)
     end
     length(sortedx) >= 2 || return (NaN)
 
@@ -213,6 +215,7 @@ end
 
 """
     countties(x::AbstractVector{<:Real}, lo::Integer, hi::Integer)
+
 Return the number of ties within `x[lo:hi]`. Assumes `x` is sorted.
 """
 function countties(x::AbstractVector{<:Real}, lo::Integer, hi::Integer)
@@ -242,7 +245,9 @@ const SMALL_THRESHOLD = 64
 # merge_sort! copied from Julia Base
 # (commit 28330a2fef4d9d149ba0fd3ffa06347b50067647, dated 20 Sep 2020)
 """
-    merge_sort!(v::AbstractVector, lo::Integer, hi::Integer, t::AbstractVector=similar(v, 0))
+    merge_sort!(v::AbstractVector, lo::Integer, hi::Integer,
+    t::AbstractVector=similar(v, 0))
+
 Mutates `v` by sorting elements `x[lo:hi]` using the merge sort algorithm.
 This method is a copy-paste-edit of sort! in base/sort.jl, amended to return the bubblesort
 distance.
@@ -296,8 +301,9 @@ midpoint(lo::Integer, hi::Integer) = midpoint(promote(lo, hi)...)
 
 """
     insertion_sort!(v::AbstractVector, lo::Integer, hi::Integer)
+
 Mutates `v` by sorting elements `x[lo:hi]` using the insertion sort algorithm.
-This method is a copy-paste-edit of sort! in base/sort.jl, amended to return the bubblesort
+This method is a copy-paste-edit of sort! in base/sort.jl, amended to return the bubblesort 
 distance.
 """
 function insertion_sort!(v::AbstractVector, lo::Integer, hi::Integer)
@@ -323,12 +329,12 @@ function insertion_sort!(v::AbstractVector, lo::Integer, hi::Integer)
 end
 
 """
-    handlemissings(x::RoMVector{T}, y::RoMVector{U}) where {T,U}
+    handlepairwise(x::RoMVector{T}, y::RoMVector{U}) where {T,U}
 
 Returns a pair `(a,b)`, filtered copies of `x` and `y`, in which elements `x[i]` and `y[i]`
 are filtered out if  `ismissing(x[i])||ismissing(y[i])`.
 """
-function handlemissings(x::RoMVector{T}, y::RoMVector{U}) where {T,U}
+function handlepairwise(x::RoMVector{T}, y::RoMVector{U}) where {T,U}
 
     n = length(x)
     a = Vector{T}(undef, n)
@@ -347,13 +353,13 @@ function handlemissings(x::RoMVector{T}, y::RoMVector{U}) where {T,U}
 end
 
 """
-    handlemissings(x::RoMVector{T}, y::RoMVector{U},
+    handlepairwise(x::RoMVector{T}, y::RoMVector{U},
     tx::AbstractVector{T}, ty::AbstractVector{U}) where {T,U}
 
-    Returns a pair `(a,b)`, filtered copies of `x` and `y`, in which elements `x[i]` and `y[i]`
-are filtered out if  `ismissing(x[i])||ismissing(y[i])`.
+Return a pair `(a,b)`, filtered copies of `(x,y)`, in which elements `x[i]` and
+`y[i]` are filtered out if  `ismissing(x[i])||ismissing(y[i])`.
 """
-function handlemissings(x::RoMVector{T}, y::RoMVector{U},
+function handlepairwise(x::RoMVector{T}, y::RoMVector{U},
     tx::AbstractVector{T}, ty::AbstractVector{U}) where {T,U}
 
     j = 0
@@ -371,9 +377,9 @@ end
 
 """
     handlelistwise(x::AbstractArray,y::AbstractArray,skipmissing::Symbol)
-Handles the case of `skipmissing == :listwise`. This is a simpler case than `:pairwise`, we
-merely need to construct new argument(s) for `corkendall`. The function also validates
-`skipmissing`, throwing an error if invalid.
+
+If `skipmissing` is `:listwise` and `x` and `y` are both matrices then do listwise filtering
+of `x` and `y`. Otherwise merely validate skipmissing.
 """
 function handlelistwise(x::AbstractArray, y::AbstractArray, skipmissing::Symbol)
     if skipmissing == :listwise
@@ -403,7 +409,7 @@ end
 """
     handlelistwise(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T,U}
 
-    Returns a pair `(a,b)`, filtered copies of `x` and `y`, in which the rows `x[i,:]` and
+Return a pair `(a,b)`, filtered copies of `(x,y)`, in which the rows `x[i,:]` and
 `y[i,:]` are both filtered out if `any(ismissing,x[i,:])||any(ismissing,y[i,:])`.
 """
 function handlelistwise(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T,U}
