@@ -97,7 +97,7 @@ help?> KendallTau.corkendall_fromfile
        Column1,Column2 etc.
 ```
 
-### Performance chart
+### Performance chart (log scales!)
 <img width="652" alt="image" src="https://user-images.githubusercontent.com/18028484/218805079-5aa7ef02-f89b-4309-8f20-007541ee1005.png">
 
 ### Performance for large `x`
