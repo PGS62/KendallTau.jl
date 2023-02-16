@@ -20,6 +20,8 @@ Xm = [1 0; missing 1; 2 1; 3 0; 4 1; 5 10]
 Ym = [5 5 6; 1 2 3; 3 4 1; 4 0 4; 2 6 1; 5 7 10]
 xm = [missing, missing, missing, missing, missing]
 xmm = hcat(xm, xm)
+a = [1,2,3,4]
+b = [1,4,2,3]
 
 x1 = x[:, 1]
 x2 = x[:, 2]
@@ -65,6 +67,7 @@ for f in (KendallTau.corkendall, corkendall_naive)
     end
 
     # Test handling of missings
+    @test f(vcat(missing,a),vcat(missing,b),skipmissing=:pairwise)==f(a,b)
     @test f(Xm, Xm, skipmissing=:pairwise) == f(x, x)
     @test f(Xm, Xm, skipmissing=:listwise) == f(x, x)
     @test f(Xm, Ym, skipmissing=:listwise) == f(x, Y)
@@ -80,6 +83,7 @@ for f in (KendallTau.corkendall, corkendall_naive)
         @test_throws ArgumentError f(Xm)
     end
     @test_throws ArgumentError f(x; skipmissing=:foo)
+    @test_throws ArgumentError f(Xm; skipmissing=:foo)
 
     c11 = f(x1, x1)
     c12 = f(x1, x2)
