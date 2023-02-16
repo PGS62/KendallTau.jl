@@ -35,6 +35,9 @@ julia> @time res_sb = StatsBase.corkendall(x);
 
 julia> @time res_kt = KendallTau.corkendall(x);
   1.780313 seconds (2.28 k allocations: 8.876 MiB, 0.14% gc time)
+  
+julia> 21.393938/1.780313
+12.016953198679108
 
 julia> res_sb == res_kt
 true
