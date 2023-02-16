@@ -261,18 +261,15 @@ end
 """
     sprinklemissings(x, proportionmissing, rng=MersenneTwister())
 
-Inject a proportion of missing values into an array.
+Inject a proportion of missing values into an array. Always injects at least one missing.
 """
 function sprinklemissings(x, proportionmissing, rng=MersenneTwister())
-    #Avoid near infinite loop by flooring proportionmissing at some positive epsilon
-    if proportionmissing <= 1e-6
-        return (x)
+    randoms = rand(rng, size(x)...)
+    x = ifelse.(randoms .< proportionmissing, missing, x)
+    if !any(ismissing, x)
+        x = ifelse.(randoms .== maximum(randoms), missing, x)
     end
-    while true
-        randoms = rand(rng, size(x)...)
-        x = ifelse.(randoms .< proportionmissing, missing, x)
-        any(ismissing, x) && return x
-    end
+    return (x)
 end
 
 """
@@ -419,7 +416,7 @@ end
     with_missings::Bool, use_benchmark_tools::Bool, test_returns_equal::Bool=true)
 
 Investigate the performance of corkendall(x) as a function of the number of columns in `x``.
-A plot is also generated using Plotly.
+The function prints output to the REPL and generates a plot using Plotly.
 
 # Example
 ```

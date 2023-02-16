@@ -11,12 +11,15 @@ const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
 #=
 TODO 16 Feb 2023
 1) Check test code coverage.
-2) KendallTau.corkendall currently slower than StatsBase.corkendall for very small
-   vector\matrix output, thanks to overhead of threading and populating the "scratch-space"
-   vectors. Does this matter?
-3) Review docstrings.
-4) Ask for code review?
-5) Suggest PR to StatsBase?
+2) Should the default value of skipmissing be :none or :pairwise? :none forces the user to
+   address question of how missings should be handled, but at least for REPL use it's rather
+   inconvenient.
+3) KendallTau.corkendall currently slower than StatsBase.corkendall for very small
+   vector\matrix output, presumably thanks to overhead of threading and populating the 
+   "scratch-space" vectors. Does this matter?
+4) Review docstrings.
+5) Ask for code review?
+6) Make PR to StatsBase?
 =#
 
 """
@@ -25,10 +28,7 @@ TODO 16 Feb 2023
 Compute Kendall's rank correlation coefficient, τ. `x` and `y` must both be either
 vectors or matrices, with elements that are either real numbers or missing values.
 
-For matrix inputs, τ is calculated column against column, so that the `[i,j]` element of the
-result is the Kendall correlation between column `i` of `x` and column `j` of `y`.
-
-# Keyword arguments
+# Keyword argument
 
 - `skipmissing::Symbol=:none` If `:none`, missing values in either `x` or `y`
     cause the function to raise an error. Use `:pairwise` to skip entries with a missing 
@@ -79,9 +79,11 @@ end
 
 function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:none) where {T,U}
     symmetric = x === y
-    size(x, 1) == size(y, 1) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
+    if size(x, 1) != size(y, 1)
+        throw(DimensionMismatch("x and y have inconsistent dimensions"))
+    end
 
-    #Swapping x and y can be more efficient in the threaded loop.
+    #Swap x and y for more efficient threaded loop.
     if size(x, 2) < size(y, 2)
         return (collect(transpose(corkendall(y, x; skipmissing))))
     end
@@ -100,8 +102,8 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
 
     C = ones(Float64, nr, nc)
 
-    #= Create scratch vectors so that threaded code can be non-allocating. Need one vector
-    per thread to avoid cross-talk between threads.=#
+    #= Create scratch vectors so that threaded code can be non-allocating. One vector per 
+    thread to avoid cross-talk between threads.=#
     scratchyvectors = duplicate(similar(y, m))
     ycolis = duplicate(similar(y, m))
     xcoljsorteds = duplicate(similar(x, m))
@@ -128,7 +130,8 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
 
         for i = 1:(symmetric ? j - 1 : nc)
             ycoli .= view(y, :, i)
-            C[j, i] = corkendall_sorted!(xcoljsorted, ycoli, permx, scratchyvector, sortyspace, tx, ty)
+            C[j, i] = corkendall_sorted!(xcoljsorted, ycoli, permx, scratchyvector,
+                sortyspace, tx, ty)
             symmetric && (C[i, j] = C[j, i])
         end
     end
@@ -154,7 +157,7 @@ subsequent arguments being:
 - `scratchyvector::RoMVector`: A vector of the same element type and length as `y`; used
     to permute `y` without allocation.
 - `sortyspace::RoMVector`: A vector of the same element type and length as `y`; used
-    (in the call to `merge_sort!`) as a means of avoiding allocations.
+    (in the call to `merge_sort!`) to avoid allocations.
 - `tx, ty`: Vectors of the same length as `x` and `y` whose element types match the types
     of the non-missing elements of `x` and `y` respectively; used (in the call to 
     `handlepairwise`) to avoid allocations.
@@ -461,5 +464,5 @@ function handlelistwise(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T,U}
         end
     end
 
-    return(a, b)
+    return (a, b)
 end
