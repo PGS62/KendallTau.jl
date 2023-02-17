@@ -20,8 +20,8 @@ Xm = [1 0; missing 1; 2 1; 3 0; 4 1; 5 10]
 Ym = [5 5 6; 1 2 3; 3 4 1; 4 0 4; 2 6 1; 5 7 10]
 xm = [missing, missing, missing, missing, missing]
 xmm = hcat(xm, xm)
-a = [1,2,3,4]
-b = [1,4,2,3]
+a = [5, 2, 3, 4, 1]
+b = [1, 4, 2, 3, 5]
 
 x1 = x[:, 1]
 x2 = x[:, 2]
@@ -67,7 +67,9 @@ for f in (KendallTau.corkendall, corkendall_naive)
     end
 
     # Test handling of missings
-    @test f(vcat(missing,a),vcat(missing,b),skipmissing=:pairwise)==f(a,b)
+    @test f(vcat(missing, a), vcat(missing, b), skipmissing=:pairwise) == f(a, b)
+    @test f(vcat(a, missing), vcat(missing, b), skipmissing=:pairwise) == f(a[2:end], b[1:(end-1)])
+    @test f(hcat(vcat(a, missing), vcat(missing, b)), skipmissing=:listwise) == f(hcat(a[2:end], b[1:(end-1)]))
     @test f(Xm, Xm, skipmissing=:pairwise) == f(x, x)
     @test f(Xm, Xm, skipmissing=:listwise) == f(x, x)
     @test f(Xm, Ym, skipmissing=:listwise) == f(x, Y)
@@ -163,7 +165,11 @@ for f in (KendallTau.corkendall, corkendall_naive)
     @test_throws DimensionMismatch f([1], [1, 2])
     @test_throws DimensionMismatch f([1], [1 2; 3 4])
     @test_throws DimensionMismatch f([1 2; 3 4], [1])
-    @test_throws DimensionMismatch f([1 2; 3 4; 4 6], [1 2; 3 4])
+    @test_throws DimensionMismatch f([1 2; 3 4; 5 6], [1 2; 3 4])
+
+    # x has sufficient columns to ensure that variable use_atomic evaluates to false
+    n_reps = Threads.nthreads()
+    @test f(repeat(hcat(a, b), outer=[1, n_reps])) == repeat(f(hcat(a, b)), outer=[n_reps, n_reps])
 
     #= Test functions against corkendall_naive, a "reference implementation" that has the 
     advantage of simplicity.
