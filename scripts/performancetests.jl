@@ -376,7 +376,7 @@ function how_scaleable(fns, nr::Integer, ncs::Vector{<:Integer},
     end
 
     plot([
-            scatter(x=ncs, y=datatoplot[:, i], mode="line", name=fullnameof(fns[i])) for i in 1:length(fns)], Layout(; title="Time to evaluate corkendall(x) vs num cols in x",
+            scatter(x=ncs, y=datatoplot[:, i], mode="line", name=fullnameof(fns[i])) for i in 1:length(fns)], Layout(; title="Time to evaluate corkendall(x) vs num cols in x ($(Threads.nthreads()) threads)",
             xaxis=attr(title="Num cols (num rows = $nr)", type="log"),
             yaxis=attr(title="Seconds", type="log")))
 end

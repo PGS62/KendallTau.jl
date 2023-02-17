@@ -9,15 +9,12 @@ const RoMVector{T<:Real} = AbstractVector{<:Union{T,Missing}}
 const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
 
 #=
-TODO 16 Feb 2023
+TODO 17 Feb 2023
 1) Should the default value of skipmissing be :none or :pairwise? :none forces the user to
-   address question of how missings should be handled, but at least for REPL use, it's 
+   address the question of how missings should be handled, but at least for REPL use, it's 
    rather inconvenient.
-2) KendallTau.corkendall currently slower than StatsBase.corkendall for very small
-   vector\matrix output(4x4 or smaller, assuming vector length 1000) , presumably thanks to
-   overhead of threading and populating the "scratch-space" vectors. Does this matter?
-3) Ask for code review?
-4) Make PR to StatsBase?
+2) Ask for code review?
+3) Make PR to StatsBase?
 =#
 
 """
@@ -65,14 +62,6 @@ function corkendall(x::RoMVector, y::RoMMatrix; skipmissing::Symbol=:none)
     return (corkendall(reshape(x, (length(x), 1)), y; skipmissing))
 end
 
-"""
-    duplicate(x)
-
-Construct a vector with `Threads.nthreads()` elements, each a copy of `x`.
-"""
-function duplicate(x)
-    [copy(x) for _ in 1:Threads.nthreads()]
-end
 
 function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:none) where {T,U}
     symmetric = x === y
@@ -98,20 +87,35 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
     end
 
     C = ones(Float64, nr, nc)
+    #Avoid unnecessary allocation when nthreads is large but output matrix is small.
+    n_duplicates = min(Threads.nthreads(), symmetric ? nr - 1 : nr)
+    use_atomic = n_duplicates < Threads.nthreads()
+
+    if use_atomic
+        a = Threads.Atomic{Int}(1)
+    end
 
     #= Create scratch vectors so that threaded code can be non-allocating. One vector per 
     thread to avoid cross-talk between threads.=#
-    scratchyvectors = duplicate(similar(y, m))
-    ycolis = duplicate(similar(y, m))
-    xcoljsorteds = duplicate(similar(x, m))
-    permxs = duplicate(zeros(Int, m))
-    txs = duplicate(Vector{T}(undef, m))
-    tys = duplicate(Vector{U}(undef, m))
-    sortyspaces = duplicate(Vector{U}(undef, m))
+    duplicate(x, n) = [copy(x) for _ in 1:n]
+    scratchyvectors = duplicate(similar(y, m), n_duplicates)
+    ycolis = duplicate(similar(y, m), n_duplicates)
+    xcoljsorteds = duplicate(similar(x, m), n_duplicates)
+    permxs = duplicate(zeros(Int, m), n_duplicates)
+    txs = duplicate(Vector{T}(undef, m), n_duplicates)
+    tys = duplicate(Vector{U}(undef, m), n_duplicates)
+    sortyspaces = duplicate(Vector{U}(undef, m), n_duplicates)
 
     Threads.@threads for j = (symmetric ? 2 : 1):nr
 
-        id = Threads.threadid()
+        if use_atomic
+            id = Threads.atomic_add!(a, 1)[]
+            #=Check that threads are using distinct scratch vectors=#
+            @assert permxs[id][1] == 0
+        else
+            id = Threads.threadid()
+        end
+
         scratchyvector = scratchyvectors[id]
         sortyspace = sortyspaces[id]
         ycoli = ycolis[id]
