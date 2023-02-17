@@ -1,5 +1,10 @@
 # KendallTau
 
+  [![Build status](https://github.com/PGS62/KendallTau.jl/workflows/CI/badge.svg)](https://github.com/PGS62/KendallTau.jl/actions?query=workflow%3ACI+branch%3Amain)
+  [![Coverage Status](https://coveralls.io/repos/PGS62/KendallTau.jl/badge.svg?branch=main)](https://coveralls.io/r/PGS62/KendallTau.jl?branch=main)
+  [![Coverage Status](http://codecov.io/github/PGS62/KendallTau.jl/coverage.svg?branch=main)](http://codecov.io/github/PGS62/KendallTau.jl?branch=main)
+
+
 [![Build Status](https://travis-ci.com/PGS62/KendallTau.jl.svg?branch=master)](https://travis-ci.com/PGS62/KendallTau.jl)
 [![Build Status](https://ci.appveyor.com/api/projects/status/github/PGS62/KendallTau.jl?svg=true)](https://ci.appveyor.com/project/PGS62/KendallTau-jl)
 [![Coverage](https://codecov.io/gh/PGS62/KendallTau.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/PGS62/KendallTau.jl)
