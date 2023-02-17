@@ -62,7 +62,6 @@ function corkendall(x::RoMVector, y::RoMMatrix; skipmissing::Symbol=:none)
     return (corkendall(reshape(x, (length(x), 1)), y; skipmissing))
 end
 
-
 function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:none) where {T,U}
     symmetric = x === y
     if size(x, 1) != size(y, 1)
@@ -89,8 +88,8 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
     C = ones(Float64, nr, nc)
     #Avoid unnecessary allocation when nthreads is large but output matrix is small.
     n_duplicates = min(Threads.nthreads(), symmetric ? nr - 1 : nr)
-    use_atomic = n_duplicates < Threads.nthreads()
 
+    use_atomic = n_duplicates < Threads.nthreads()
     if use_atomic
         a = Threads.Atomic{Int}(1)
     end
