@@ -28,7 +28,7 @@ x2 = x[:, 2]
 y = Y[:, 1]
 
 # corkendall and friends
-for f in (KendallTau.corkendall, corkendall_naive)
+for f in (KendallTau.corkendall, corkendall_naive,KendallTau.Experimental.corkendall,KendallTau.Experimental2.corkendall)
 
     println("f = $(Base.parentmodule(f)).$(Base.nameof(f))")
     # Check error, handling of NaN, Inf etc

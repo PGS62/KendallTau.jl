@@ -66,16 +66,13 @@ function corkendall(x::RoMVector, y::RoMMatrix; skipmissing::Symbol=:none)
 end
 
 """
-    duplicate(x)
+    duplicate(x, n)
 
-Construct a vector with `Threads.nthreads()` elements, each a copy of `x`.
+Construct a vector with `n` copies of `x`.
 """
-function duplicate(x,n)
+function duplicate(x, n)
     [copy(x) for _ in 1:n]
 end
-
-
-
 
 function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:none) where {T,U}
     symmetric = x === y
@@ -101,8 +98,9 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
     end
 
     C = ones(Float64, nr, nc)
-    ndups = min(Threads.nthreads(), symmetric ? nr - 1 : nr)
-    use_atomic = ndups < Threads.nthreads()
+    #Avoid unnecessary allocation when nthreads is large but output matrix is small
+    n_duplicates = min(Threads.nthreads(), symmetric ? nr - 1 : nr)
+    use_atomic = n_duplicates < Threads.nthreads()
 
     if use_atomic
         a = Threads.Atomic{Int}(1)
@@ -110,19 +108,20 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
 
     #= Create scratch vectors so that threaded code can be non-allocating. One vector per 
     thread to avoid cross-talk between threads.=#
-
-    scratchyvectors = duplicate(similar(y, m),ndups)
-    ycolis = duplicate(similar(y, m),ndups)
-    xcoljsorteds = duplicate(similar(x, m),ndups)
-    permxs = duplicate(zeros(Int, m),ndups)
-    txs = duplicate(Vector{T}(undef, m),ndups)
-    tys = duplicate(Vector{U}(undef, m),ndups)
-    sortyspaces = duplicate(Vector{U}(undef, m),ndups)
+    scratchyvectors = duplicate(similar(y, m), n_duplicates)
+    ycolis = duplicate(similar(y, m), n_duplicates)
+    xcoljsorteds = duplicate(similar(x, m), n_duplicates)
+    permxs = duplicate(zeros(Int, m), n_duplicates)
+    txs = duplicate(Vector{T}(undef, m), n_duplicates)
+    tys = duplicate(Vector{U}(undef, m), n_duplicates)
+    sortyspaces = duplicate(Vector{U}(undef, m), n_duplicates)
 
     Threads.@threads for j = (symmetric ? 2 : 1):nr
 
         if use_atomic
             id = Threads.atomic_add!(a, 1)[]
+            #=Check that threads are using distinct scratch vectors=#
+            @assert permxs[id][1] == 0
         else
             id = Threads.threadid()
         end
