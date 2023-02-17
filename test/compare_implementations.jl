@@ -232,9 +232,9 @@ function myisapprox(x::AbstractArray, y::AbstractArray, abstol::Float64)
     end
 end
 
-function myisapprox(x::Union{Float64,Int64,Missing}, y::Union{Float64,Int64,Missing},
-    abstol::Float64)
-    
+function myisapprox(x::Union{T,Missing}, y::Union{U,Missing},
+    abstol::V) where {T<:Real,U<:Real,V<:Real}
+
     if x isa Real && y isa Real && !isnan(x) && !isnan(y)
         return (abs(x - y) <= abstol)
     else
