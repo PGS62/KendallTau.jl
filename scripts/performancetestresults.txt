@@ -183,3 +183,101 @@ KendallTau.corkendall(vector1,vector2) argument(s) amended to contain 10.0% miss
 Speed ratio KendallTau.corkendall (10.0% missings) vs KendallTau.corkendall (no missings): 1.1050228310502284
 Ratio of memory allocated KendallTau.corkendall (10.0% missings) vs KendallTau.corkendall (no missings): 0.9897985207855139
 ###################################################################
+
+julia> using StatsBase,KendallTau;include("scripts/performancetests.jl");how_scaleable([StatsBase.corkendall,KendallTau.corkendall],1000,[2,3,4,5,6,7,8,16,32,64,128,256,512,1024,2048,4096],false,true,true)
+###################################################################
+Executing how_scaleable 2023-02-17T20:48:06.439
+ComputerName = 109OCS-KITCHEN
+fns[1] = StatsBase.corkendall
+fns[2] = KendallTau.corkendall
+ncs = [2, 3, 4, 5, 6, 7, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096]
+with_missings = false
+use_benchmark_tools = true
+Threads.nthreads() = 8
+  87.500 μs (10 allocations: 51.80 KiB)
+nc = 2, nr = 1000, f = StatsBase.corkendall,  time = 8.75e-5
+  123.500 μs (76 allocations: 117.80 KiB)
+nc = 2, nr = 1000, f = KendallTau.corkendall,  time = 0.0001235, ratio = 0.708502024291498
+  226.800 μs (25 allocations: 139.34 KiB)
+nc = 3, nr = 1000, f = StatsBase.corkendall,  time = 0.0002268
+  185.400 μs (84 allocations: 173.45 KiB)
+nc = 3, nr = 1000, f = KendallTau.corkendall,  time = 0.0001854, ratio = 1.2233009708737863
+  425.800 μs (46 allocations: 262.73 KiB)
+nc = 4, nr = 1000, f = StatsBase.corkendall,  time = 0.0004258
+  243.700 μs (93 allocations: 229.28 KiB)
+nc = 4, nr = 1000, f = KendallTau.corkendall,  time = 0.0002437, ratio = 1.7472302010668856
+  680.900 μs (73 allocations: 421.94 KiB)
+nc = 5, nr = 1000, f = StatsBase.corkendall,  time = 0.0006809
+  303.400 μs (102 allocations: 285.00 KiB)
+nc = 5, nr = 1000, f = KendallTau.corkendall,  time = 0.0003034, ratio = 2.2442320369149638
+  987.200 μs (106 allocations: 617.00 KiB)
+nc = 6, nr = 1000, f = StatsBase.corkendall,  time = 0.0009872
+  355.200 μs (111 allocations: 340.88 KiB)
+nc = 6, nr = 1000, f = KendallTau.corkendall,  time = 0.0003552, ratio = 2.779279279279279
+  1.357 ms (145 allocations: 847.84 KiB)
+nc = 7, nr = 1000, f = StatsBase.corkendall,  time = 0.0013569
+  405.000 μs (120 allocations: 396.61 KiB)
+nc = 7, nr = 1000, f = KendallTau.corkendall,  time = 0.000405, ratio = 3.3503703703703707
+  1.759 ms (190 allocations: 1.09 MiB)
+nc = 8, nr = 1000, f = StatsBase.corkendall,  time = 0.0017589
+  485.300 μs (129 allocations: 452.50 KiB)
+nc = 8, nr = 1000, f = KendallTau.corkendall,  time = 0.0004853, ratio = 3.6243560684112923
+  7.030 ms (766 allocations: 4.43 MiB)
+nc = 16, nr = 1000, f = StatsBase.corkendall,  time = 0.0070302
+  1.596 ms (151 allocations: 510.36 KiB)
+nc = 16, nr = 1000, f = KendallTau.corkendall,  time = 0.0015956, ratio = 4.4059914765605415
+  28.475 ms (3070 allocations: 17.84 MiB)
+nc = 32, nr = 1000, f = StatsBase.corkendall,  time = 0.0284747
+  5.691 ms (183 allocations: 517.86 KiB)
+nc = 32, nr = 1000, f = KendallTau.corkendall,  time = 0.0056906, ratio = 5.003813306154008
+  115.364 ms (12287 allocations: 71.51 MiB)
+nc = 64, nr = 1000, f = StatsBase.corkendall,  time = 0.1153636
+  22.941 ms (248 allocations: 544.78 KiB)
+nc = 64, nr = 1000, f = KendallTau.corkendall,  time = 0.0229408, ratio = 5.028752266703863
+  468.920 ms (49151 allocations: 286.36 MiB)
+nc = 128, nr = 1000, f = StatsBase.corkendall,  time = 0.4689199
+  96.513 ms (376 allocations: 646.78 KiB)
+nc = 128, nr = 1000, f = KendallTau.corkendall,  time = 0.0965125, ratio = 4.858644217070328
+  1.860 s (196607 allocations: 1.12 GiB)
+nc = 256, nr = 1000, f = StatsBase.corkendall,  time = 1.8602109
+  392.028 ms (633 allocations: 1.02 MiB)
+nc = 256, nr = 1000, f = KendallTau.corkendall,  time = 0.3920279, ratio = 4.745098244283124
+  7.547 s (786431 allocations: 4.48 GiB)
+nc = 512, nr = 1000, f = StatsBase.corkendall,  time = 7.5472971
+  1.628 s (1149 allocations: 2.54 MiB)
+nc = 512, nr = 1000, f = KendallTau.corkendall,  time = 1.6280758, ratio = 4.635716039756871
+  31.677 s (3145727 allocations: 17.91 GiB)
+nc = 1024, nr = 1000, f = StatsBase.corkendall,  time = 31.6766512
+  7.495 s (2169 allocations: 8.59 MiB)
+nc = 1024, nr = 1000, f = KendallTau.corkendall,  time = 7.4945787, ratio = 4.22660865513361
+  126.357 s (12582911 allocations: 71.65 GiB)
+nc = 2048, nr = 1000, f = StatsBase.corkendall,  time = 126.3572958
+  28.059 s (4223 allocations: 32.68 MiB)
+nc = 2048, nr = 1000, f = KendallTau.corkendall,  time = 28.0592791, ratio = 4.503226734716788
+  493.926 s (50331647 allocations: 286.62 GiB)
+nc = 4096, nr = 1000, f = StatsBase.corkendall,  time = 493.9260795
+  117.206 s (8313 allocations: 128.87 MiB)
+nc = 4096, nr = 1000, f = KendallTau.corkendall,  time = 117.2061244, ratio = 4.214166128506507
+16×3 Named Matrix{Float64}
+A ╲ B │            numcols(x)   StatsBase.corkendall  KendallTau.corkendall
+──────┼────────────────────────────────────────────────────────────────────
+1     │                   2.0                8.75e-5              0.0001235
+2     │                   3.0              0.0002268              0.0001854
+3     │                   4.0              0.0004258              0.0002437
+4     │                   5.0              0.0006809              0.0003034
+5     │                   6.0              0.0009872              0.0003552
+6     │                   7.0              0.0013569               0.000405
+7     │                   8.0              0.0017589              0.0004853
+8     │                  16.0              0.0070302              0.0015956
+9     │                  32.0              0.0284747              0.0056906
+10    │                  64.0               0.115364              0.0229408
+11    │                 128.0                0.46892              0.0965125
+12    │                 256.0                1.86021               0.392028
+13    │                 512.0                 7.5473                1.62808
+14    │                1024.0                31.6767                7.49458
+15    │                2048.0                126.357                28.0593
+16    │                4096.0                493.926                117.206
+###################################################################
+
+julia> using StatsBase,KendallTau;include("scripts/performancetests.jl");how_scaleable([StatsBase.corkendall,KendallTau.corkendall],1000,vcat(2:31, 2 .^(5:15)),false,true,true)
+
