@@ -279,5 +279,20 @@ A ╲ B │            numcols(x)   StatsBase.corkendall  KendallTau.corkendall
 16    │                4096.0                493.926                117.206
 ###################################################################
 
+#TODO run the test below on 12-core PC to generate new chart for README.md
 julia> using StatsBase,KendallTau;include("scripts/performancetests.jl");how_scaleable([StatsBase.corkendall,KendallTau.corkendall],1000,vcat(2:31, 2 .^(5:15)),false,true,true)
+
+
+using KendallTau
+small_x = rand(1040, 10);
+small_x = ifelse.(small_x .< 0.05, missing, small_x);
+n_repeat = 10;
+big_x = repeat(small_x, outer=[1, n_repeat]);
+size(small_x), size(big_x)
+@time small_tau = corkendall(small_x, skipmissing = :pairwise);
+@time big_tau = corkendall(big_x, skipmissing = :pairwise);
+size(small_tau), size(big_tau)
+big_tau == repeat(small_tau, outer=[n_repeat, n_repeat])
+
+
 
