@@ -50,16 +50,6 @@ function corkendall(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none)
     return (corkendall_sorted!(x, y, permx, similar(y), similar(y), T[], U[]))
 end
 
-# Function returns a vector in this case, inconsistent with with Statistics.cor and 
-# StatsBase.corspearman. Fixing that is a breaking change.
-function corkendall(x::RoMMatrix, y::RoMVector; skipmissing::Symbol=:none)
-    return (vec(corkendall(x, reshape(y, (length(y), 1)); skipmissing)))
-end
-
-function corkendall(x::RoMVector, y::RoMMatrix; skipmissing::Symbol=:none)
-    return (corkendall(reshape(x, (length(x), 1)), y; skipmissing))
-end
-
 function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:none) where {T,U}
     symmetric = x === y
     if size(x, 1) != size(y, 1)
@@ -135,6 +125,16 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
         end
     end
     return C
+end
+
+# Function returns a vector in this case, inconsistent with with Statistics.cor and 
+# StatsBase.corspearman. Fixing that is a breaking change.
+function corkendall(x::RoMMatrix, y::RoMVector; skipmissing::Symbol=:none)
+    return (vec(corkendall(x, reshape(y, (length(y), 1)); skipmissing)))
+end
+
+function corkendall(x::RoMVector, y::RoMMatrix; skipmissing::Symbol=:none)
+    return (corkendall(reshape(x, (length(x), 1)), y; skipmissing))
 end
 
 # Auxiliary functions for Kendall's rank correlation
