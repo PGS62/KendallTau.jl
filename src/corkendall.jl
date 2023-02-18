@@ -4,18 +4,16 @@
 # 
 #######################################
 
-#RoM stands for "Real or Missing"
+# RoM = "Real or Missing"
 const RoMVector{T<:Real} = AbstractVector{<:Union{T,Missing}}
 const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
 
-#=
-TODO 17 Feb 2023
+#= TODO 17 Feb 2023
 1) Should the default value of skipmissing be :none or :pairwise? :none forces the user to
    address the question of how missings should be handled, but at least for REPL use, it's 
    rather inconvenient.
 2) Ask for code review?
-3) Make PR to StatsBase?
-=#
+3) Make PR to StatsBase? =#
 
 """
     corkendall(x, y=x; skipmissing::Symbol=:none)
@@ -52,8 +50,8 @@ function corkendall(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none)
     return (corkendall_sorted!(x, y, permx, similar(y), similar(y), T[], U[]))
 end
 
-#= Function returns a vector in this case, inconsistent with with Statistics.cor and 
-StatsBase.corspearman. Fixing that is a breaking change. =#
+# Function returns a vector in this case, inconsistent with with Statistics.cor and 
+# StatsBase.corspearman. Fixing that is a breaking change.
 function corkendall(x::RoMMatrix, y::RoMVector; skipmissing::Symbol=:none)
     return (vec(corkendall(x, reshape(y, (length(y), 1)); skipmissing)))
 end
@@ -68,7 +66,7 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
         throw(DimensionMismatch("x and y have inconsistent dimensions"))
     end
 
-    #Swap x and y for more efficient threaded loop.
+    # Swap x and y for more efficient threaded loop.
     if size(x, 2) < size(y, 2)
         return (collect(transpose(corkendall(y, x; skipmissing))))
     end
@@ -77,6 +75,7 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
     m, nr = size(x)
     nc = size(y, 2)
 
+    # Handle degenerate case early to simplify subsequent code (U and/or T not defined).
     if x isa Matrix{Missing} || y isa Matrix{Missing}
         if symmetric
             return (ifelse.((1:nr) .== (1:nc)', 1.0, NaN))
@@ -86,7 +85,7 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
     end
 
     C = ones(Float64, nr, nc)
-    #Avoid unnecessary allocation when nthreads is large but output matrix is small.
+    # Avoid unnecessary allocation when nthreads is large but output matrix is small.
     n_duplicates = min(Threads.nthreads(), symmetric ? nr - 1 : nr)
 
     use_atomic = n_duplicates < Threads.nthreads()
@@ -94,8 +93,8 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
         a = Threads.Atomic{Int}(1)
     end
 
-    #= Create scratch vectors so that threaded code can be non-allocating. One vector per 
-    thread to avoid cross-talk between threads.=#
+    # Create scratch vectors so that threaded code can be non-allocating. One vector per 
+    # thread to avoid cross-talk between threads.
     duplicate(x, n) = [copy(x) for _ in 1:n]
     scratchyvectors = duplicate(similar(y, m), n_duplicates)
     ycolis = duplicate(similar(y, m), n_duplicates)
@@ -109,7 +108,7 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
 
         if use_atomic
             id = Threads.atomic_add!(a, 1)[]
-            #=Check that threads are using distinct scratch vectors=#
+            # Check that threads are using distinct scratch vectors
             @assert permxs[id][1] == 0
         else
             id = Threads.threadid()
@@ -190,11 +189,9 @@ function corkendall_sorted!(sortedx::RoMVector{T}, y::RoMVector{U},
         if sortedx[i-1] == sortedx[i]
             k += 1
         elseif k > 0
-            #=
-            Sort the corresponding chunk of shuffledy, so the rows of hcat(sortedx,shuffledy)
-            are sorted first on sortedx, then (where sortedx values are tied) on shuffledy.
-            Hence double ties can be counted by calling countties.
-            =#
+            # Sort the corresponding chunk of shuffledy, so the rows of hcat(sortedx,shuffledy)
+            # are sorted first on sortedx, then (where sortedx values are tied) on shuffledy.
+            # Hence double ties can be counted by calling countties.
             sort!(view(shuffledy, (i-k-1):(i-1)))
             ntiesx += div(widen(k) * (k + 1), 2) # Must use wide integers here
             ndoubleties += countties(shuffledy, i - k - 1, i - 1)
