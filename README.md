@@ -18,7 +18,7 @@ More recently I have made further changes to `corkendall`:
 3) For convenience, there is a new function `corkendall_fromfile` which takes arguments in the form of names of csv files containing the input and output data.
  
 ### Performance relative to `StatsBase.corkendall`
-Note the greatly (x1000) reduced number and size of allocations. Multi-threaded code benefits from minimising allocations (at least that was my experience when working on this package).
+Note the greatly (x1000) reduced number and size of allocations. This was key to obtaining the full benefit of multi-threading.
 ```julia
 julia> using StatsBase,KendallTau,Random #StatsBase v0.33.21
 [ Info: Precompiling KendallTau [aff0c2a8-f755-4235-a8c7-7336d8be0b73]
@@ -44,7 +44,7 @@ julia> Threads.nthreads()#12 cores, 20 logical processors
 20
 ```
 ### Help for `KendallTau.corkendall`
-```julia
+```
 help?> KendallTau.corkendall
   corkendall(x, y=x; skipmissing::Symbol=:none)
 
@@ -60,12 +60,10 @@ help?> KendallTau.corkendall
        in either of the two vectors used to calculate (an element of) the return. Use
        :listwise to skip entries where a missing value appears anywhere in a given
        row of x or y; note that this might drop a high proportion of entries.
-
-julia> 
 ```
 
 ### Help for `KendallTau.corkendall_fromfile`
-```julia
+```
 help?> KendallTau.corkendall_fromfile
   corkendall_fromfile(inputfile::String, outputfile::String, inputhasheaderrow::Bool,
   inputhasheadercol::Bool, outputhasheaderrow::Bool, outputhasheadercol::Bool)
@@ -100,7 +98,7 @@ help?> KendallTau.corkendall_fromfile
 <img width="652" alt="image" src="https://user-images.githubusercontent.com/18028484/218805079-5aa7ef02-f89b-4309-8f20-007541ee1005.png">
 
 ### Performance for large `x`
-I wish to compute Kendall Tau for a set of 32,000 time series, each having observations every weekday over a four year period. Such a calculation takes about 42 minutes. Windows 11, 12th Gen Intel(R) Core(TM) i7-12700, 2100 Mhz, 12 Core(s), 20 Logical Processors.
+I wish to compute Kendall Tau for a set of 32,000 time series, each having observations every weekday over a four year period. Such a calculation takes some 42 minutes on my PC (Windows 11, 12th Gen Intel(R) Core(TM) i7-12700, 2100 Mhz, 12 Core(s), 20 Logical Processors).
 
 ```julia
 julia> x = rand(1040,32000);
@@ -110,4 +108,4 @@ julia> @time KendallTau.corkendall(x);
 ```
 
 Philip Swannell  
-15 February 2023
+18 February 2023
