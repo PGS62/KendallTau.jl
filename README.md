@@ -11,7 +11,7 @@ The package also contains a function `speedtest` that prints a comparison of the
 ## Update February 2023
 The code of `corkendall` from this package was incorporated in Julia StatsBase on 8 February 2021 (see [this](https://github.com/JuliaStats/StatsBase.jl/commit/11ac5b596405367b3217d3d962e22523fef9bb0d) commit).
 
-More recently I have made further changes to `corkendall`:
+More recently I have made further changes:
 
 1) The function is now multi-threaded. On a PC with 12 cores and 20 logical processors this gives an approximate 12 times speed-up relative to `StatsBase.corkendall`
 2) `KendallTau.corkendall` now has a `skipmissings` keyword argument, to control the treatment of missing values.
@@ -21,7 +21,6 @@ More recently I have made further changes to `corkendall`:
 Note the greatly (x1000) reduced number and size of allocations. This was key to obtaining the full benefit of multi-threading.
 ```julia
 julia> using StatsBase,KendallTau,Random #StatsBase v0.33.21
-[ Info: Precompiling KendallTau [aff0c2a8-f755-4235-a8c7-7336d8be0b73]
 
 julia> x = rand(1000,10);StatsBase.corkendall(x)==KendallTau.corkendall(x)#compile
 true
