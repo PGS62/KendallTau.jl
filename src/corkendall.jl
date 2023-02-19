@@ -33,6 +33,7 @@ vectors or matrices, with elements that are either real numbers or missing value
 """
 function corkendall(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none) where {T,U}
 
+    Base.require_one_based_indexing(x, y)
     length(x) == length(y) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
 
     x, y = handlelistwise(x, y, skipmissing)
@@ -53,6 +54,8 @@ function corkendall(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none)
 end
 
 function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:none) where {T,U}
+
+    Base.require_one_based_indexing(x, y)
     symmetric = x === y
     if size(x, 1) != size(y, 1)
         throw(DimensionMismatch("x and y have inconsistent dimensions"))
