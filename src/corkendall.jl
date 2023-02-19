@@ -12,8 +12,10 @@ const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
 1) Should the default value of skipmissing be :none or :pairwise? :none forces the user to
    address the question of how missings should be handled, but at least for REPL use, it's 
    rather inconvenient.
-2) Ask for code review?
-3) Make PR to StatsBase? =#
+2) Should the docstring mention that the function is multi-threaded? Currently no function
+   in StatsBase is multi-threaded... By default Julia starts up single-threaded...   
+3) Ask for code review?
+4) Make PR to StatsBase? =#
 
 """
     corkendall(x, y=x; skipmissing::Symbol=:none)
