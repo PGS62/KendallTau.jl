@@ -14,14 +14,14 @@ Compute Spearman's rank correlation coefficient. If `x` and `y` are vectors, the
 output is a float, otherwise it's a matrix corresponding to the pairwise correlations
 of the columns of `x` and `y`.
 """
-function corspearman(x::AbstractVector, y::AbstractVector)
+function corspearman(x::AbstractVector{<:Real}, y::AbstractVector{<:Real})
     n = length(x)
     n == length(y) || throw(DimensionMismatch("vectors must have same length"))
     (any(isnan, x) || any(isnan, y)) && return NaN
     return cor(tiedrank(x), tiedrank(y))
 end
 
-function corspearman(X::AbstractMatrix, y::AbstractVector)
+function corspearman(X::AbstractMatrix{<:Real}, y::AbstractVector{<:Real})
     size(X, 1) == length(y) ||
         throw(DimensionMismatch("X and y have inconsistent dimensions"))
     n = size(X, 2)
@@ -40,7 +40,7 @@ function corspearman(X::AbstractMatrix, y::AbstractVector)
     return C
 end
 
-function corspearman(x::AbstractVector, Y::AbstractMatrix)
+function corspearman(x::AbstractVector{<:Real}, Y::AbstractMatrix{<:Real})
     size(Y, 1) == length(x) ||
         throw(DimensionMismatch("x and Y have inconsistent dimensions"))
     n = size(Y, 2)
@@ -59,11 +59,11 @@ function corspearman(x::AbstractVector, Y::AbstractMatrix)
     return C
 end
 
-function corspearman(X::AbstractMatrix)
+function corspearman(X::AbstractMatrix{<:Real})
     return(cor(tiedrank_nan(X)))
 end
 
-function corspearman(X::AbstractMatrix, Y::AbstractMatrix)
+function corspearman(X::AbstractMatrix{<:Real}, Y::AbstractMatrix{<:Real})
     size(X, 1) == size(Y, 1) ||
         throw(ArgumentError("number of rows in each array must match"))
     return (cor(tiedrank_nan(X), tiedrank_nan(Y)))
@@ -75,7 +75,7 @@ end
 Replace each column of `X` by its tied rank, unless the column contains NaN in which case
 set all elements of the column to NaN.
 """
-function tiedrank_nan(X::AbstractMatrix)
+function tiedrank_nan(X::AbstractMatrix{<:Real})
     Z = similar(X, Float64)
     for j in axes(X, 2)
         if any(isnan, view(X, :, j))
