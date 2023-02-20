@@ -7,17 +7,22 @@ Compute Spearman's rank correlation coefficient. If `x` and `y` are vectors, the
 output is a float, otherwise it's a matrix corresponding to the pairwise correlations
 of the columns of `x` and `y`.
 """
-corspearman(x::Union{AbstractVector{<:Real},AbstractMatrix{<:Real}},
-    y::Union{AbstractVector{<:Real},AbstractMatrix{<:Real}}) =
+corspearman(x::AbstractVector{<:Real}, y::AbstractVector{<:Real}) =
     cor(tiedrank_nan(x), tiedrank_nan(y))
-
-corspearman(x::AbstractMatrix{<:Real}) = cor(tiedrank_nan(x))
+corspearman(x::AbstractVector{<:Real}, y::AbstractMatrix{<:Real}) =
+    cor(tiedrank_nan(x), tiedrank_nan(y))
+corspearman(x::AbstractMatrix{<:Real}, y::AbstractVector{<:Real}) =
+    cor(tiedrank_nan(x), tiedrank_nan(y))
+corspearman(x::AbstractMatrix{<:Real}, y::AbstractMatrix{<:Real}) =
+    cor(tiedrank_nan(x), tiedrank_nan(y))
+corspearman(x::AbstractMatrix{<:Real}) =
+    cor(tiedrank_nan(x))
 
 function tiedrank_nan(x::AbstractMatrix{<:Real})
-    Z = similar(x,Int)
-    for j in axes(x)[2]
+    Z = similar(x, Int)
+    for j in axes(x, 2)
         if any(isnan, view(x, :, j))
-            Z[1, j] = NaN
+            Z[begin, j] = NaN
         else
             Z[:, j] .= tiedrank(view(x, :, j))
         end
@@ -27,7 +32,9 @@ end
 
 function tiedrank_nan(x::AbstractVector{<:Real})
     if any(isnan, x)
-        return (fill(NaN, length(x)))
+        res = similar(x, Int)
+        res[begin] = NaN
+        return (res)
     else
         tiedrank(x)
     end
