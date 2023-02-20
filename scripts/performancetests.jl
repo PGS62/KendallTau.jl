@@ -358,7 +358,7 @@ function how_scaleable(fns, nr::Integer, ncs::Vector{<:Integer},
 
                 if j > 1
                     if test_returns_equal
-                        res == res1 || throw("Different return values from $(fullnameof(f)) and $(fullnameof(fns[1])), nr = $nr, nc = $nc, with_missings = $with_missings")
+                        all(myapprox.(res, res1, 1e-14)) || throw("Different return values from $(fullnameof(f)) and $(fullnameof(fns[1])), nr = $nr, nc = $nc, with_missings = $with_missings")
                     end
                 end
                 printthis = "nc = $nc, nr = $nr, f = $(fullnameof(f)),  time = $(time)"
@@ -370,13 +370,13 @@ function how_scaleable(fns, nr::Integer, ncs::Vector{<:Integer},
             end
         end
         datatoprint = NamedArray(hcat(ncs, datatoplot))
-        setnames!(datatoprint,vcat("numcols(x)",fullnameof.(fns)),2)
+        setnames!(datatoprint, vcat("numcols(x)", fullnameof.(fns)), 2)
         display(datatoprint)
         println("#"^67)
     end
 
     plot([
-            scatter(x=ncs, y=datatoplot[:, i], mode="line", name=fullnameof(fns[i])) for i in 1:length(fns)], Layout(; title="Time to evaluate corkendall(x) vs num cols in x ($(Threads.nthreads()) threads)",
+            scatter(x=ncs, y=datatoplot[:, i], mode="line", name=fullnameof(fns[i])) for i in 1:length(fns)], Layout(; title="Time to evaluate fn(x) vs num cols in x ($(Threads.nthreads()) threads)",
             xaxis=attr(title="Num cols (num rows = $nr)", type="log"),
             yaxis=attr(title="Seconds", type="log")))
 end
