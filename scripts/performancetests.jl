@@ -311,6 +311,11 @@ function how_scaleable(fns, nr::Integer, ncs::Vector{<:Integer},
     with_missings::Bool, use_benchmark_tools::Bool, test_returns_equal::Bool=true)
 
     just_tweaking_plot = false
+    num_threads_in_title = false
+
+    if any(contains.(string.(Base.nameof.(fns)),"kendall"))
+        num_threads_in_title = true
+    end
 
     function fullnameof(f::Function)
         "$(Base.parentmodule(f)).$(Base.nameof(f))"
@@ -375,8 +380,13 @@ function how_scaleable(fns, nr::Integer, ncs::Vector{<:Integer},
         println("#"^67)
     end
 
+    title="Time to evaluate fn(x) vs num cols in x"
+    if num_threads_in_title
+        title="$title ($(Threads.nthreads()) threads)"
+    end    
+
     plot([
-            scatter(x=ncs, y=datatoplot[:, i], mode="line", name=fullnameof(fns[i])) for i in 1:length(fns)], Layout(; title="Time to evaluate fn(x) vs num cols in x ($(Threads.nthreads()) threads)",
+            scatter(x=ncs, y=datatoplot[:, i], mode="line", name=fullnameof(fns[i])) for i in 1:length(fns)], Layout(; title=title,
             xaxis=attr(title="Num cols (num rows = $nr)", type="log"),
             yaxis=attr(title="Seconds", type="log")))
 end
