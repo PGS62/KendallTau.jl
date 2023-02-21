@@ -1,4 +1,4 @@
-using StatsBase: cor, tiedrank
+using StatsBase: cor, tiedrank, _tiedrank!
 using LinearAlgebra: I
 
 #######################################
@@ -9,7 +9,6 @@ using LinearAlgebra: I
 
 """
     corspearman(x, y=x)
-
 Compute Spearman's rank correlation coefficient. If `x` and `y` are vectors, the
 output is a float, otherwise it's a matrix corresponding to the pairwise correlations
 of the columns of `x` and `y`.
@@ -31,10 +30,10 @@ function corspearman(X::AbstractMatrix{<:Real}, y::AbstractVector{<:Real})
     for j = 1:n
         Xj = view(X, :, j)
         if any(isnan, Xj)
-            C[j, 1] = NaN
+            C[j,1] = NaN
         else
             Xjrank = tiedrank(Xj)
-            C[j, 1] = cor(Xjrank, yrank)
+            C[j,1] = cor(Xjrank, yrank)
         end
     end
     return C
@@ -50,17 +49,17 @@ function corspearman(x::AbstractVector{<:Real}, Y::AbstractMatrix{<:Real})
     for j = 1:n
         Yj = view(Y, :, j)
         if any(isnan, Yj)
-            C[1, j] = NaN
+            C[1,j] = NaN
         else
             Yjrank = tiedrank(Yj)
-            C[1, j] = cor(xrank, Yjrank)
+            C[1,j] = cor(xrank, Yjrank)
         end
     end
     return C
 end
 
 function corspearman(X::AbstractMatrix{<:Real})
-    return(cor(tiedrank_nan(X)))
+    return cor(tiedrank_nan(X))
 end
 
 function corspearman(X::AbstractMatrix{<:Real}, Y::AbstractMatrix{<:Real})
@@ -71,18 +70,21 @@ end
 
 """
     tiedrank_nan(X::AbstractMatrix)
-
 Replace each column of `X` by its tied rank, unless the column contains NaN in which case
 set all elements of the column to NaN.
 """
 function tiedrank_nan(X::AbstractMatrix{<:Real})
     Z = similar(X, Float64)
+    idxs = Vector{Int}(undef, size(X, 1))
     for j in axes(X, 2)
-        if any(isnan, view(X, :, j))
-            Z[:, j] .= NaN
+        Xj = view(X, :, j)
+        Zj = view(Z, :, j) 
+        if any(isnan, Xj)
+            fill!(Zj, NaN)
         else
-            Z[:, j] .= tiedrank(view(X, :, j))
+            sortperm!(idxs, Xj)
+            _tiedrank!(Zj, Xj, idxs)
         end
     end
-    return (Z)
+    return Z
 end
