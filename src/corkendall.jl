@@ -8,14 +8,13 @@
 const RoMVector{T<:Real} = AbstractVector{<:Union{T,Missing}}
 const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
 
-#= TODO 17 Feb 2023
+#= TODO 21 Feb 2023
 1) Should the default value of skipmissing be :none or :pairwise? :none forces the user to
    address the question of how missings should be handled, but at least for REPL use, it's 
    rather inconvenient.
 2) Should the docstring mention that the function is multi-threaded? Currently no function
-   in StatsBase is multi-threaded... By default Julia starts up single-threaded...   
-3) Ask for code review?
-4) Make PR to StatsBase? =#
+   in StatsBase is multi-threaded... By default, Julia starts up single-threaded...   
+=#
 
 """
     corkendall(x, y=x; skipmissing::Symbol=:none)
@@ -425,7 +424,7 @@ function handlelistwise(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T,U}
 
     a = similar(x, T)
     b = similar(y, U)
-    k = axes(x, 1)[begin] - 1
+    k = 0
 
     @inbounds for i in axes(x, 1)
         include = true
@@ -452,6 +451,6 @@ function handlelistwise(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T,U}
                 end
             end
         end
-    end    
+    end
     return view(a, 1:k, :), view(b, 1:k, :)
 end
