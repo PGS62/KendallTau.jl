@@ -15,7 +15,7 @@ function corkendall_naive(x::AbstractVector{<:Real}, y::AbstractVector{<:Real})
     end
     n = length(x)
     if n <= 1
-        return (NaN)
+        return NaN
     end
     npairs = div(n * (n - 1), 2)
 
@@ -63,9 +63,9 @@ function corkendall_naive(x::AbstractArray; skipmissing::Symbol)
         x = handlemissings_naive(x)
     end
     if skipmissing == :pairwise || skipmissing == :listwise
-        return (corkendall_naive(x))
+        return corkendall_naive(x)
     elseif skipmissing == :none && !(missing isa eltype(x))
-        return (corkendall_naive(x))
+        return corkendall_naive(x)
     else
         throw(ArgumentError("keyword argument skipmissing has unrecognised value `:$skipmissing`"))
     end
@@ -76,9 +76,9 @@ function corkendall_naive(x::AbstractArray, y::AbstractArray; skipmissing::Symbo
         x, y = handlemissings_naive(x, y)
     end
     if skipmissing == :pairwise || skipmissing == :listwise
-        return (corkendall_naive(x, y))
+        return corkendall_naive(x, y)
     elseif skipmissing == :none && !(missing isa eltype(x)) & !(ismissing isa eltype(y))
-        return (corkendall_naive(x, y))
+        return corkendall_naive(x, y)
     else
         throw(ArgumentError("keyword argument skipmissing has unrecognised value `:$skipmissing`"))
     end

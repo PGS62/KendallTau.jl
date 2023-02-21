@@ -39,7 +39,7 @@ function corkendall(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none)
     x, y = handlelistwise(x, y, skipmissing)
 
     if x isa Vector{Missing} || y isa Vector{Missing}
-        return (NaN)
+        return NaN
     end
 
     x = copy(x)
@@ -50,7 +50,7 @@ function corkendall(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none)
     permx = sortperm(x)
     permute!(x, permx)
 
-    return (corkendall_sorted!(x, y, permx, similar(y), similar(y), T[], U[]))
+    return corkendall_sorted!(x, y, permx, similar(y), similar(y), T[], U[])
 end
 
 function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:none) where {T,U}
@@ -63,7 +63,7 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
 
     # Swap x and y for more efficient threaded loop.
     if size(x, 2) < size(y, 2)
-        return (collect(transpose(corkendall(y, x; skipmissing))))
+        return collect(transpose(corkendall(y, x; skipmissing)))
     end
 
     x, y = handlelistwise(x, y, skipmissing)
@@ -73,9 +73,9 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
     # Handle degenerate case early to simplify subsequent code (U and/or T not defined).
     if x isa Matrix{Missing} || y isa Matrix{Missing}
         if symmetric
-            return (ifelse.((1:nr) .== (1:nc)', 1.0, NaN))
+            return ifelse.((1:nr) .== (1:nc)', 1.0, NaN)
         else
-            return (fill(NaN, nr, nc))
+            return fill(NaN, nr, nc)
         end
     end
 
@@ -135,11 +135,11 @@ end
 # Function returns a vector in this case, inconsistent with with Statistics.cor and 
 # StatsBase.corspearman. Fixing that is a breaking change.
 function corkendall(x::RoMMatrix, y::RoMVector; skipmissing::Symbol=:none)
-    return (vec(corkendall(x, reshape(y, (length(y), 1)); skipmissing)))
+    return vec(corkendall(x, reshape(y, (length(y), 1)); skipmissing))
 end
 
 function corkendall(x::RoMVector, y::RoMMatrix; skipmissing::Symbol=:none)
-    return (corkendall(reshape(x, (length(x), 1)), y; skipmissing))
+    return corkendall(reshape(x, (length(x), 1)), y; skipmissing)
 end
 
 # Auxiliary functions for Kendall's rank correlation
@@ -176,7 +176,7 @@ function corkendall_sorted!(sortedx::RoMVector{T}, y::RoMVector{U},
     if missing isa eltype(sortedx) || missing isa eltype(scratchyvector)
         sortedx, scratchyvector = handlepairwise!(sortedx, scratchyvector, tx, ty)
     end
-    length(sortedx) >= 2 || return (NaN)
+    length(sortedx) >= 2 || return NaN
 
     shuffledy = scratchyvector
 
@@ -240,7 +240,7 @@ function countties(x::AbstractVector{<:Real}, lo::Integer, hi::Integer)
     if thistiecount > 0
         result += div(thistiecount * (thistiecount + 1), 2)
     end
-    result
+    return result
 end
 
 # Tests appear to show that a value of 64 is optimal,
@@ -354,7 +354,7 @@ function handlepairwise(x::RoMVector{T}, y::RoMVector{U}) where {T,U}
         end
     end
 
-    return (resize!(a, j), resize!(b, j))
+    return resize!(a, j), resize!(b, j)
 end
 
 """
@@ -377,7 +377,7 @@ function handlepairwise!(x::RoMVector{T}, y::RoMVector{U},
         end
     end
 
-    return (view(tx, 1:j), view(ty, 1:j))
+    return view(tx, 1:j), view(ty, 1:j)
 end
 
 """
@@ -389,7 +389,7 @@ of `x` and `y`. Otherwise merely validate `skipmissing` argument.
 function handlelistwise(x::AbstractArray, y::AbstractArray, skipmissing::Symbol)
     if skipmissing == :listwise
         if x isa Matrix && y isa Matrix
-            return (handlelistwise(x, y))
+            return handlelistwise(x, y)
         end
     elseif skipmissing == :pairwise
     elseif skipmissing == :none
@@ -408,7 +408,7 @@ function handlelistwise(x::AbstractArray, y::AbstractArray, skipmissing::Symbol)
                                 `:$skipmissing`"))
         end
     end
-    return (x, y)
+    return x, y
 end
 
 """
@@ -419,53 +419,39 @@ Return a pair `(a,b)`, filtered copies of `(x,y)`, in which the rows `x[i,:]` an
 """
 function handlelistwise(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T,U}
 
-    nrx, ncx = size(x)
-    nry, ncy = size(y)
-
+    nrx = size(x, 1)
+    nry = size(y, 1)
     nrx == nry || throw(DimensionMismatch("x and y have inconsistent dimensions"))
-    chooser = fill(true, nrx)
 
-    nrout = nrx
-    @inbounds for i = 1:nrx
-        for j = 1:ncx
+    a = similar(x, T)
+    b = similar(y, U)
+    k = axes(x, 1)[begin] - 1
+
+    @inbounds for i in axes(x, 1)
+        include = true
+        for j in axes(x, 2)
             if ismissing(x[i, j])
-                chooser[i] = false
-                nrout -= 1
+                include = false
                 break
             end
         end
-        if chooser[i]
-            for j = 1:ncy
+        if include
+            for j in axes(y, 2)
                 if ismissing(y[i, j])
-                    chooser[i] = false
-                    nrout -= 1
+                    include = false
                     break
                 end
             end
-        end
-    end
-
-    a = Matrix{T}(undef, nrout, ncx)
-    @inbounds for j = 1:ncx
-        k = 0
-        for i = 1:nrx
-            if chooser[i]
+            if include
                 k += 1
-                a[k, j] = x[i, j]
+                for j in axes(x, 2)
+                    a[k, j] = x[i, j]
+                end
+                for j in axes(y, 2)
+                    b[k, j] = y[i, j]
+                end
             end
         end
-    end
-
-    b = Matrix{U}(undef, nrout, ncy)
-    @inbounds for j = 1:ncy
-        k = 0
-        for i = 1:nrx
-            if chooser[i]
-                k += 1
-                b[k, j] = y[i, j]
-            end
-        end
-    end
-
-    return (a, b)
+    end    
+    return view(a, 1:k, :), view(b, 1:k, :)
 end

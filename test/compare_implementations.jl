@@ -209,14 +209,14 @@ function compare_implementations(fn1::Function=corkendall, fn2::Function=corkend
             # test for equality, if that fails print to the screen the argument(s) and the two returns
             if !myisapprox(res1, res2, abstol)
                 if j == 1
-                    return (res1, res2, arg1)
+                    return res1, res2, arg1
                 else
-                    return (res1, res2, arg1, arg2)
+                    return res1, res2, arg1, arg2
                 end
             end
         end
     end
-    return (true)
+    return true
 end
 
 # Custom isapprox function needed since when comparing returns from two implementations
@@ -224,11 +224,11 @@ end
 # elements of a column are identical, e.g. corkendall([1,1],[2,3]) = NaN
 function myisapprox(x::AbstractArray, y::AbstractArray, abstol::Float64)
     if size(x) ≠ size(y)
-        return (false)
+        return false
     elseif eltype(x) != eltype(y)
-        return (false)
+        return false
     else
-        return (all(myisapprox.(x, y, abstol)))
+        return all(myisapprox.(x, y, abstol))
     end
 end
 
@@ -236,7 +236,7 @@ function myisapprox(x::Union{T,Missing}, y::Union{U,Missing},
     abstol::V) where {T<:Real,U<:Real,V<:Real}
 
     if x isa Real && y isa Real && !isnan(x) && !isnan(y)
-        return (abs(x - y) <= abstol)
+        return abs(x - y) <= abstol
     else
         return isequal(x, y)
     end

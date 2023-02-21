@@ -176,21 +176,21 @@ Test for approximate equality, but with NaN == NaN being true.
 """
 function myapprox(x::AbstractArray, y::AbstractArray, abstol::Float64)
     if size(x) ≠ size(y)
-        return (false)
+        return false
     else
-        return (all(myapprox.(x, y, abstol)))
+        return all(myapprox.(x, y, abstol))
     end
 end
 
 function myapprox(x::Float64, y::Float64, abstol::Float64)
     if isnan(x) && isnan(y)
-        return (true)
+        return true
     elseif isnan(x)
-        return (false)
+        return false
     elseif isnan(y)
-        return (false)
+        return false
     else
-        return (abs(x - y) <= abstol)
+        return abs(x - y) <= abstol
     end
 end
 
@@ -205,7 +205,7 @@ function sprinklemissings(x, proportionmissing, rng=MersenneTwister())
     if !any(ismissing, x)
         x = ifelse.(randoms .== maximum(randoms), missing, x)
     end
-    return (x)
+    return x
 end
 
 """

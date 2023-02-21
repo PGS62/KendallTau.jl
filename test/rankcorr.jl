@@ -4,16 +4,6 @@ using Random
 include("corkendall_naive.jl")
 include("compare_implementations.jl")
 
-function equal_with_nan(x, y)
-    if isnan(x) && isnan(y)
-        return (true)
-    elseif isnan(x) || isnan(y)
-        return (false)
-    else
-        return x == y
-    end
-end
-
 x = Float64[1 0; 2 1; 3 0; 4 1; 5 10]
 Y = Float64[5 5 6; 3 4 1; 4 0 4; 2 6 1; 5 7 10]
 Xm = [1 0; missing 1; 2 1; 3 0; 4 1; 5 10]
@@ -77,8 +67,8 @@ for f in (KendallTau.corkendall, corkendall_naive)
         -2/√154 7/√165 -1/√154]
     @test isnan(f(1:5, xm, skipmissing=:pairwise))
     @test isnan(f(xm, 1:5, skipmissing=:pairwise))
-    @test all(equal_with_nan.(f(xmm, skipmissing=:pairwise), [1.0 NaN; NaN 1.0]))
-    @test all(equal_with_nan.(f(xmm, copy(xmm), skipmissing=:pairwise), [NaN NaN; NaN NaN]))
+    @test isequal(f(xmm, skipmissing=:pairwise), [1.0 NaN; NaN 1.0])
+    @test isequal(f(xmm, copy(xmm), skipmissing=:pairwise), [NaN NaN; NaN NaN])
 
     # Test not-correct values of skipmissing
     if !(f === corkendall_naive)
@@ -199,4 +189,3 @@ mx = [1 2
 @test KendallTau.handlepairwise!(x, float.(y), similar(x), similar(float.(y))) == ([2, 3, 4], [1.0, 2.0, 4.0])
 @test KendallTau.handlepairwise!(u, v, similar(u), similar(v)) == (Int64[], Int64[])
 @test KendallTau.handlelistwise(mx, mx) == ([1 2; 5 6], [1 2; 5 6])
-
