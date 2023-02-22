@@ -33,6 +33,7 @@ for f in (KendallTau.corkendall, corkendall_naive)
     @test f(x2, y) == -1 / sqrt(72)
     # AbstractMatrix{<:Real}, AbstractVector{<:Real}
     @test f(x, y) == [-1 / sqrt(90), -1 / sqrt(72)]
+    @test f(x, y, skipmissing=:listwise) == [-1 / sqrt(90), -1 / sqrt(72)]
     # AbstractVector{<:Real}, AbstractMatrix{<:Real}
     @test f(y, x) == [-1 / sqrt(90) -1 / sqrt(72)]
 
