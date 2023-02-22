@@ -4,16 +4,42 @@
 # 
 #######################################
 
+
 # RoM = "Real or Missing"
 const RoMVector{T<:Real} = AbstractVector{<:Union{T,Missing}}
 const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
 
-#= TODO 21 Feb 2023
+#= TODO 22 Feb 2023
 1) Should the default value of skipmissing be :none or :pairwise? :none forces the user to
    address the question of how missings should be handled, but at least for REPL use, it's 
    rather inconvenient.
+
 2) Should the docstring mention that the function is multi-threaded? Currently no function
-   in StatsBase is multi-threaded... By default, Julia starts up single-threaded...   
+   in StatsBase is multi-threaded... By default, Julia starts up single-threaded...
+
+3) How to get compatibility of corkendall with StatsBase.pairwise? Some ideas:
+
+   Option a)
+   Amend StatsBase._pairwise! to replace line:
+   dest[i, j] = f(ynm, ynm)
+   with: 
+   dest[i, j] = f(disallowmissing(ynm), disallowmissing(ynm))
+
+   Option b)
+   In corkendall vector-vector method, if missing is an element type of both x and of y, but
+   missing does not appear in either x or y, then call disallowmissing twice, like this:
+
+    if missing isa eltype(x) && missing isa eltype(y)
+        if !any(ismissing,x) && !any(ismissing,y)
+            x = disallowmissing(x)
+            y = disallowmissing(y)
+        end
+    end
+
+   Option c)
+   Have a dedicated method of _pairwise! to handle f === corkendall. This has a big 
+   performance advantage, and is maybe along the lines suggested by nalimilan here:
+   https://github.com/JuliaStats/StatsBase.jl/pull/647#issuecomment-775264454
 =#
 
 """
@@ -79,8 +105,9 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
         a = Threads.Atomic{Int}(1)
     end
 
-    # Create scratch vectors so that threaded code can be non-allocating. One vector per 
-    # thread to avoid cross-talk between threads.
+    # Create scratch vectors so that threaded code can be non-allocating, a requirement for 
+    # good multi-threaded performance. One vector per thread to avoid cross-talk between
+    # threads.
     duplicate(x, n) = [copy(x) for _ in 1:n]
     scratchyvectors = duplicate(similar(y, m), n_duplicates)
     ycolis = duplicate(similar(y, m), n_duplicates)
