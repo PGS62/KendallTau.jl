@@ -22,7 +22,6 @@ More recently I have made further changes:
 help?> KendallTau.corkendall
   corkendall(x, y=x; skipmissing::Symbol=:none)
 
-
   Compute Kendall's rank correlation coefficient, τ. x and y must both be either vectors
   or matrices, with elements that are either real numbers or missing values.
 
@@ -35,7 +34,6 @@ help?> KendallTau.corkendall
        :listwise to skip entries where a missing value appears anywhere in a given
        row of x or y; note that this might drop a high proportion of entries.
 ```
-
 
 ## Performance
 In the REPL output below, note the large reduction in number and size of allocations. This was key to obtaining the full benefit of multi-threading.
