@@ -17,7 +17,9 @@ const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
 2) Should the docstring mention that the function is multi-threaded? Currently no function
    in StatsBase is multi-threaded... By default, Julia starts up single-threaded...
 
-3) How to get compatibility of corkendall with StatsBase.pairwise? Some ideas:
+3) How to get compatibility of corkendall with StatsBase.pairwise? The problem is that 
+   pairwise passes vectors to f that don't contain missing but for which missing isa eltype
+   and corkendall then wants a skipmissing argument.
 
    Option a)
    Amend StatsBase._pairwise! to replace line:
@@ -26,6 +28,11 @@ const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
    dest[i, j] = f(disallowmissing(ynm), disallowmissing(ynm))
 
    Option b)
+   Some other way to arrange that arguments passed to f from within StatsBase._pairwise!
+   do not have Missing as an allowed element type. Using function handlepairwise! would do
+   that efficiently.
+
+   Option c)
    In corkendall vector-vector method, if missing is an element type of both x and of y, but
    missing does not appear in either x or y, then call disallowmissing twice, like this:
 
@@ -36,7 +43,7 @@ const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
         end
     end
 
-   Option c)
+   Option d)
    Have a dedicated method of _pairwise! to handle f === corkendall. This has a big 
    performance advantage, and is maybe along the lines suggested by nalimilan here:
    https://github.com/JuliaStats/StatsBase.jl/pull/647#issuecomment-775264454
