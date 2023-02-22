@@ -101,26 +101,26 @@ end
 
 #Alternative (simpler but slower) implementation of handlemissings
 function handlemissings_naive(x::AbstractMatrix)
-    choose = [!any(ismissing, x[i, :]) for i in axes(x, 1)]
+    choose = [!any(ismissing, view(x, i, :)) for i in axes(x, 1)]
     x[choose, :]
 end
 
 function handlemissings_naive(x::AbstractMatrix, y::AbstractMatrix)
-    choose1 = [!any(ismissing, x[i, :]) for i in axes(x, 1)]
-    choose2 = [!any(ismissing, y[i, :]) for i in axes(y, 1)]
+    choose1 = [!any(ismissing, view(x, i, :)) for i in axes(x, 1)]
+    choose2 = [!any(ismissing, view(y, i, :)) for i in axes(y, 1)]
     choose = choose1 .& choose2
     x[choose, :], y[choose, :]
 end
 
 function handlemissings_naive(x::AbstractVector, y::AbstractMatrix)
     choose1 = .!ismissing.(x)
-    choose2 = [!any(ismissing, y[i, :]) for i in axes(y, 1)]
+    choose2 = [!any(ismissing, view(y, i, :)) for i in axes(y, 1)]
     choose = choose1 .& choose2
     x[choose], y[choose, :]
 end
 
 function handlemissings_naive(x::AbstractMatrix, y::AbstractVector)
-    choose1 = [!any(ismissing, x[i, :]) for i in axes(x, 1)]
+    choose1 = [!any(ismissing, view(x, i, :)) for i in axes(x, 1)]
     choose2 = .!ismissing.(y)
     choose = choose1 .& choose2
     x[choose, :], y[choose]
