@@ -330,6 +330,8 @@ end
 Return a pair `(a,b)`, filtered copies of `x` and `y`, in which elements `x[i]` and `y[i]`
 are filtered out if  `ismissing(x[i])||ismissing(y[i])`.
 """
+handlepairwise(x::AbstractVector{<:Real}, y::AbstractVector{<:Real}) = x, y
+
 function handlepairwise(x::RoMVector{T}, y::RoMVector{U}) where {T,U}
 
     n = length(x)
@@ -347,8 +349,6 @@ function handlepairwise(x::RoMVector{T}, y::RoMVector{U}) where {T,U}
 
     return resize!(a, j), resize!(b, j)
 end
-
-handlepairwise(x::AbstractVector{<:Real}, y::AbstractVector{<:Real}) = x, y
 
 """
     handlepairwise!(x::RoMVector{T}, y::RoMVector{U},
@@ -410,6 +410,8 @@ end
 Return a pair `(a,b)`, filtered copies of `(x,y)`, in which the rows `x[i,:]` and
 `y[i,:]` are both filtered out if `any(ismissing,x[i,:])||any(ismissing,y[i,:])`.
 """
+handlelistwise(x::AbstractMatrix{<:Real}, y::AbstractMatrix{<:Real}) = x, y
+
 function handlelistwise(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T,U}
 
     nrx = size(x, 1)
@@ -449,4 +451,3 @@ function handlelistwise(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T,U}
     return view(a, 1:k, :), view(b, 1:k, :)
 end
 
-handlelistwise(x::AbstractMatrix{<:Real}, y::AbstractMatrix{<:Real}) = x, y
