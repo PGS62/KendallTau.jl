@@ -121,7 +121,7 @@ end
 
 function handlemissings_naive(x::AbstractMatrix, y::AbstractVector)
     choose1 = [!any(ismissing, x[i, :]) for i in axes(x, 1)]
-    choose2 = .!ismissing.(x)
+    choose2 = .!ismissing.(y)
     choose = choose1 .& choose2
     x[choose, :], y[choose]
 end
