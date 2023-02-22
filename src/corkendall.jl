@@ -34,18 +34,10 @@ function corkendall(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none)
 
     Base.require_one_based_indexing(x, y)
     length(x) == length(y) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
+    (x isa Vector{Missing} || y isa Vector{Missing})  && return NaN
 
     x, y = handlelistwise(x, y, skipmissing)
-
-    if x isa Vector{Missing} || y isa Vector{Missing}
-        return NaN
-    end
-
-    x = copy(x)
-    y = copy(y)
-    if missing isa eltype(x) || missing isa eltype(y)
-        x, y = handlepairwise(x, y)
-    end
+    x, y = handlepairwise(copy(x), copy(y))
     permx = sortperm(x)
     permute!(x, permx)
 
@@ -356,6 +348,8 @@ function handlepairwise(x::RoMVector{T}, y::RoMVector{U}) where {T,U}
     return resize!(a, j), resize!(b, j)
 end
 
+handlepairwise(x::AbstractVector{<:Real}, y::AbstractVector{<:Real}) = x, y
+
 """
     handlepairwise!(x::RoMVector{T}, y::RoMVector{U},
     tx::AbstractVector{T}, ty::AbstractVector{U}) where {T,U}
@@ -454,3 +448,5 @@ function handlelistwise(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T,U}
     end
     return view(a, 1:k, :), view(b, 1:k, :)
 end
+
+handlelistwise(x::AbstractMatrix{<:Real}, y::AbstractMatrix{<:Real}) = x, y
