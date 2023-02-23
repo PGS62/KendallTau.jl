@@ -4,7 +4,6 @@
 # 
 #######################################
 
-
 # RoM = "Real or Missing"
 const RoMVector{T<:Real} = AbstractVector{<:Union{T,Missing}}
 const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
