@@ -1,6 +1,5 @@
 using KendallTau
 using Test
 
-@testset "KendallTau.jl" begin
-    include("rankcorr.jl")
-end
+include("rankcorr.jl")
+include("corkendall_fromfile.jl")

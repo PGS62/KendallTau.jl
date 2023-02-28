@@ -4,6 +4,8 @@ using Random
 include("corkendall_naive.jl")
 include("compare_implementations.jl")
 
+@testset "corkendall" begin
+
 x = Float64[1 0; 2 1; 3 0; 4 1; 5 10]
 Y = Float64[5 5 6; 3 4 1; 4 0 4; 2 6 1; 5 7 10]
 Xm = [1 0; missing 1; 2 1; 3 0; 4 1; 5 10]
@@ -190,3 +192,5 @@ mx = [1 2
 @test KendallTau.handlepairwise!(x, float.(y), similar(x), similar(float.(y))) == ([2, 3, 4], [1.0, 2.0, 4.0])
 @test KendallTau.handlepairwise!(u, v, similar(u), similar(v)) == (Int64[], Int64[])
 @test KendallTau.handlelistwise(mx, mx) == ([1 2; 5 6], [1 2; 5 6])
+
+end #testset
