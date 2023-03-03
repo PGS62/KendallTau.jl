@@ -3,9 +3,10 @@ using DataFrames
 using Tables
 
 """
-    corkendall_fromfile(file1::String, file2::String = "", outputfile::String, 
-    inputshaveheaderrow::Bool, inputshaveheadercol::Bool, writeheaderrow::Bool, 
-    writeheadercol::Bool, converttopearson::Bool = false)
+    corkendall_fromfile(file1::String, file2::String, outputfile::String,
+    inputshaveheaderrow::Bool=false, inputshaveheadercol::Bool=false,
+    writeheaders::Bool=false, converttopearson::Bool=false,
+    missingstring::String="")
 
 Compute Kendall's rank correlation coefficient, `τ(x,y)` where `x` and `y` are read from csv 
 files, writing the result to another csv file.
@@ -17,32 +18,25 @@ files, writing the result to another csv file.
 - `inputshaveheaderrow::Bool`: pass in `true` if the input files have a header row.
 - `inputshaveheadercol::Bool`: pass in `true` if the input files have a header column. The 
     contents of the header column have no effect on the output correlations.
-- `writeheaderrow::Bool`: pass in `true` if `outputfile` is to be written with a header 
-    row. If `true` the output header row will match the header row of `file2` if it has one or
-    `Column1,Column2,...` otherwise.
-- `writeheadercol::Bool`:  pass in `true` if `outputfile` is to be written with a header 
-    column. If `true` the output header row will match the header row of `file1` if it has one or
-    `Column1,Column2,...` otherwise.
-- `converttopearson::Bool`: if `true` then the function returns the equivalent Pearson
-    correlation ρ = sin(τ*π/2).
+- `writeheaders::Bool`: pass in `true` if `outputfile` is to be written with header 
+    row and column. If `true` the output headers will match the header rows of `file1` and
+    `file2` if they exist or be `Column1,Column2,...` otherwise.
+- `converttopearson::Bool`: if `true` then the equivalent Pearson correlations
+     ρ = sin(τ*π/2) are written to the output file.
+- `missingstring::Union{Nothing,String,Vector{String}}=nothing`: Used to indicate how
+    missing values are represented in `file1` and `file2` See `CSV.File`.
 """
 function corkendall_fromfile(file1::String, file2::String, outputfile::String,
-    inputshaveheaderrow::Bool, inputshaveheadercol::Bool, writeheaderrow::Bool,
-    writeheadercol::Bool, converttopearson::Bool)
+    inputshaveheaderrow::Bool=false, inputshaveheadercol::Bool=false,
+    writeheaders::Bool=false, converttopearson::Bool=false,
+    missingstring::Union{Nothing,String,Vector{String}}=nothing)
 
-    header = inputshaveheaderrow ? 1 : 0
-    drop = inputshaveheadercol ? [1] : [0]
-
-    filedata1 = CSV.File(file1; header, drop)
-    names1 = CSV.getnames(filedata1)
-    data1 = Tables.matrix(filedata1)
+    data1, names1 = readfromcsv(file1, inputshaveheaderrow, inputshaveheadercol, missingstring=missingstring)
 
     if file2 == "" || file1 == file2
         names2, data2 = names1, data1
     else
-        filedata2 = CSV.File(file2; header, drop)
-        names2 = CSV.getnames(filedata2)
-        data2 = Tables.matrix(filedata2)
+        names2, data2 = readfromcsv(file2, inputshaveheaderrow, inputshaveheadercol, missingstring=missingstring)
     end
 
     res = corkendall(data1, data2, skipmissing=:pairwise)
@@ -52,9 +46,40 @@ function corkendall_fromfile(file1::String, file2::String, outputfile::String,
 
     datatowrite = DataFrame(res, names2)
 
-    if writeheadercol
+    if writeheaders
         insertcols!(datatowrite, 1, Symbol("") => String.(names1))
     end
 
-    return (CSV.write(outputfile, datatowrite, header=writeheaderrow))
+    return (CSV.write(outputfile, datatowrite, header=writeheaders))
 end
+
+function readfromcsv(filename::String, ignorefirstrow::Bool, ignorefirstcol::Bool; missingstring::String="")
+
+    header = ignorefirstrow ? 1 : 0
+    drop = ignorefirstcol ? [1] : [0]
+
+    filedata = CSV.File(filename; header, drop, missingstring)
+    data = Tables.matrix(filedata)
+    if ignorefirstrow
+        names = Symbol.("Column" .* string.(collect(axes(data,2))))
+    else
+        names = CSV.getnames(filedata)
+    end
+
+    if !(data isa RoMMatrix)
+        throw("Data read from file '$filename' is of type $(typeof(data)) so the file seems \
+        to contains data that is neither missing nor numeric. Check the following arguments \
+        to function readfromcsv: ignorefirstrow was passed as $ignorefirstrow, ignorefirstcol \
+        was passed as $ignorefirstcol and missingstring was passed as '$missingstring'")
+    end
+
+    return data, names
+end
+
+function testreadfromcsv()
+    #readfromcsv(raw"C:\Users\phili\OneDrive\ISDA SIMM\SolumWorking\2023\StressBalance\EQ\correlation\EQ_returns_1.csv",true,true)
+
+    readfromcsv(raw"C:\Users\phili\OneDrive\ISDA SIMM\SolumWorking\2023\StressBalance\CRQ\correlation\CRQ_returns_1.csv", true, true, missingstring="NA")
+
+end
+
