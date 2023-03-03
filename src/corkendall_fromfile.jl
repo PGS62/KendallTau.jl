@@ -6,7 +6,7 @@ using Tables
     corkendall_fromfile(file1::String, file2::String, outputfile::String,
     inputshaveheaderrow::Bool=false, inputshaveheadercol::Bool=false,
     writeheaders::Bool=false, converttopearson::Bool=false,
-    missingstring::String="")
+    missingstring::Union{Nothing,String,Vector{String}}=nothing)
 
 Compute Kendall's rank correlation coefficient, `τ(x,y)` where `x` and `y` are read from csv 
 files, writing the result to another csv file.
@@ -34,9 +34,9 @@ function corkendall_fromfile(file1::String, file2::String, outputfile::String,
     data1, names1 = readfromcsv(file1, inputshaveheaderrow, inputshaveheadercol, missingstring=missingstring)
 
     if file2 == "" || file1 == file2
-        names2, data2 = names1, data1
+        data2, names2 = data1,names1
     else
-        names2, data2 = readfromcsv(file2, inputshaveheaderrow, inputshaveheadercol, missingstring=missingstring)
+        data2, names2 = readfromcsv(file2, inputshaveheaderrow, inputshaveheadercol, missingstring=missingstring)
     end
 
     res = corkendall(data1, data2, skipmissing=:pairwise)
@@ -53,7 +53,8 @@ function corkendall_fromfile(file1::String, file2::String, outputfile::String,
     return (CSV.write(outputfile, datatowrite, header=writeheaders))
 end
 
-function readfromcsv(filename::String, ignorefirstrow::Bool, ignorefirstcol::Bool; missingstring::String="")
+function readfromcsv(filename::String, ignorefirstrow::Bool, ignorefirstcol::Bool; 
+    missingstring::Union{Nothing,String,Vector{String}}=nothing)
 
     header = ignorefirstrow ? 1 : 0
     drop = ignorefirstcol ? [1] : [0]
