@@ -64,12 +64,16 @@ function corkendall_fromfile(file1::String, file2::String, outputfile::String,
         return filename
     elseif whattoreturn == "median"
         if symmetric
-            return median(offdiag(res))
+            if size(res) == (1,1)
+                return 1.0
+            else
+                return median(offdiag(res))
+            end
         else
             return median(res)
         end
     else
-        throw("whattoreturn value of $whattoreturn was not recognised")
+        throw("whattoreturn value '$whattoreturn' was not recognised")
     end
 
 end
@@ -82,11 +86,7 @@ function readfromcsv(filename::String, ignorefirstrow::Bool, ignorefirstcol::Boo
 
     filedata = CSV.File(filename; header, drop, missingstring)
     data = Tables.matrix(filedata)
-    if ignorefirstrow
-        names = Symbol.("Column" .* string.(collect(axes(data, 2))))
-    else
-        names = CSV.getnames(filedata)
-    end
+    names = CSV.getnames(filedata)
 
     if !(data isa RoMMatrix)
         throw("Data read from file '$filename' is of type $(typeof(data)) so the file seems \

@@ -87,19 +87,19 @@ isapproxequal(a, b, abstol::Float64=0.0) = isequal(a, b)
     expected_withheaders = vcat(hcat(missing, ["x" "y" "z"]),
         hcat(["a", "b", "c", "d"], expected))
 
-    KendallTau.corkendall_fromfile(x_noheaders, y_noheaders, outputfile, false, false, false, false, false)
+    KendallTau.corkendall_fromfile(x_noheaders, y_noheaders, outputfile, false, false, false, false)
     @test Tables.matrix(CSV.File(outputfile; header=0, drop=[0])) ≈ expected
 
-    KendallTau.corkendall_fromfile(x_headerrow, y_headerrow, outputfile, true, false, false, false, false)
+    KendallTau.corkendall_fromfile(x_headerrow, y_headerrow, outputfile, true, false, false, false)
     @test Tables.matrix(CSV.File(outputfile; header=0, drop=[0])) ≈ expected
 
-    KendallTau.corkendall_fromfile(x_headercol, y_headercol, outputfile, false, true, false, false, false)
+    KendallTau.corkendall_fromfile(x_headercol, y_headercol, outputfile, false, true, false, false)
     @test Tables.matrix(CSV.File(outputfile; header=0, drop=[0])) ≈ expected
 
-    KendallTau.corkendall_fromfile(x_withheaders, y_withheaders, outputfile, true, true, false, false, false)
+    KendallTau.corkendall_fromfile(x_withheaders, y_withheaders, outputfile, true, true, false, false)
     @test Tables.matrix(CSV.File(outputfile; header=0, drop=[0])) ≈ expected
 
-    KendallTau.corkendall_fromfile(x_headerrow, y_headerrow, outputfile, true, false, true, true, false)
+    KendallTau.corkendall_fromfile(x_headerrow, y_headerrow, outputfile, true, false, true, false)
     @test isapproxequal(myreadfile(outputfile), expected_withheaders, 1e-14)
 
 end
