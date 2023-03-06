@@ -101,7 +101,7 @@ end
 function testreadfromcsv()
     #readfromcsv(raw"C:\Users\phili\OneDrive\ISDA SIMM\SolumWorking\2023\StressBalance\EQ\correlation\EQ_returns_1.csv",true,true)
 
-    readfromcsv(raw"C:\Users\phili\OneDrive\ISDA SIMM\SolumWorking\2023\StressBalance\CRQ\correlation\CRQ_returns_1.csv", true, true, missingstring="NA")
+    readfromcsv(raw"C:\Users\phili\OneDrive\ISDA SIMM\SolumWorking\2023\StressBalance\CRQ\correlation\CRQ_returns_1.csv", false, false, missingstring="NA")
 end
 
 function offdiag(A::AbstractMatrix)
