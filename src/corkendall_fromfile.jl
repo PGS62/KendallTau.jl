@@ -1,6 +1,7 @@
 using CSV
 using DataFrames
 using Tables
+using Statistics: median
 
 """
     corkendall_fromfile(file1::String, file2::String, outputfile::String,
@@ -13,7 +14,8 @@ files, writing the result to another csv file.
 
 # Arguments
 - `file1::String`: path to a csv file containing the `x` data.
-- `file2::String`: path to a csv file containing the `y` data.
+- `file2::String`: path to a csv file containing the `y` data. May be the zero-length string
+    to calculate the Kendall correlation between the columns of `x`.
 - `outputfile::String`: path to an output csv file.
 - `inputshaveheaderrow::Bool`: pass in `true` if the input files have a header row.
 - `inputshaveheadercol::Bool`: pass in `true` if the input files have a header column. The 
@@ -25,16 +27,22 @@ files, writing the result to another csv file.
      ρ = sin(τ*π/2) are written to the output file.
 - `missingstring::Union{Nothing,String,Vector{String}}=nothing`: Used to indicate how
     missing values are represented in `file1` and `file2` See `CSV.File`.
+- `whattoreturn::String="filename"` controls what the function returns. If "filename" then 
+    the function the name of the outputfile. If "median", the function returns the median of 
+    the elements of the generated output file, or the median of the off-diagonal elements
+    when `file1 == file2` or `file2 == ""`.
 """
 function corkendall_fromfile(file1::String, file2::String, outputfile::String,
     inputshaveheaderrow::Bool=false, inputshaveheadercol::Bool=false,
     writeheaders::Bool=false, converttopearson::Bool=false,
-    missingstring::Union{Nothing,String,Vector{String}}=nothing)
+    missingstring::Union{Nothing,String,Vector{String}}=nothing, whattoreturn::String="filename")
 
     data1, names1 = readfromcsv(file1, inputshaveheaderrow, inputshaveheadercol, missingstring=missingstring)
 
+    symmetric = false
     if file2 == "" || file1 == file2
-        data2, names2 = data1,names1
+        symmetric = true
+        data2, names2 = data1, names1
     else
         data2, names2 = readfromcsv(file2, inputshaveheaderrow, inputshaveheadercol, missingstring=missingstring)
     end
@@ -50,10 +58,23 @@ function corkendall_fromfile(file1::String, file2::String, outputfile::String,
         insertcols!(datatowrite, 1, Symbol("") => String.(names1))
     end
 
-    return (CSV.write(outputfile, datatowrite, header=writeheaders))
+    filename = CSV.write(outputfile, datatowrite, header=writeheaders)
+
+    if whattoreturn == "filename"
+        return filename
+    elseif whattoreturn == "median"
+        if symmetric
+            return median(offdiag(res))
+        else
+            return median(res)
+        end
+    else
+        throw("whattoreturn value of $whattoreturn was not recognised")
+    end
+
 end
 
-function readfromcsv(filename::String, ignorefirstrow::Bool, ignorefirstcol::Bool; 
+function readfromcsv(filename::String, ignorefirstrow::Bool, ignorefirstcol::Bool;
     missingstring::Union{Nothing,String,Vector{String}}=nothing)
 
     header = ignorefirstrow ? 1 : 0
@@ -62,7 +83,7 @@ function readfromcsv(filename::String, ignorefirstrow::Bool, ignorefirstcol::Boo
     filedata = CSV.File(filename; header, drop, missingstring)
     data = Tables.matrix(filedata)
     if ignorefirstrow
-        names = Symbol.("Column" .* string.(collect(axes(data,2))))
+        names = Symbol.("Column" .* string.(collect(axes(data, 2))))
     else
         names = CSV.getnames(filedata)
     end
@@ -81,6 +102,9 @@ function testreadfromcsv()
     #readfromcsv(raw"C:\Users\phili\OneDrive\ISDA SIMM\SolumWorking\2023\StressBalance\EQ\correlation\EQ_returns_1.csv",true,true)
 
     readfromcsv(raw"C:\Users\phili\OneDrive\ISDA SIMM\SolumWorking\2023\StressBalance\CRQ\correlation\CRQ_returns_1.csv", true, true, missingstring="NA")
+end
 
+function offdiag(A::AbstractMatrix)
+    [A[ι] for ι in CartesianIndices(A) if ι[1] ≠ ι[2]]
 end
 
