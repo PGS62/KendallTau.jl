@@ -64,7 +64,7 @@ function corkendall_fromfile(file1::String, file2::String, outputfile::String,
         return filename
     elseif whattoreturn == "median"
         if symmetric
-            if size(res) == (1,1)
+            if size(res) == (1, 1)
                 return 1.0
             else
                 return median(offdiag(res))
@@ -79,7 +79,7 @@ function corkendall_fromfile(file1::String, file2::String, outputfile::String,
 end
 
 function readfromcsv(filename::String, ignorefirstrow::Bool, ignorefirstcol::Bool;
-    missingstring::Union{Nothing,String,Vector{String}}=nothing)
+    missingstring::Union{Nothing,String,Vector{String}}="")
 
     header = ignorefirstrow ? 1 : 0
     drop = ignorefirstcol ? [1] : [0]
@@ -107,4 +107,3 @@ end
 function offdiag(A::AbstractMatrix)
     [A[ι] for ι in CartesianIndices(A) if ι[1] ≠ ι[2]]
 end
-
