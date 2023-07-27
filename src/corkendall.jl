@@ -8,6 +8,11 @@
 const RoMVector{T<:Real} = AbstractVector{<:Union{T,Missing}}
 const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
 
+#= TODO 27 July 2023
+Review use of threads in light of
+https://julialang.org/blog/2023/07/PSA-dont-use-threadid/#another_option_use_a_package_which_handles_this_correctly
+=#
+
 #= TODO 22 Feb 2023
 1) Should the default value of skipmissing be :none or :pairwise? :none forces the user to
    address the question of how missings should be handled, but at least for REPL use, it's 
