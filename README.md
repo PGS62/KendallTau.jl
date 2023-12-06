@@ -65,7 +65,7 @@ julia> Threads.nthreads()#12 cores, 20 logical processors
 <img width="800" alt="image" src="plots/KendallTau vs StatsBase corkendall speed on 12 core 20 thread.svg">
 
 ### Performance for very large `x`
-I wish to compute Kendall Tau for a set of 32,000 time series, each having observations every weekday over a four year period. Such a calculation takes some 42 minutes on my PC (Windows 11, 12th Gen Intel(R) Core(TM) i7-12700, 2100 Mhz, 12 Core(s), 20 Logical Processors).
+I wish to compute Kendall Tau for a set of 32,000 time series, each having observations every weekday over a four year period. Such a calculation takes some 42 minutes on my PC (Windows 11, 12th Gen Intel(R) Core(TM) i7-12700, 2100 Mhz, 12 Core(s), 20 Logical Processors), with Julia 1.8.5.
 
 ```julia
 julia> x = rand(1040,32000);
