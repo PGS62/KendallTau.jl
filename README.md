@@ -74,5 +74,41 @@ julia> @time KendallTau.corkendall(x);
 2524.754279 seconds (64.28 k allocations: 7.633 GiB, 0.00% gc time)
 ```
 
+<!---
+Performance regression on Julia 1.10?
+```julia
+julia> x = rand(1040,100);
+
+julia> @time KendallTau.corkendall(x);
+  1.558091 seconds (1.74 M allocations: 118.908 MiB, 2.43% gc time, 1806.03% compilation time)
+
+julia> @time KendallTau.corkendall(x);
+  0.021051 seconds (357 allocations: 2.074 MiB)
+
+julia> x = rand(1040,32000);
+
+julia> @time KendallTau.corkendall(x);
+2907.826224 seconds (32.26 k allocations: 7.882 GiB, 0.00% gc time)
+
+julia> versioninfo()
+Julia Version 1.10.0-rc2
+Commit dbb9c46795 (2023-12-03 15:25 UTC)
+Build Info:
+  Official https://julialang.org/ release
+Platform Info:
+  OS: Windows (x86_64-w64-mingw32)
+  CPU: 20 × 12th Gen Intel(R) Core(TM) i7-12700
+  WORD_SIZE: 64
+  LIBM: libopenlibm
+  LLVM: libLLVM-15.0.7 (ORCJIT, alderlake)
+  Threads: 29 on 20 virtual cores
+Environment:
+  JULIA_NUM_THREADS = 20
+  JULIA_PKG_DEVDIR = C:\Projects
+```
+--->
+
+
+
 Philip Swannell  
 20 February 2023
