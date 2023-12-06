@@ -106,6 +106,42 @@ Environment:
   JULIA_NUM_THREADS = 20
   JULIA_PKG_DEVDIR = C:\Projects
 ```
+
+Compare with this on Julia 1.9.4
+```julia
+julia> using KendallTau
+
+julia> x = rand(1040,100);
+
+julia> @time KendallTau.corkendall(x);
+  1.192388 seconds (1.85 M allocations: 126.852 MiB, 2.25% gc time, 1809.97% compilation time)
+
+julia> @time KendallTau.corkendall(x);
+  0.020833 seconds (391 allocations: 2.075 MiB)
+
+julia> x = rand(1040,32000);
+
+julia> @time KendallTau.corkendall(x);
+2576.263435 seconds (32.28 k allocations: 7.882 GiB, 0.00% gc time)
+
+julia> versioninfo()
+Julia Version 1.9.4
+Commit 8e5136fa29 (2023-11-14 08:46 UTC)
+Build Info:
+  Official https://julialang.org/ release
+Platform Info:
+  OS: Windows (x86_64-w64-mingw32)
+  CPU: 20 × 12th Gen Intel(R) Core(TM) i7-12700
+  WORD_SIZE: 64
+  LIBM: libopenlibm
+  LLVM: libLLVM-14.0.6 (ORCJIT, alderlake)
+  Threads: 20 on 20 virtual cores
+Environment:
+  JULIA_NUM_THREADS = 20
+  JULIA_PKG_DEVDIR = C:\Projects
+```
+
+
 --->
 
 
