@@ -68,31 +68,28 @@ julia> Threads.nthreads()#12 cores, 20 logical processors
 I wish to compute Kendall Tau for a set of 32,000 time series, each having observations every weekday over a four year period. Such a calculation takes some 42 minutes on my PC (Windows 11, 12th Gen Intel(R) Core(TM) i7-12700, 2100 Mhz, 12 Core(s), 20 Logical Processors), with Julia 1.8.5.
 
 ```julia
+julia> Threads.nthreads()
+20
+
 julia> x = rand(1040,32000);
 
 julia> @time KendallTau.corkendall(x);
 2524.754279 seconds (64.28 k allocations: 7.633 GiB, 0.00% gc time)
 ```
 
-<!---
-Performance regression on Julia 1.10?
+**Update** 23 Jan 2024.
+
+On Julia 1.10, performance seems to have improved by about 10%:
+
 ```julia
-julia> x = rand(1040,100);
-
-julia> @time KendallTau.corkendall(x);
-  1.558091 seconds (1.74 M allocations: 118.908 MiB, 2.43% gc time, 1806.03% compilation time)
-
-julia> @time KendallTau.corkendall(x);
-  0.021051 seconds (357 allocations: 2.074 MiB)
-
 julia> x = rand(1040,32000);
 
 julia> @time KendallTau.corkendall(x);
-2907.826224 seconds (32.26 k allocations: 7.882 GiB, 0.00% gc time)
+2283.363978 seconds (32.26 k allocations: 7.882 GiB, 0.00% gc time)
 
 julia> versioninfo()
-Julia Version 1.10.0-rc2
-Commit dbb9c46795 (2023-12-03 15:25 UTC)
+Julia Version 1.10.0
+Commit 3120989f39 (2023-12-25 18:01 UTC)
 Build Info:
   Official https://julialang.org/ release
 Platform Info:
@@ -104,45 +101,8 @@ Platform Info:
   Threads: 29 on 20 virtual cores
 Environment:
   JULIA_NUM_THREADS = 20
-  JULIA_PKG_DEVDIR = C:\Projects
 ```
 
-Compare with this on Julia 1.9.4
-```julia
-julia> using KendallTau
-
-julia> x = rand(1040,100);
-
-julia> @time KendallTau.corkendall(x);
-  1.192388 seconds (1.85 M allocations: 126.852 MiB, 2.25% gc time, 1809.97% compilation time)
-
-julia> @time KendallTau.corkendall(x);
-  0.020833 seconds (391 allocations: 2.075 MiB)
-
-julia> x = rand(1040,32000);
-
-julia> @time KendallTau.corkendall(x);
-2576.263435 seconds (32.28 k allocations: 7.882 GiB, 0.00% gc time)
-
-julia> versioninfo()
-Julia Version 1.9.4
-Commit 8e5136fa29 (2023-11-14 08:46 UTC)
-Build Info:
-  Official https://julialang.org/ release
-Platform Info:
-  OS: Windows (x86_64-w64-mingw32)
-  CPU: 20 × 12th Gen Intel(R) Core(TM) i7-12700
-  WORD_SIZE: 64
-  LIBM: libopenlibm
-  LLVM: libLLVM-14.0.6 (ORCJIT, alderlake)
-  Threads: 20 on 20 virtual cores
-Environment:
-  JULIA_NUM_THREADS = 20
-  JULIA_PKG_DEVDIR = C:\Projects
-```
-
-
---->
 
 
 

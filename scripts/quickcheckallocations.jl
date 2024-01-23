@@ -15,17 +15,21 @@ xm = ifelse.(x .< 0.05, missing, x);
 println("="^100)
 @show(Dates.now())
 @show ENV["COMPUTERNAME"]
+println("Julia Version $VERSION")
 @show Threads.nthreads()
 @show size(x)
 @show typeof(x)
+@show size(xm)
+@show typeof(xm)
+
 print("KendallTau.corkendall(x)$(" "^26)")
-@time res_kt = KendallTau.corkendall(x)
+@time res_1 = KendallTau.corkendall(x)
 print("KendallTau.corkendall(xm; skipmissing = :pairwise)")
-@time res_kt = KendallTau.corkendall(xm; skipmissing=:pairwise)
+@time res_2 = KendallTau.corkendall(xm; skipmissing=:pairwise)
 print("KendallTau.corkendall(xm; skipmissing = :listwise)")
-@time res_kt = KendallTau.corkendall(xm; skipmissing=:listwise)
+@time res_3 = KendallTau.corkendall(xm; skipmissing=:listwise)
 println("="^100)
-nothing
+
 
 #=
 ====================================================================================================
@@ -38,4 +42,19 @@ KendallTau.corkendall(x)                            1.752958 seconds (2.28 k all
 KendallTau.corkendall(xm; skipmissing = :pairwise)  1.770887 seconds (2.28 k allocations: 8.938 MiB)
 KendallTau.corkendall(xm; skipmissing = :listwise)  0.003478 seconds (2.29 k allocations: 7.747 MiB)
 ====================================================================================================
+
+====================================================================================================
+Dates.now() = DateTime("2024-01-23T16:25:13.336")
+ENV["COMPUTERNAME"] = "DESKTOP-HSGAM5S"
+Julia Version 1.10.0
+Threads.nthreads() = 20
+size(x) = (1000, 1000)
+typeof(x) = Matrix{Float64}
+size(xm) = (1000, 1000)
+typeof(xm) = Matrix{Union{Missing, Float64}}
+KendallTau.corkendall(x)                            1.716595 seconds (1.26 k allocations: 16.528 MiB)
+KendallTau.corkendall(xm; skipmissing = :pairwise)  1.738789 seconds (1.26 k allocations: 16.236 MiB)
+KendallTau.corkendall(xm; skipmissing = :listwise)  0.002477 seconds (268 allocations: 22.915 MiB)
+====================================================================================================
+
 =#

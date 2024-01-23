@@ -160,12 +160,7 @@ function comparecorrelationfiles(file1::String, file2::String)
 
     end
 
-    display(["" reshape(names1[1:10], 1, 10); reshape(names1[1:10], 10, 1) data1[1:10, 1:10]])
-    display(["" reshape(names2[1:10], 1, 10); reshape(names2[1:10], 10, 1) data2[1:10, 1:10]])
-
     absdiffs = abs.(data1 .- data2)
-
-    display(absdiffs[1:10, 1:10])
 
     return (maximum(absdiffs), median(absdiffs))
 

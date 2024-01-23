@@ -1,7 +1,7 @@
 using BenchmarkTools
 using Dates
-using Plotly
-using PlotlyJS
+#using Plotly
+#using PlotlyJS
 using Random
 using NamedArrays
 
