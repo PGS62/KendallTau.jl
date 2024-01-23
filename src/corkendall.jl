@@ -73,8 +73,9 @@ function corkendall(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none)
     length(x) == length(y) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
     (x isa Vector{Missing} || y isa Vector{Missing})  && return NaN
 
+    x = copy(x)
     x, y = handlelistwise(x, y, skipmissing)
-    x, y = handlepairwise(copy(x), copy(y))
+    x, y = handlepairwise(x, y)
     permx = sortperm(x)
     permute!(x, permx)
 
@@ -128,7 +129,11 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
     tys = duplicate(Vector{U}(undef, m), n_duplicates)
     sortyspaces = duplicate(Vector{U}(undef, m), n_duplicates)
 
-    Threads.@threads for j = (symmetric ? 2 : 1):nr
+    #= Use the "static scheduler". This is the "quickfix, but not recommended longterm"
+    way of avoiding concurrency bugs. See https://julialang.org/blog/2023/07/PSA-dont-use-threadid/#fixing_buggy_code_which_uses_this_pattern
+    TODO Adopt a "better fix" as outlined in that blog.
+    =#
+    Threads.@threads :static for j = (symmetric ? 2 : 1):nr
 
         if use_atomic
             id = Threads.atomic_add!(a, 1)[]
@@ -161,8 +166,8 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
     return C
 end
 
-# Function returns a vector in this case, inconsistent with with Statistics.cor and 
-# StatsBase.corspearman. Fixing that is a breaking change.
+# corkendall returns a vector in this case, inconsistent with with Statistics.cor and 
+# StatsBase.corspearman, but consistent with StatsBase.corkendall.
 function corkendall(x::RoMMatrix, y::RoMVector; skipmissing::Symbol=:none)
     return vec(corkendall(x, reshape(y, (length(y), 1)); skipmissing))
 end
@@ -366,7 +371,7 @@ end
     handlepairwise(x::RoMVector{T}, y::RoMVector{U}) where {T,U}
 
 Return a pair `(a,b)`, filtered copies of `x` and `y`, in which elements `x[i]` and `y[i]`
-are filtered out if  `ismissing(x[i])||ismissing(y[i])`.
+are filtered out if `ismissing(x[i])||ismissing(y[i])`.
 """
 handlepairwise(x::AbstractVector{<:Real}, y::AbstractVector{<:Real}) = x, y
 
