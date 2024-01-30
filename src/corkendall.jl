@@ -79,7 +79,7 @@ function corkendall(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none)
     permx = sortperm(x)
     permute!(x, permx)
 
-    return corkendall_sorted!(x, y, permx, similar(y), similar(y), T[], U[])
+    return corkendall_sorted!(x, y, permx, similar(y), T[], U[])
 end
 
 function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:none) where {T,U}
@@ -127,7 +127,6 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
     permxs = duplicate(zeros(Int, m), n_duplicates)
     txs = duplicate(Vector{T}(undef, m), n_duplicates)
     tys = duplicate(Vector{U}(undef, m), n_duplicates)
-    sortyspaces = duplicate(Vector{U}(undef, m), n_duplicates)
 
     #= Use the "static scheduler". This is the "quickfix, but not recommended longterm"
     way of avoiding concurrency bugs. See https://julialang.org/blog/2023/07/PSA-dont-use-threadid/#fixing_buggy_code_which_uses_this_pattern
@@ -144,7 +143,6 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
         end
 
         scratchyvector = scratchyvectors[id]
-        sortyspace = sortyspaces[id]
         ycoli = ycolis[id]
         xcoljsorted = xcoljsorteds[id]
         permx = permxs[id]
@@ -158,8 +156,7 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
 
         for i = 1:(symmetric ? j - 1 : nc)
             ycoli .= view(y, :, i)
-            C[j, i] = corkendall_sorted!(xcoljsorted, ycoli, permx, scratchyvector,
-                sortyspace, tx, ty)
+            C[j, i] = corkendall_sorted!(xcoljsorted, ycoli, permx, scratchyvector, tx, ty)
             symmetric && (C[i, j] = C[j, i])
         end
     end
@@ -183,7 +180,7 @@ end
 # JSTOR, www.jstor.org/stable/2282833.
 """
     corkendall_sorted!(sortedx::RoMVector{T}, y::RoMVector{U},
-    permx::AbstractVector{<:Integer}, scratchyvector::RoMVector, sortyspace::RoMVector,
+    permx::AbstractVector{<:Integer}, scratchyvector::RoMVector, 
     tx::AbstractVector{T}, ty::AbstractVector{U}) where {T,U}
 
 Kendall correlation between two vectors but this function omits the initial sorting of
@@ -194,14 +191,12 @@ subsequent arguments being:
     yield `sortedx`.
 - `scratchyvector::RoMVector`: a vector of the same element type and length as `y`; used
     to permute `y` without allocation.
-- `sortyspace::RoMVector`: a vector of the same element type and length as `y`; used
-    (in the call to `merge_sort!`) to avoid allocations.
 - `tx, ty`: vectors of the same length as `x` and `y` whose element types match the types
     of the non-missing elements of `x` and `y` respectively; used (in the call to 
     `handlepairwise!`) to avoid allocations.
 """
 function corkendall_sorted!(sortedx::RoMVector{T}, y::RoMVector{U},
-    permx::AbstractVector{<:Integer}, scratchyvector::RoMVector, sortyspace::RoMVector,
+    permx::AbstractVector{<:Integer}, scratchyvector::RoMVector{U},
     tx::AbstractVector{T}, ty::AbstractVector{U}) where {T,U}
 
     @inbounds for i in eachindex(y)
@@ -243,7 +238,7 @@ function corkendall_sorted!(sortedx::RoMVector{T}, y::RoMVector{U},
         ndoubleties += countties(shuffledy, n - k, n)
     end
 
-    nswaps = merge_sort!(shuffledy, 1, n, sortyspace)
+    nswaps = merge_sort!(shuffledy, 1, n, ty)
     ntiesy = countties(shuffledy, 1, n)
 
     # Calls to float below prevent possible overflow errors when
