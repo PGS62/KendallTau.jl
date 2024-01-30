@@ -65,7 +65,7 @@ function speedtest(functions, nr::Int, nc::Int, fns_handle_missings::Bool)
         end
     end
 
-    #= Make the contents of matrix1 etc. deterministic so successive calls with fixed 
+    #= Make the contents of matrix1 etc. deterministic so successive calls with fixed
     nc & nr are fully comparable=#
     rng = MersenneTwister(1)
     results = Array{Any}(undef, length(functions))
@@ -221,7 +221,7 @@ function impactofmissings(nr::Int, nc::Int, proportionmissing::Float64=0.1)
     fn1 = KendallTau.corkendall #fn1 executes with no missing elements in its args
     fn2 = KendallTau.corkendall #fn2 executes with missing elements in its args
 
-    #= Make the contents of matrix1 etc. deterministic so successive calls with fixed 
+    #= Make the contents of matrix1 etc. deterministic so successive calls with fixed
     nc & nr are fully comparable=#
     rng = MersenneTwister(1)
     results = Array{Any}(undef, 2)
@@ -313,7 +313,7 @@ function how_scaleable(fns, nr::Integer, ncs::Vector{<:Integer},
     just_tweaking_plot = false
     num_threads_in_title = false
 
-    if any(contains.(string.(Base.nameof.(fns)),"kendall"))
+    if any(contains.(string.(Base.nameof.(fns)), "kendall"))
         num_threads_in_title = true
     end
 
@@ -380,10 +380,10 @@ function how_scaleable(fns, nr::Integer, ncs::Vector{<:Integer},
         println("#"^67)
     end
 
-    title="Time to evaluate fn(x) vs num cols in x"
+    title = "Time to evaluate fn(x) vs num cols in x"
     if num_threads_in_title
-        title="$title ($(Threads.nthreads()) threads)"
-    end    
+        title = "$title ($(Threads.nthreads()) threads)"
+    end
 
     plot([
             scatter(x=ncs, y=datatoplot[:, i], mode="line", name=fullnameof(fns[i])) for i in 1:length(fns)], Layout(; title=title,

@@ -9,7 +9,7 @@ using Statistics: median
     writeheaders::Bool=false, converttopearson::Bool=false,
     missingstring::Union{Nothing,String,Vector{String}}=nothing)
 
-Compute Kendall's rank correlation coefficient, `τ(x,y)` where `x` and `y` are read from csv 
+Compute Kendall's rank correlation coefficient, `τ(x,y)` where `x` and `y` are read from csv
 files, writing the result to another csv file.
 
 # Arguments
@@ -18,17 +18,17 @@ files, writing the result to another csv file.
     to calculate the Kendall correlation between the columns of `x`.
 - `outputfile::String`: path to an output csv file.
 - `inputshaveheaderrow::Bool`: pass in `true` if the input files have a header row.
-- `inputshaveheadercol::Bool`: pass in `true` if the input files have a header column. The 
+- `inputshaveheadercol::Bool`: pass in `true` if the input files have a header column. The
     contents of the header column have no effect on the output correlations.
-- `writeheaders::Bool`: pass in `true` if `outputfile` is to be written with header 
+- `writeheaders::Bool`: pass in `true` if `outputfile` is to be written with header
     row and column. If `true` the output headers will match the header rows of `file1` and
     `file2` if they exist or be `Column1,Column2,...` otherwise.
 - `converttopearson::Bool`: if `true` then the equivalent Pearson correlations
      ρ = sin(τ*π/2) are written to the output file.
 - `missingstring::Union{Nothing,String,Vector{String}}=""`: Used to indicate how
     missing values are represented in `file1` and `file2` See `CSV.File`.
-- `whattoreturn::String="filename"` controls what the function returns. If "filename" then 
-    the function the name of the outputfile. If "median", the function returns the median of 
+- `whattoreturn::String="filename"` controls what the function returns. If "filename" then
+    the function the name of the outputfile. If "median", the function returns the median of
     the elements of the generated output file, or the median of the off-diagonal elements
     when `file1 == file2` or `file2 == ""`.
 """
@@ -82,7 +82,7 @@ end
     csvread(filename::String, ignorefirstrow::Bool, ignorefirstcol::Bool;
     missingstring::Union{Nothing,String,Vector{String}}="")
 
-Returns a pair `(data,names)` where 
+Returns a pair `(data,names)` where
 """
 function csvread(filename::String, ignorefirstrow::Bool, ignorefirstcol::Bool;
     missingstring::Union{Nothing,String,Vector{String}}="")
@@ -122,7 +122,7 @@ end
 Compares two csv files, each representing a correlation matrix. Both files assumed to have
 header top row and header left column. The function does not examine the left headers but assumes
 they are the transpose of the top headers. The set of headers in file1 and file2 must be the
-same but they needn't be arranged in the same order. The function returns a tuple, the 
+same but they needn't be arranged in the same order. The function returns a tuple, the
 first element is the maximum absolute difference of the correlations, the second element is
 the median absolute difference.
 """
@@ -143,7 +143,7 @@ function comparecorrelationfiles(file1::String, file2::String)
         end
     end
 
-    names1 == unique(names1)||throw("Headers in file '$file1' are not unique")
+    names1 == unique(names1) || throw("Headers in file '$file1' are not unique")
 
     if names1 != names2
         if sort(names1) != sort(names2)

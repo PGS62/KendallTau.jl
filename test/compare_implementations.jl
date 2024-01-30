@@ -3,8 +3,8 @@
     maxcols::Integer, maxrows::Integer, numtests::Integer,
     fns_handle_missings::Bool)
 
-Tests two different implementations of Kendall Tau against one another. The two functions 
-are called multiple times with random input data and the returns are tested for equality 
+Tests two different implementations of Kendall Tau against one another. The two functions
+are called multiple times with random input data and the returns are tested for equality
 subject to an absolute tolerance of `abstol`.
 
 Return is `true` if no differences are detected. If differences are detected, the return is
@@ -16,11 +16,11 @@ The function also checks that `fn1` and `fn2` never mutate their arguments.
 - `fn2::Function`: second implementation of Kendall Tau.
 - `abstol::Float64`: the absolute tolerance for difference in returns from the two functions.
 - `maxcols::Integer`: the maximum number of columns in the randomly-generated input matrices.
-- `maxrows::Integer`: the maximum number of rows in the randomly-generated input matrices, 
+- `maxrows::Integer`: the maximum number of rows in the randomly-generated input matrices,
     or elements in the input vectors.
 - `numtests::Integer`: the functions are tested `numtests` times - for various combinations
     of matrix and vector input.
-- `fns_handle_missings::Bool` pass `true` if both `fn1` and `fn2` handle input arrays 
+- `fns_handle_missings::Bool` pass `true` if both `fn1` and `fn2` handle input arrays
     containing missing values and have `skipmissing` keyword argument.
 """
 function compare_implementations(fn1::Function=corkendall, fn2::Function=corkendall_naive;

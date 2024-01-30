@@ -86,7 +86,7 @@ end
 
 """
     handlemissings_naive(x::RoMVector,y::RoMVector)
-    
+
 Simpler but slower version of handlemissings.
 """
 function handlemissings_naive(x::RoMVector, y::RoMVector)
