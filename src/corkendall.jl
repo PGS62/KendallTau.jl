@@ -91,7 +91,7 @@ function corkendall(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none)
     permx = sortperm(x)
     permute!(x, permx)
 
-    return corkendall_sorted!(x, y, permx, similar(y), similar(x, T), similar(y, U))
+    return corkendall_sorted!(x, y, permx, similar(y), similar(y), similar(x, T), similar(y, U))
 end
 
 function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:none) where {T,U}
@@ -147,6 +147,7 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
     permxs = duplicate(zeros(Int, m), n_duplicates)
     scratchxs = duplicate(Vector{T}(undef, m), n_duplicates)
     scratchys = duplicate(Vector{U}(undef, m), n_duplicates)
+    sortyspaces = duplicate(Vector{U}(undef, m), n_duplicates)
 
     #= Use the "static scheduler". This is the "quickfix, but not recommended longterm" way
     of avoiding concurrency bugs when using threadid.
@@ -164,6 +165,7 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
         end
 
         scratchpermutedy = scratchpermutedys[id]
+        sortyspace = sortyspaces[id]
         ycoli = ycolis[id]
         xcoljsorted = xcoljsorteds[id]
         permx = permxs[id]
@@ -177,7 +179,7 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
 
         for i = 1:(symmetric ? j - 1 : nc)
             ycoli .= view(y, :, i)
-            C[j, i] = corkendall_sorted!(xcoljsorted, ycoli, permx, scratchpermutedy, scratchx, scratchy)
+            C[j, i] = corkendall_sorted!(xcoljsorted, ycoli, permx, scratchpermutedy, sortyspace, scratchx, scratchy)
             symmetric && (C[i, j] = C[j, i])
         end
     end
@@ -218,7 +220,7 @@ subsequent arguments being:
     `handle_pairwise!` and `merge_sort!`) to avoid allocations.
 """
 function corkendall_sorted!(sortedx::RoMVector{T}, y::RoMVector{U},
-    permx::AbstractVector{<:Integer}, scratchpermutedy::RoMVector{U},
+    permx::AbstractVector{<:Integer}, scratchpermutedy::RoMVector{U}, sortyspace::RoMVector{U},
     scratchx::AbstractVector{T}, scratchy::AbstractVector{U}) where {T,U}
 
     length(sortedx) >= 2 || return NaN
@@ -262,7 +264,7 @@ function corkendall_sorted!(sortedx::RoMVector{T}, y::RoMVector{U},
         ndoubleties += countties(permutedy, n - k, n)
     end
 
-    nswaps = merge_sort!(permutedy, 1, n, scratchy)
+    nswaps = merge_sort!(permutedy, 1, n, sortyspace)
     ntiesy = countties(permutedy, 1, n)
 
     # Calls to float below prevent possible overflow errors when
