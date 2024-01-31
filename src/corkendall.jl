@@ -57,7 +57,7 @@ https://julialang.org/blog/2023/07/PSA-dont-use-threadid/#another_option_use_a_p
     corkendall(x, y=x; skipmissing::Symbol=:none)
 
 Compute Kendall's rank correlation coefficient, τ. `x` and `y` must be either vectors or
-matrices, with elements that are either real numbers or `missing`.
+matrices, with elements that are either real numbers or `missing`. 
 
 # Keyword argument
 
