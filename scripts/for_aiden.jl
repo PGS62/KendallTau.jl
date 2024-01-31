@@ -25,12 +25,12 @@ function test_corkendall_fromfile(year)
     if year == 2023
         #ISDA's file for 2023 is kendall tau, not converted to Pearson
         converttopearson = false
-        base_folder = "C:/Users/phili/OneDrive/ISDA SIMM/Solum Validation C-VIII 2023/EQ_delta"
+        base_folder = raw"C:\Users\phili\OneDrive\ISDA SIMM\Solum Validation C-VIII 2023\EQ_delta"
         #ISDA's calculation of KendallTau
-        isda_results_file = joinpath(base_folder, "9_correlations/eq_delta-kendall_recent_1-10d.csv")
+        isda_results_file = joinpath(base_folder, raw"9_correlations\eq_delta-kendall_recent_1-10d.csv")
         #ISDA's returns data
-        file1 = joinpath(base_folder, "7_returns_relevant_period/returns-10d_recent_1.csv")
-        julia_results_file = "c:/temp/correlations_2023.csv"
+        file1 = joinpath(base_folder, raw"7_returns_relevant_period\returns-10d_recent_1.csv")
+        julia_results_file = raw"c:\temp\correlations_2023.csv"
     elseif year == 2024
         #ISDA's file for 2024 is kendall tau, converted to Pearson ρ = sin(τπ/2)
         converttopearson = true
@@ -39,7 +39,7 @@ function test_corkendall_fromfile(year)
         isda_results_file = joinpath(base_folder, raw"9_correlations\eq_delta-individual_recent_0-10d.csv")
         #ISDA's returns data
         file1 = joinpath(base_folder, raw"7_returns_relevant_period\returns-10d_recent_0.csv")
-        julia_results_file = "c:/temp/correlations_2024.csv"
+        julia_results_file = raw"c:\temp\correlations_2024.csv"
     else
         throw("year must be 2023 or 2024 but got $year")
     end

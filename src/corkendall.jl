@@ -56,16 +56,17 @@ https://julialang.org/blog/2023/07/PSA-dont-use-threadid/#another_option_use_a_p
 """
     corkendall(x, y=x; skipmissing::Symbol=:none)
 
-Compute Kendall's rank correlation coefficient, τ. `x` and `y` must both be either
-vectors or matrices, with elements that are either real numbers or missing values.
+Compute Kendall's rank correlation coefficient, τ. `x` and `y` must be either vectors or
+matrices, with elements that are either real numbers or `missing`.
 
 # Keyword argument
 
-- `skipmissing::Symbol=:none`: if `:none`, missing values in either `x` or `y`
-    cause the function to raise an error. Use `:pairwise` to skip entries with a missing
-    value in either of the two vectors used to calculate (an element of) the return. Use
-    `:listwise` to skip entries where a missing value appears anywhere in a given row of `x`
-    or `y`; note that this might drop a high proportion of entries.
+- `skipmissing::Symbol=:none`: If `:none` (the default), when `missing` is an element type
+    of either `x` or `y` the function raises an error. If `:pairwise`, both `i`th elements
+    of the pair of vectors used to calculate an element of the return are skipped if either
+    is `missing`. If `:listwise`, all entries in the `i`th row of `x` and in the `i`th row
+    of `y` are skipped if any of them are missing; note that this might drop a high
+    proportion of entries. Only allowed when `x` or `y` is a matrix.
 """
 function corkendall(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none) where {T,U}
 
@@ -74,7 +75,7 @@ function corkendall(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none)
     length(x) == length(y) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
 
     missing_allowed = missing isa eltype(x) || missing isa eltype(y)
-    validate_skipmissing(skipmissing, missing_allowed)
+    validate_skipmissing(skipmissing, missing_allowed, false)
 
     # Degenerate case - U and/or T not defined.
     if x isa Vector{Missing} || y isa Vector{Missing}
@@ -83,7 +84,7 @@ function corkendall(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none)
 
     x = copy(x)
 
-    if missing_allowed && skipmissing != :none #pairwise and listwise the same for vector-vector case
+    if missing_allowed && skipmissing == :pairwise
         x, y = handle_pairwise!(x, y, similar(x, T), similar(y, U))
     end
 
@@ -102,7 +103,7 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
     symmetric = x === y
 
     missing_allowed = missing isa eltype(x) || missing isa eltype(y)
-    validate_skipmissing(skipmissing, missing_allowed)
+    validate_skipmissing(skipmissing, missing_allowed, true)
 
     # Degenerate case - U and/or T not defined.
     if x isa Matrix{Missing} || y isa Matrix{Missing}
@@ -453,24 +454,27 @@ function handle_listwise!(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T,U}
     return view(a, 1:k, :), view(b, 1:k, :)
 end
 
-function validate_skipmissing(skipmissing::Symbol, missing_allowed::Bool)
-    if skipmissing == :listwise
+function validate_skipmissing(skipmissing::Symbol, missing_allowed::Bool, listwise_allowed::Bool)
+    if skipmissing == :listwise && listwise_allowed
     elseif skipmissing == :pairwise
-    elseif skipmissing == :none
-        if missing_allowed
+    elseif missing_allowed
+        if listwise_allowed
             throw(ArgumentError("When missing is an allowed element type \
-                                then keyword argument skipmissing must be either\
-                                `:pairwise` or `:listwise`, but got `:$skipmissing`"))
-        end
-    else
-        if missing_allowed
-            throw(ArgumentError("keyword argument skipmissing must be either \
-                                `:pairwise` or `:listwise`, but got `:$skipmissing`"))
+                                skipmissing must be either :pairwise or :listwise, \
+                                but got :$skipmissing"))
         else
-            throw(ArgumentError("keyword argument skipmissing must be either \
-                                `:pairwise`, `:listwise` or `:none` but got \
-                                `:$skipmissing`"))
+            throw(ArgumentError("When missing is an allowed element type \
+            skipmissing must be :pairwise, but got :$skipmissing"))
+        end
+
+    elseif skipmissing == :none
+    else
+        if listwise_allowed
+            throw(ArgumentError("skipmissing must be one of :none, :pairwise or :listwise, \
+                                but got :$skipmissing"))
+        else
+            throw(ArgumentError("skipmissing must be either :none or :pairwise, \
+            but got :$skipmissing"))
         end
     end
 end
-
