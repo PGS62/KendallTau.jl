@@ -14,50 +14,45 @@ https://julialang.org/blog/2023/07/PSA-dont-use-threadid/#another_option_use_a_p
 =#
 
 #= TODO 22 Feb 2023
-1) Should the default value of skipmissing be :none or :pairwise? :none forces the user to
-   address the question of how missings should be handled, but at least for REPL use, it's
-   rather inconvenient.
 
-2) Should the docstring mention that the function is multi-threaded? Currently no function
-   in StatsBase is multi-threaded... By default, Julia starts up single-threaded...
+How to get compatibility of corkendall with StatsBase.pairwise? The problem is that
+pairwise passes vectors to f that don't contain missing but for which missing isa eltype
+and corkendall then wants a skipmissing argument.
 
-3) How to get compatibility of corkendall with StatsBase.pairwise? The problem is that
-   pairwise passes vectors to f that don't contain missing but for which missing isa eltype
-   and corkendall then wants a skipmissing argument.
+Option a)
+Amend StatsBase._pairwise! to replace line:
+dest[i, j] = f(ynm, ynm)
+with:
+dest[i, j] = f(disallowmissing(ynm), disallowmissing(ynm))
 
-   Option a)
-   Amend StatsBase._pairwise! to replace line:
-   dest[i, j] = f(ynm, ynm)
-   with:
-   dest[i, j] = f(disallowmissing(ynm), disallowmissing(ynm))
+Option b)
+Some other way to arrange that arguments passed to f from within StatsBase._pairwise!
+do not have Missing as an allowed element type. Using function handle_pairwise! would do
+that efficiently.
 
-   Option b)
-   Some other way to arrange that arguments passed to f from within StatsBase._pairwise!
-   do not have Missing as an allowed element type. Using function handle_pairwise! would do
-   that efficiently.
+Option c)
+In corkendall vector-vector method, if missing is an element type of both x and of y, but
+missing does not appear in either x or y, then call disallowmissing twice, like this:
 
-   Option c)
-   In corkendall vector-vector method, if missing is an element type of both x and of y, but
-   missing does not appear in either x or y, then call disallowmissing twice, like this:
-
-    if missing isa eltype(x) && missing isa eltype(y)
-        if !any(ismissing,x) && !any(ismissing,y)
-            x = disallowmissing(x)
-            y = disallowmissing(y)
-        end
+if missing isa eltype(x) && missing isa eltype(y)
+    if !any(ismissing,x) && !any(ismissing,y)
+        x = disallowmissing(x)
+        y = disallowmissing(y)
     end
+end
 
-   Option d)
-   Have a dedicated method of _pairwise! to handle f === corkendall. This has a big
-   performance advantage, and is maybe along the lines suggested by nalimilan here:
-   https://github.com/JuliaStats/StatsBase.jl/pull/647#issuecomment-775264454
+Option d)
+Have a dedicated method of _pairwise! to handle f === corkendall. This has a big
+performance advantage, and is maybe along the lines suggested by nalimilan here:
+https://github.com/JuliaStats/StatsBase.jl/pull/647#issuecomment-775264454
 =#
 
 """
     corkendall(x, y=x; skipmissing::Symbol=:none)
 
 Compute Kendall's rank correlation coefficient, τ. `x` and `y` must be either vectors or
-matrices, with elements that are either real numbers or `missing`. 
+matrices, with elements that are either real numbers or `missing`. The function uses
+multiple threads if they are available.
 
 # Keyword argument
 
@@ -143,7 +138,7 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
     duplicate(x, n) = [copy(x) for _ in 1:n]
     scratchpermuteys = duplicate(similar(y, m), n_duplicates)
     ycolis = duplicate(similar(y, m), n_duplicates)
-    xcoljsorteds = duplicate(similar(x, m), n_duplicates)
+    sortedxcoljs = duplicate(similar(x, m), n_duplicates)
     permxs = duplicate(zeros(Int, m), n_duplicates)
     scratchfilterxs = duplicate(Vector{T}(undef, m), n_duplicates)
     scratchfilterys = duplicate(Vector{U}(undef, m), n_duplicates)
@@ -167,19 +162,19 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
         scratchpermutey = scratchpermuteys[id]
         scratchsorty = scratchsortys[id]
         ycoli = ycolis[id]
-        xcoljsorted = xcoljsorteds[id]
+        sortedxcolj = sortedxcoljs[id]
         permx = permxs[id]
         scratchfilterx = scratchfilterxs[id]
         scratchfiltery = scratchfilterys[id]
 
         sortperm!(permx, view(x, :, j))
-        @inbounds for k in eachindex(xcoljsorted)
-            xcoljsorted[k] = x[permx[k], j]
+        @inbounds for k in eachindex(sortedxcolj)
+            sortedxcolj[k] = x[permx[k], j]
         end
 
         for i = 1:(symmetric ? j - 1 : nc)
             ycoli .= view(y, :, i)
-            C[j, i] = corkendall_sorted!(xcoljsorted, ycoli, permx, scratchpermutey, scratchsorty, scratchfilterx, scratchfiltery)
+            C[j, i] = corkendall_sorted!(sortedxcolj, ycoli, permx, scratchpermutey, scratchsorty, scratchfilterx, scratchfiltery)
             symmetric && (C[i, j] = C[j, i])
         end
     end
