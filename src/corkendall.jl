@@ -136,13 +136,13 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
     threads.
     =#
     duplicate(x, n) = [copy(x) for _ in 1:n]
-    scratchpermuteys = duplicate(similar(y, m), n_duplicates)
+    scratch_pys = duplicate(similar(y, m), n_duplicates)
     ycolis = duplicate(similar(y, m), n_duplicates)
     sortedxcoljs = duplicate(similar(x, m), n_duplicates)
     permxs = duplicate(zeros(Int, m), n_duplicates)
-    scratchfilterxs = duplicate(Vector{T}(undef, m), n_duplicates)
-    scratchfilterys = duplicate(Vector{U}(undef, m), n_duplicates)
-    scratchsortys = duplicate(Vector{U}(undef, m), n_duplicates)
+    scratch_fxs = duplicate(Vector{T}(undef, m), n_duplicates)
+    scratch_fys = duplicate(Vector{U}(undef, m), n_duplicates)
+    scratch_sys = duplicate(Vector{U}(undef, m), n_duplicates)
 
     #= Use the "static scheduler". This is the "quickfix, but not recommended longterm" way
     of avoiding concurrency bugs when using threadid.
@@ -159,13 +159,14 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
             id = Threads.threadid()
         end
 
-        scratchpermutey = scratchpermuteys[id]
-        scratchsorty = scratchsortys[id]
+        
+        scratch_py = scratch_pys[id]
+        scratch_sy = scratch_sys[id]
         ycoli = ycolis[id]
         sortedxcolj = sortedxcoljs[id]
         permx = permxs[id]
-        scratchfilterx = scratchfilterxs[id]
-        scratchfiltery = scratchfilterys[id]
+        scratch_fx = scratch_fxs[id]
+        scratch_fy = scratch_fys[id]
 
         sortperm!(permx, view(x, :, j))
         @inbounds for k in eachindex(sortedxcolj)
@@ -174,7 +175,7 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
 
         for i = 1:(symmetric ? j - 1 : nc)
             ycoli .= view(y, :, i)
-            C[j, i] = corkendall_sorted!(sortedxcolj, ycoli, permx, scratchpermutey, scratchsorty, scratchfilterx, scratchfiltery)
+            C[j, i] = corkendall_sorted!(sortedxcolj, ycoli, permx, scratch_py, scratch_sy, scratch_fx, scratch_fy)
             symmetric && (C[i, j] = C[j, i])
         end
     end
@@ -199,36 +200,36 @@ end
 # JSTOR, www.jstor.org/stable/2282833.
 """
     corkendall_sorted!(sortedx::RoMVector{T}, y::RoMVector{U},
-    permx::AbstractVector{<:Integer}, scratchpermutey::RoMVector{U}, 
-    scratchsorty::RoMVector{U}, scratchfilterx::AbstractVector{T}, 
-    scratchfiltery::AbstractVector{U}) where {T,U}
+    permx::AbstractVector{<:Integer}, scratch_py::RoMVector{U}, 
+    scratch_sy::RoMVector{U}, scratch_fx::AbstractVector{T}, 
+    scratch_fy::AbstractVector{U}) where {T,U}
 
 Kendall correlation between two vectors but omitting the initial sorting of the first 
 argument. Calculating Kendall correlation between `x` and `y` is thus a two stage process:
 a) sort `x` to get `sortedx`; b) call this function on `sortedx` and `y`, with
 subsequent arguments being:
 - `permx`: The permutation that achieved the sorting of `x` to yield `sortedx`.
-- `scratchpermutey`: A vector used to permute `y` without allocation.
-- `scratchsorty`: A vector used to sort `y` without allocation.
-- `scratchfilterx, scratchfiltery`: Two further vectors used to avoid allocations when filtering out \
-missing values.
+- `scratch_py`: A vector used to permute `y` without allocation.
+- `scratch_sy`: A vector used to sort `y` without allocation.
+- `scratch_fx, scratch_fy`: Two further vectors used to avoid allocations when filtering \
+out missing values from `x` and `y`.
 
 """
 function corkendall_sorted!(sortedx::RoMVector{T}, y::RoMVector{U},
-    permx::AbstractVector{<:Integer}, scratchpermutey::RoMVector{U}, 
-    scratchsorty::RoMVector{U}, scratchfilterx::AbstractVector{T}, 
-    scratchfiltery::AbstractVector{U}) where {T,U}
+    permx::AbstractVector{<:Integer}, scratch_py::RoMVector{U}, 
+    scratch_sy::RoMVector{U}, scratch_fx::AbstractVector{T}, 
+    scratch_fy::AbstractVector{U}) where {T,U}
 
     length(sortedx) >= 2 || return NaN
 
     @inbounds for i in eachindex(y)
-        scratchpermutey[i] = y[permx[i]]
+        scratch_py[i] = y[permx[i]]
     end
 
-    if missing isa eltype(sortedx) || missing isa eltype(scratchpermutey)
-        sortedx, permutedy = handle_pairwise!(sortedx, scratchpermutey, scratchfilterx, scratchfiltery)
+    if missing isa eltype(sortedx) || missing isa eltype(scratch_py)
+        sortedx, permutedy = handle_pairwise!(sortedx, scratch_py, scratch_fx, scratch_fy)
     else
-        permutedy = scratchpermutey
+        permutedy = scratch_py
     end
 
     if any(isnan, sortedx) || any(isnan, permutedy)
@@ -260,7 +261,7 @@ function corkendall_sorted!(sortedx::RoMVector{T}, y::RoMVector{U},
         ndoubleties += countties(permutedy, n - k, n)
     end
 
-    nswaps = merge_sort!(permutedy, 1, n, scratchsorty)
+    nswaps = merge_sort!(permutedy, 1, n, scratch_sy)
     ntiesy = countties(permutedy, 1, n)
 
     # Calls to float below prevent possible overflow errors when
@@ -386,25 +387,25 @@ end
 
 """
     handle_pairwise!(x::RoMVector{T}, y::RoMVector{U},
-    scratchfilterx::AbstractVector{T}, scratchfiltery::AbstractVector{U}) where {T,U}
+    scratch_fx::AbstractVector{T}, scratch_fy::AbstractVector{U}) where {T,U}
 
 Return a pair `(a,b)`, filtered copies of `(x,y)`, in which elements `x[i]` and
 `y[i]` are filtered out if  `ismissing(x[i])||ismissing(y[i])`.
 """
 function handle_pairwise!(x::RoMVector{T}, y::RoMVector{U},
-    scratchfilterx::AbstractVector{T}, scratchfiltery::AbstractVector{U}) where {T,U}
+    scratch_fx::AbstractVector{T}, scratch_fy::AbstractVector{U}) where {T,U}
 
     j = 0
 
     @inbounds for i in eachindex(x)
         if !(ismissing(x[i]) || ismissing(y[i]))
             j += 1
-            scratchfilterx[j] = x[i]
-            scratchfiltery[j] = y[i]
+            scratch_fx[j] = x[i]
+            scratch_fy[j] = y[i]
         end
     end
 
-    return view(scratchfilterx, 1:j), view(scratchfiltery, 1:j)
+    return view(scratch_fx, 1:j), view(scratch_fy, 1:j)
 end
 
 """
