@@ -1,7 +1,8 @@
 using BenchmarkTools
 using Dates
-#using Plotly
+#using Plotly # As of 1 Feb 2024 Plotly won't precompile on Julia 1.10
 #using PlotlyJS
+using Plots
 using Random
 using NamedArrays
 
@@ -302,7 +303,7 @@ end
     with_missings::Bool, use_benchmark_tools::Bool, test_returns_equal::Bool=true)
 
 Investigate the performance of corkendall(x) as a function of the number of columns in `x``.
-The function prints output to the REPL and generates a plot using Plotly.
+The function prints output to the REPL and generates a plot using Plots.jl.
 
 See file performancetestresults.txt for example output.
 
@@ -385,8 +386,25 @@ function how_scaleable(fns, nr::Integer, ncs::Vector{<:Integer},
         title = "$title ($(Threads.nthreads()) threads)"
     end
 
+    #=
+    #Syntax for Plotly
     plot([
             scatter(x=ncs, y=datatoplot[:, i], mode="line", name=fullnameof(fns[i])) for i in 1:length(fns)], Layout(; title=title,
             xaxis=attr(title="Num cols (num rows = $nr)", type="log"),
             yaxis=attr(title="Seconds", type="log")))
+            =#
+
+    #Syntax for Plots.jl
+    #cheatsheet: https://www.matecdev.com/posts/julia-plotting-linestyle-markers.html        
+    plot(ncs, datatoplot,
+        title=title,
+        xlabel="Num cols (num rows = $nr)",
+        ylabel="Seconds",
+        label=hcat([fullnameof(fn) for fn in fns]...),
+        marker = :circle,
+        xaxis=:log,
+        yaxis=:log,
+        size = (1500,1000),
+        grid = true)
+
 end

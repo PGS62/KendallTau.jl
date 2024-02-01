@@ -430,3 +430,59 @@ A ╲ B │             numcols(x)   StatsBase.corspearman  KendallTau.corspearm
 9     │                  512.0                 4.58601               0.0207313
 10    │                 1024.0                 18.5209               0.0466779
 ###################################################################
+
+
+
+###################################################################
+Executing how_scaleable 2024-02-01T15:23:21.164
+ComputerName = DESKTOP-HSGAM5S
+fns[1] = StatsBase.corkendall
+fns[2] = KendallTau.corkendall
+ncs = [2, 4, 8, 16, 32, 64, 128, 256]
+with_missings = false
+use_benchmark_tools = true
+Threads.nthreads() = 20
+  36.900 μs (10 allocations: 59.72 KiB)
+nc = 2, nr = 1000, f = StatsBase.corkendall,  time = 3.69e-5
+  139.300 μs (2149 allocations: 166.58 KiB)
+nc = 2, nr = 1000, f = KendallTau.corkendall,  time = 0.0001393, ratio = 0.26489590811198854
+  235.400 μs (46 allocations: 286.50 KiB)
+nc = 4, nr = 1000, f = StatsBase.corkendall,  time = 0.0002354
+  184.000 μs (6165 allocations: 357.17 KiB)
+nc = 4, nr = 1000, f = KendallTau.corkendall,  time = 0.000184, ratio = 1.2793478260869566
+  1.014 ms (190 allocations: 1.14 MiB)
+nc = 8, nr = 1000, f = StatsBase.corkendall,  time = 0.0010139
+  342.300 μs (14269 allocations: 740.98 KiB)
+nc = 8, nr = 1000, f = KendallTau.corkendall,  time = 0.0003423, ratio = 2.962021618463336
+  4.115 ms (766 allocations: 4.55 MiB)
+nc = 16, nr = 1000, f = StatsBase.corkendall,  time = 0.0041146
+  682.200 μs (30766 allocations: 1.48 MiB)
+nc = 16, nr = 1000, f = KendallTau.corkendall,  time = 0.0006822, ratio = 6.031369099970684
+  16.788 ms (3070 allocations: 18.08 MiB)
+nc = 32, nr = 1000, f = StatsBase.corkendall,  time = 0.0167883
+  1.981 ms (64833 allocations: 2.45 MiB)
+nc = 32, nr = 1000, f = KendallTau.corkendall,  time = 0.0019812, ratio = 8.47380375529982
+  69.224 ms (12287 allocations: 72.00 MiB)
+nc = 64, nr = 1000, f = StatsBase.corkendall,  time = 0.069224
+  7.064 ms (137513 allocations: 3.99 MiB)
+nc = 64, nr = 1000, f = KendallTau.corkendall,  time = 0.0070644, ratio = 9.798992129550987
+  285.385 ms (49151 allocations: 287.34 MiB)
+nc = 128, nr = 1000, f = StatsBase.corkendall,  time = 0.285385
+  28.056 ms (301290 allocations: 7.75 MiB)
+nc = 128, nr = 1000, f = KendallTau.corkendall,  time = 0.0280557, ratio = 10.172086242724296
+  1.155 s (196607 allocations: 1.12 GiB)
+nc = 256, nr = 1000, f = StatsBase.corkendall,  time = 1.1547012
+  110.696 ms (702571 allocations: 17.87 MiB)
+nc = 256, nr = 1000, f = KendallTau.corkendall,  time = 0.1106956, ratio = 10.431319763387163
+8×3 Named Matrix{Float64}
+A ╲ B │            numcols(x)   StatsBase.corkendall  KendallTau.corkendall
+──────┼────────────────────────────────────────────────────────────────────
+1     │                   2.0                3.69e-5              0.0001393
+2     │                   4.0              0.0002354               0.000184
+3     │                   8.0              0.0010139              0.0003423
+4     │                  16.0              0.0041146              0.0006822
+5     │                  32.0              0.0167883              0.0019812
+6     │                  64.0               0.069224              0.0070644
+7     │                 128.0               0.285385              0.0280557
+8     │                 256.0                 1.1547               0.110696
+###################################################################
