@@ -54,120 +54,93 @@ function compare_implementations(fn1::Function=corkendall, fn2::Function=corkend
         ncols2 = rand(rng, 1:maxcols)
         nrows = rand(rng, 1:maxrows)
 
-        arg1 = [1.0]
-        arg2 = [2.0]
-        skipmissing = :foo
+        # want positive even number of rows so that we can use repeat to ensure repeats exist
+        if mod(nrows, 2) == 1
+            nrows += 1
+        elseif nrows == 0
+            nrows = 2
+        end
 
         if fns_handle_missings
-            cases = 1:15
+            cases = 1:14
         else
             cases = [1, 4, 7, 10, 13]
         end
 
+        matrixx() = repeat(randn(rng, (nrows ÷ 2, ncols1)), 2)
+        matrixy() = repeat(randn(rng, (nrows ÷ 2, ncols2)), 2)
+        vectorx() = repeat(randn(rng, nrows ÷ 2), 2)
+        vectory = vectorx
+        sprinklemissing(x) = ifelse.(rand(rng, size(x)...) .< prob_missing, missing, x)
+
         for j in cases
             if j == 1
-                casedesc = "one matrix case, no missings, skipmissing = :none"
-                # by restricting elements to 1:nrows, we can be sure repeats exist
-                arg1 = rand(rng, 1:nrows, nrows, ncols1)
+                #one matrix case, no missings, skipmissing = :none
+                arg1 = matrixx()
                 skipmissing = :none
             elseif j == 2
-                casedesc = "one matrix case, with missings, skipmissing = :pairwise"
-                # by restricting elements to 1:nrows, we can be sure repeats exist
-                arg1 = rand(rng, 1:nrows, nrows, ncols1)
-                arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
+                #one matrix case, with missings, skipmissing = :pairwise
+                arg1 = sprinklemissing(matrixx())
                 skipmissing = :pairwise
             elseif j == 3
-                casedesc = "one matrix case, with missings, skipmissing = :listwise"
-                # by restricting elements to 1:nrows, we can be sure repeats exist
-                arg1 = rand(rng, 1:nrows, nrows, ncols1)
-                arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
+                #one matrix case, with missings, skipmissing = :listwise
+                arg1 = sprinklemissing(matrixx())
                 skipmissing = :listwise
             elseif j == 4
-                casedesc = "two matrix case, no missings, skipmissing = :none"
-                arg1 = rand(rng, 1:nrows, nrows, ncols1)
-                arg2 = rand(rng, 1:nrows, nrows, ncols2)
+                #two matrix case, no missings, skipmissing = :none
+                arg1 = matrixx()
+                arg2 = matrixy()
                 skipmissing = :none
             elseif j == 5
-                casedesc = "two matrix case, with missings, skipmissing = :pairwise"
-                arg1 = rand(rng, 1:nrows, nrows, ncols1)
-                arg2 = rand(rng, 1:nrows, nrows, ncols2)
-                arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
-                arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
+                #two matrix case, with missings, skipmissing = :pairwise
+                arg1 = sprinklemissing(matrixx())
+                arg2 = sprinklemissing(matrixy())
                 skipmissing = :pairwise
             elseif j == 6
-                casedesc = "two matrix case, with missings, skipmissing = :listwise"
-                arg1 = rand(rng, 1:nrows, nrows, ncols1)
-                arg2 = rand(rng, 1:nrows, nrows, ncols2)
-                arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
-                arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
+                #two matrix case, with missings, skipmissing = :listwise
+                arg1 = sprinklemissing(matrixx())
+                arg2 = sprinklemissing(matrixy())
                 skipmissing = :listwise
             elseif j == 7
-                casedesc = "vector-matrix case, no missings, skipmissing = :none"
-                arg1 = rand(rng, 1:nrows, nrows)
-                arg2 = rand(rng, 1:nrows, nrows, ncols2)
+                #vector-matrix case, no missings, skipmissing = :none
+                arg1 = matrixx()
+                arg2 = vectory()
                 skipmissing = :none
             elseif j == 8
-                casedesc = "vector-matrix case, with missings, skipmissings = :pairwise"
-                arg1 = rand(rng, 1:nrows, nrows)
-                arg2 = rand(rng, 1:nrows, nrows, ncols2)
-                arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
-                arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
+                #vector-matrix case, with missings, skipmissings = :pairwise
+                arg1 = sprinklemissing(vectorx())
+                arg2 = sprinklemissing(matrixy())
                 skipmissing = :pairwise
             elseif j == 9
-                casedesc = "vector-matrix case, with missings, skipmissings = :listwise"
-                arg1 = rand(rng, 1:nrows, nrows)
-                arg2 = rand(rng, 1:nrows, nrows, ncols2)
-                arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
-                arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
+                #vector-matrix case, with missings, skipmissings = :listwise
+                arg1 = sprinklemissing(vectorx())
+                arg2 = sprinklemissing(matrixy())
                 skipmissing = :listwise
             elseif j == 10
-                casedesc = "matrix-vector case, no missings, skipmissing = :none"
-                arg1 = rand(rng, 1:nrows, nrows, ncols1)
-                arg2 = randn(rng, nrows)
+                #matrix-vector case, no missings, skipmissing = :none
+                arg1 = matrixx()
+                arg2 = vectory()
                 skipmissings = :none
             elseif j == 11
-                casedesc = "matrix-vector case, with missings, skipmissings = :pairwise"
-                arg1 = rand(rng, 1:nrows, nrows, ncols1)
-                arg2 = randn(rng, nrows)
-                arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
-                arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
+                #matrix-vector case, with missings, skipmissings = :pairwise
+                arg1 = sprinklemissing(matrixx())
+                arg2 = sprinklemissing(vectory())
                 skipmissings = :pairwise
             elseif j == 12
-                casedesc = "matrix-vector case, with missings, skipmissings = :listwise"
-                arg1 = rand(rng, 1:nrows, nrows, ncols1)
-                arg2 = randn(rng, nrows)
-                arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
-                arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
+                #matrix-vector case, with missings, skipmissings = :listwise
+                arg1 = sprinklemissing(matrixx())
+                arg2 = sprinklemissing(vectory())
                 skipmissings = :listwise
             elseif j == 13
-                casedesc = "vector-vector case, no missings, skipmissing = :none"
-                arg1 = rand(rng, 1:nrows, nrows)
-                arg2 = rand(rng, 1:nrows, nrows)
+                #vector-vector case, no missings, skipmissing = :none
+                arg1 = vectorx()
+                arg2 = vectory()
                 skipmissing = :none
             elseif j == 14
-                casedesc = "vector-vector case, with missings, skipmissings = :pairwise"
-                arg1 = rand(rng, 1:nrows, nrows)
-                arg2 = rand(rng, 1:nrows, nrows)
-                arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
-                arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
+                #vector-vector case, with missings, skipmissings = :pairwise
+                arg1 = sprinklemissing(vectorx())
+                arg2 = sprinklemissing(vectory())
                 skipmissing = :pairwise
-            elseif j == 15
-                casedesc = "vector-vector case, with missings, skipmissings = :listwise"
-                arg1 = rand(rng, 1:nrows, nrows)
-                arg2 = rand(rng, 1:nrows, nrows)
-                arg1 = ifelse.(arg1 .< prob_missing, missing, arg1)
-                arg2 = ifelse.(arg2 .< prob_missing, missing, arg2)
-                skipmissing = :listwise
-            end
-
-            # sometimes flip to floats
-            if randn() < 0
-                arg1 = float(arg1)
-            end
-            if j > 3
-                if randn() < 0
-                    arg2 = float(arg2)
-                end
             end
 
             arg1_backup = copy(arg1)
