@@ -56,39 +56,14 @@ multiple threads if they are available.
 
 # Keyword argument
 
-- `skipmissing::Symbol=:none`: If `:none` (the default), when `missing` is an element type
-    of either `x` or `y` the function raises an error. If `:pairwise`, both `i`th elements
-    of the pair of vectors used to calculate an element of the return are skipped if either
-    is `missing`. If `:listwise`, all entries in the `i`th row of `x` and in the `i`th row
-    of `y` are skipped if any of them are missing; note that this might drop a high
-    proportion of entries. Only allowed when `x` or `y` is a matrix.
+- `skipmissing::Symbol=:none`: If `:none` (the default), when `missing` is an allowed 
+   element type of either `x` or `y` the function returns an error. If `:pairwise`, when
+   either of the `i`th entries of the vectors used to calculate an element of the return is
+  `missing`, both entries are skipped. If `:listwise`, when any entry in the `i`th row
+   of `x` or the `i`th row of `y` is `missing` then all entries in the `i`th rows are
+   skipped; note that this might skip a high proportion of entries. Only allowed when `x`
+   or `y` is a matrix.
 """
-function corkendall(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none) where {T,U}
-
-    Base.require_one_based_indexing(x, y)
-
-    length(x) == length(y) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
-
-    missing_allowed = missing isa eltype(x) || missing isa eltype(y)
-    validate_skipmissing(skipmissing, missing_allowed, false)
-
-    # Degenerate case - U and/or T not defined.
-    if x isa Vector{Missing} || y isa Vector{Missing}
-        return NaN
-    end
-
-    x = copy(x)
-
-    if missing_allowed && skipmissing == :pairwise
-        x, y = handle_pairwise!(x, y, similar(x, T), similar(y, U))
-    end
-
-    permx = sortperm(x)
-    permute!(x, permx)
-
-    return corkendall_sorted!(x, y, permx, similar(y), similar(y), similar(x, T), similar(y, U))
-end
-
 function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:none) where {T,U}
 
     Base.require_one_based_indexing(x, y)
@@ -145,7 +120,7 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
     scratch_sys = duplicate(Vector{U}(undef, m), n_duplicates)
 
     #= Use the "static scheduler". This is the "quickfix, but not recommended longterm" way
-    of avoiding concurrency bugs when using threadid.
+    of avoiding concurrency bugs when using Threads.threadid().
     https://julialang.org/blog/2023/07/PSA-dont-use-threadid/#fixing_buggy_code_which_uses_this_pattern
     TODO Adopt a "better fix" as outlined in that blog.
     =#
@@ -158,7 +133,6 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
         else
             id = Threads.threadid()
         end
-
         
         scratch_py = scratch_pys[id]
         scratch_sy = scratch_sys[id]
@@ -180,6 +154,32 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
         end
     end
     return C
+end
+
+function corkendall(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none) where {T,U}
+
+    Base.require_one_based_indexing(x, y)
+
+    length(x) == length(y) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
+
+    missing_allowed = missing isa eltype(x) || missing isa eltype(y)
+    validate_skipmissing(skipmissing, missing_allowed, false)
+
+    # Degenerate case - U and/or T not defined.
+    if x isa Vector{Missing} || y isa Vector{Missing}
+        return NaN
+    end
+
+    x = copy(x)
+
+    if missing_allowed && skipmissing == :pairwise
+        x, y = handle_pairwise!(x, y, similar(x, T), similar(y, U))
+    end
+
+    permx = sortperm(x)
+    permute!(x, permx)
+
+    return corkendall_sorted!(x, y, permx, similar(y), similar(y), similar(x, T), similar(y, U))
 end
 
 #= corkendall returns a vector in this case, inconsistent with with Statistics.cor and
@@ -207,13 +207,12 @@ end
 Kendall correlation between two vectors but omitting the initial sorting of the first 
 argument. Calculating Kendall correlation between `x` and `y` is thus a two stage process:
 a) sort `x` to get `sortedx`; b) call this function on `sortedx` and `y`, with
-subsequent arguments being:
-- `permx`: The permutation that achieved the sorting of `x` to yield `sortedx`.
+subsequent arguments:
+- `permx`: The permutation that sorts `x` to yield `sortedx`.
 - `scratch_py`: A vector used to permute `y` without allocation.
 - `scratch_sy`: A vector used to sort `y` without allocation.
-- `scratch_fx, scratch_fy`: Two further vectors used to avoid allocations when filtering \
-out missing values from `x` and `y`.
-
+- `scratch_fx, scratch_fy`: Vectors used to filter `missing`s from `x` and `y` without
+   allocation.
 """
 function corkendall_sorted!(sortedx::RoMVector{T}, y::RoMVector{U},
     permx::AbstractVector{<:Integer}, scratch_py::RoMVector{U}, 
