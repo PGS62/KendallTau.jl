@@ -172,22 +172,22 @@ function csvread2(filename::String, ignorefirstrow::Bool, ignorefirstcol::Bool;
     missingstring::Union{Nothing,String,Vector{String}}="")
 
 
-    contents = DelimitedFiles.readdlm(filename,',')
-    contents = ifelse.(contents .== missingstring,missing,contents)
+    contents = DelimitedFiles.readdlm(filename, ',')
+    contents = ifelse.(contents .== missingstring, missing, contents)
     firstrow = ignorefirstrow ? 2 : 1
     firstcol = ignorefirstcol ? 2 : 1
-    if firstrow==firstcol==1
-        data=contents
+    if firstrow == firstcol == 1
+        data = contents
     else
-        data = contents[firstrow:end,firstcol:end]
+        data = contents[firstrow:end, firstcol:end]
     end
-    data = identity.(data)    
+    data = identity.(data)
     if firstrow == 0
-        names = "Column".* string.(1:(size(data,2)))
+        names = "Column" .* string.(1:(size(data, 2)))
     else
-        names = Symbol.(contents[1,firstcol:end])
+        names = Symbol.(contents[1, firstcol:end])
     end
-return(data,names)
+    return (data, names)
 
 end
 
@@ -198,10 +198,10 @@ function testcsvread2()
     #ISDA's calculation of KendallTau
     isda_results_file = joinpath(base_folder, raw"9_correlations\eq_delta-kendall_recent_1-10d.csv")
 
-    @time res1=csvread2(isda_results_file,true,true,missingstring = "NA")
-@time res2=csvread(isda_results_file,true,true,missingstring = "NA")
+    @time res1 = csvread2(isda_results_file, true, true, missingstring="NA")
+    @time res2 = csvread(isda_results_file, true, true, missingstring="NA")
 
-res1==res2
+    res1 == res2
 
 end
 

@@ -395,16 +395,16 @@ function how_scaleable(fns, nr::Integer, ncs::Vector{<:Integer},
             =#
 
     #Syntax for Plots.jl
-    #cheatsheet: https://www.matecdev.com/posts/julia-plotting-linestyle-markers.html        
+    #cheatsheet: https://www.matecdev.com/posts/julia-plotting-linestyle-markers.html
     plot(ncs, datatoplot,
         title=title,
         xlabel="Num cols (num rows = $nr)",
         ylabel="Seconds",
         label=hcat([fullnameof(fn) for fn in fns]...),
-        marker = :circle,
+        marker=:circle,
         xaxis=:log,
         yaxis=:log,
-        size = (1500,1000),
-        grid = true)
+        size=(1500, 1000),
+        grid=true)
 
 end

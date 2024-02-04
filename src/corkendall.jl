@@ -56,13 +56,12 @@ multiple threads if they are available.
 
 # Keyword argument
 
-- `skipmissing::Symbol=:none`: If `:none` (the default), when `missing` is an allowed 
-   element type of either `x` or `y` the function returns an error. If `:pairwise`, when
-   either of the `i`th entries of the vectors used to calculate an element of the return is
-  `missing`, both entries are skipped. If `:listwise`, when any entry in the `i`th row
-   of `x` or the `i`th row of `y` is `missing` then all entries in the `i`th rows are
-   skipped; note that this might skip a high proportion of entries. Only allowed when `x`
-   or `y` is a matrix.
+- `skipmissing::Symbol=:none`: If `:none` (the default), then `missing` entries in `x` or
+   `y` lead to `missing` entries in the return. If `:pairwise`, when either of the `i`th
+   entries of the vectors used to calculate an element of the return is `missing`, both
+   entries are skipped. If `:listwise`, when any entry in the `i`th row of `x` or the `i`th
+   row of `y` is `missing` then all entries in the `i`th rows are skipped; note that this
+   might skip a high proportion of entries. Only allowed when `x` or `y` is a matrix.
 """
 function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:none) where {T,U}
 
@@ -73,15 +72,16 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
     symmetric = x === y
 
     missing_allowed = missing isa eltype(x) || missing isa eltype(y)
-    validate_skipmissing(skipmissing, missing_allowed, true)
+    skipmissing in [:none, :pairwise, :listwise] || throw(ArgumentError("skipmissing must be one of :none, :pairwise or :listwise"))
 
     # Degenerate case - U and/or T not defined.
     if x isa Matrix{Missing} || y isa Matrix{Missing}
+        offdiag = missing_allowed && skipmissing == :none ? missing : NaN
         nr, nc = size(x, 2), size(y, 2)
         if symmetric
-            return ifelse.((1:nr) .== (1:nc)', 1.0, NaN)
+            return ifelse.((1:nr) .== (1:nc)', 1.0, offdiag)
         else
-            return fill(NaN, nr, nc)
+            return fill(offdiag, nr, nc)
         end
     end
 
@@ -90,14 +90,21 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
         return collect(transpose(corkendall(y, x; skipmissing)))
     end
 
-    if missing_allowed && skipmissing == :listwise
-        x, y = handle_listwise!(x, y)
+    if missing_allowed
+        if skipmissing == :listwise
+            x, y = handle_listwise!(x, y)
+        end
     end
 
     m, nr = size(x)
     nc = size(y, 2)
 
-    C = ones(Float64, nr, nc)
+    if missing_allowed && skipmissing == :none
+        C = ones(Union{Missing,Float64}, nr, nc)
+    else
+        C = ones(Float64, nr, nc)
+    end
+
     # Avoid unnecessary allocation when nthreads is large but output matrix is small.
     n_duplicates = min(Threads.nthreads(), symmetric ? nr - 1 : nr)
 
@@ -128,12 +135,10 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
 
         if use_atomic
             id = Threads.atomic_add!(a, 1)[]
-            # Check that threads are using distinct scratch vectors
-            @assert permxs[id][1] == 0
         else
             id = Threads.threadid()
         end
-        
+
         scratch_py = scratch_pys[id]
         scratch_sy = scratch_sys[id]
         ycoli = ycolis[id]
@@ -149,7 +154,7 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
 
         for i = 1:(symmetric ? j - 1 : nc)
             ycoli .= view(y, :, i)
-            C[j, i] = corkendall_sorted!(sortedxcolj, ycoli, permx, scratch_py, scratch_sy, scratch_fx, scratch_fy)
+            C[j, i] = corkendall_kernel!(sortedxcolj, ycoli, permx, scratch_py, scratch_sy, scratch_fx, scratch_fy, skipmissing)
             symmetric && (C[i, j] = C[j, i])
         end
     end
@@ -163,10 +168,14 @@ function corkendall(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none)
     length(x) == length(y) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
 
     missing_allowed = missing isa eltype(x) || missing isa eltype(y)
-    validate_skipmissing(skipmissing, missing_allowed, false)
+    skipmissing in [:none, :pairwise] || throw(ArgumentError("skipmissing must be one of :none or :pairwise"))
 
-    # Degenerate case - U and/or T not defined.
-    if x isa Vector{Missing} || y isa Vector{Missing}
+    if missing_allowed && skipmissing == :none
+        if any(ismissing, x) || any(ismissing, y)
+            return missing
+        end
+    elseif x isa Vector{Missing} || y isa Vector{Missing}
+        # Degenerate case - U and/or T not defined.
         return NaN
     end
 
@@ -179,7 +188,7 @@ function corkendall(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none)
     permx = sortperm(x)
     permute!(x, permx)
 
-    return corkendall_sorted!(x, y, permx, similar(y), similar(y), similar(x, T), similar(y, U))
+    return corkendall_kernel!(x, y, permx, similar(y), similar(y), similar(x, T), similar(y, U), skipmissing)
 end
 
 #= corkendall returns a vector in this case, inconsistent with with Statistics.cor and
@@ -199,12 +208,12 @@ end
 # Journal of the American Statistical Association, vol. 61, no. 314, 1966, pp. 436–439.
 # JSTOR, www.jstor.org/stable/2282833.
 """
-    corkendall_sorted!(sortedx::RoMVector{T}, y::RoMVector{U},
-    permx::AbstractVector{<:Integer}, scratch_py::RoMVector{U}, 
-    scratch_sy::RoMVector{U}, scratch_fx::AbstractVector{T}, 
+    corkendall_kernel!(sortedx::RoMVector{T}, y::RoMVector{U},
+    permx::AbstractVector{<:Integer}, scratch_py::RoMVector{U},
+    scratch_sy::RoMVector{U}, scratch_fx::AbstractVector{T},
     scratch_fy::AbstractVector{U}) where {T,U}
 
-Kendall correlation between two vectors but omitting the initial sorting of the first 
+Kendall correlation between two vectors but omitting the initial sorting of the first
 argument. Calculating Kendall correlation between `x` and `y` is thus a two stage process:
 a) sort `x` to get `sortedx`; b) call this function on `sortedx` and `y`, with
 subsequent arguments:
@@ -214,12 +223,20 @@ subsequent arguments:
 - `scratch_fx, scratch_fy`: Vectors used to filter `missing`s from `x` and `y` without
    allocation.
 """
-function corkendall_sorted!(sortedx::RoMVector{T}, y::RoMVector{U},
-    permx::AbstractVector{<:Integer}, scratch_py::RoMVector{U}, 
-    scratch_sy::RoMVector{U}, scratch_fx::AbstractVector{T}, 
-    scratch_fy::AbstractVector{U}) where {T,U}
+function corkendall_kernel!(sortedx::RoMVector{T}, y::RoMVector{U},
+    permx::AbstractVector{<:Integer}, scratch_py::RoMVector{U},
+    scratch_sy::RoMVector{U}, scratch_fx::AbstractVector{T},
+    scratch_fy::AbstractVector{U}, skipmissing::Symbol) where {T,U}
 
     length(sortedx) >= 2 || return NaN
+
+    if skipmissing == :none
+        if missing isa eltype(sortedx) && any(ismissing, sortedx)
+            return (missing)
+        elseif missing isa eltype(y) && any(ismissing, y)
+            return (missing)
+        end
+    end
 
     @inbounds for i in eachindex(y)
         scratch_py[i] = y[permx[i]]
@@ -450,29 +467,4 @@ function handle_listwise!(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T,U}
         end
     end
     return view(a, 1:k, :), view(b, 1:k, :)
-end
-
-function validate_skipmissing(skipmissing::Symbol, missing_allowed::Bool, listwise_allowed::Bool)
-    if skipmissing == :listwise && listwise_allowed
-    elseif skipmissing == :pairwise
-    elseif missing_allowed
-        if listwise_allowed
-            throw(ArgumentError("When missing is an allowed element type \
-                                skipmissing must be either :pairwise or :listwise, \
-                                but got :$skipmissing"))
-        else
-            throw(ArgumentError("When missing is an allowed element type \
-            skipmissing must be :pairwise, but got :$skipmissing"))
-        end
-
-    elseif skipmissing == :none
-    else
-        if listwise_allowed
-            throw(ArgumentError("skipmissing must be one of :none, :pairwise or :listwise, \
-                                but got :$skipmissing"))
-        else
-            throw(ArgumentError("skipmissing must be either :none or :pairwise, \
-            but got :$skipmissing"))
-        end
-    end
 end

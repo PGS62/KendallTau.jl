@@ -73,10 +73,14 @@ include("compare_implementations.jl")
         @test isequal(f(xmm, skipmissing=:pairwise), [1.0 NaN; NaN 1.0])
         @test isequal(f(xmm, copy(xmm), skipmissing=:pairwise), [NaN NaN; NaN NaN])
 
-        # Test not-correct values of skipmissing
         if !(f === corkendall_naive)
-            @test_throws ArgumentError f(Xm)
+            #TODO fix corkendall_naive to cope with skipmissing=:none
+            @test ismissing(f(1:5, xm, skipmissing=:none))
+            @test ismissing(f(1:5, xm, skipmissing=:none))
+            @test isequal(f(xmm, skipmissing=:none), [1.0 missing; missing 1.0])
+            @test isequal(f(xmm, copy(xmm), skipmissing=:none), [missing missing; missing missing])
         end
+
         @test_throws ArgumentError f(x; skipmissing=:foo)
         @test_throws ArgumentError f(Xm; skipmissing=:foo)
 

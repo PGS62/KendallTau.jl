@@ -4,7 +4,7 @@
 
 # KendallTau.jl
 
-This (unregistered) Julia package exposes a function `corkendall` that is a candidate to replace the function of the same name in the StatsBase package. 
+This (unregistered) Julia package exposes a function `corkendall` that is a candidate to replace the function of the same name in the StatsBase package.
 
 The package also contains a function `speedtest` that prints a comparison of the execution speed of two (or more) implementations of Kendall Tau. `speedtest` demonstrates that the new version of `corkendall` is about ~~five~~ ~~six~~ seven times faster than the existing StatsBase version. See [# 634](https://github.com/JuliaStats/StatsBase.jl/issues/634).
 
@@ -50,7 +50,7 @@ julia> @time res_sb = StatsBase.corkendall(x);
 
 julia> @time res_kt = KendallTau.corkendall(x);
   1.780313 seconds (2.28 k allocations: 8.876 MiB, 0.14% gc time)
-  
+
 julia> 21.393938/1.780313
 12.016953198679108
 
@@ -106,5 +106,5 @@ Environment:
 
 
 
-Philip Swannell  
+Philip Swannell
 20 February 2023
