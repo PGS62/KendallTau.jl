@@ -171,7 +171,6 @@ end
 function csvread2(filename::String, ignorefirstrow::Bool, ignorefirstcol::Bool;
     missingstring::Union{Nothing,String,Vector{String}}="")
 
-
     contents = DelimitedFiles.readdlm(filename, ',')
     contents = ifelse.(contents .== missingstring, missing, contents)
     firstrow = ignorefirstrow ? 2 : 1

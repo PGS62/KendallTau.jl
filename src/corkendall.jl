@@ -8,71 +8,35 @@
 const RoMVector{T<:Real} = AbstractVector{<:Union{T,Missing}}
 const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
 
-#= TODO 27 July 2023
-Review use of threads in light of
-https://julialang.org/blog/2023/07/PSA-dont-use-threadid/#another_option_use_a_package_which_handles_this_correctly
-=#
-
-#= TODO 22 Feb 2023
-
-How to get compatibility of corkendall with StatsBase.pairwise? The problem is that
-pairwise passes vectors to f that don't contain missing but for which missing isa eltype
-and corkendall then wants a skipmissing argument.
-
-Option a)
-Amend StatsBase._pairwise! to replace line:
-dest[i, j] = f(ynm, ynm)
-with:
-dest[i, j] = f(disallowmissing(ynm), disallowmissing(ynm))
-
-Option b)
-Some other way to arrange that arguments passed to f from within StatsBase._pairwise!
-do not have Missing as an allowed element type. Using function handle_pairwise! would do
-that efficiently.
-
-Option c)
-In corkendall vector-vector method, if missing is an element type of both x and of y, but
-missing does not appear in either x or y, then call disallowmissing twice, like this:
-
-if missing isa eltype(x) && missing isa eltype(y)
-    if !any(ismissing,x) && !any(ismissing,y)
-        x = disallowmissing(x)
-        y = disallowmissing(y)
-    end
-end
-
-Option d)
-Have a dedicated method of _pairwise! to handle f === corkendall. This has a big
-performance advantage, and is maybe along the lines suggested by nalimilan here:
-https://github.com/JuliaStats/StatsBase.jl/pull/647#issuecomment-775264454
-=#
-
 """
     corkendall(x, y=x; skipmissing::Symbol=:none)
 
 Compute Kendall's rank correlation coefficient, τ. `x` and `y` must be either vectors or
-matrices, with elements that are either real numbers or `missing`. The function uses
-multiple threads if they are available.
+matrices, with elements that are either real numbers or `missing`. Uses multiple threads if
+available.
 
 # Keyword argument
 
 - `skipmissing::Symbol=:none`: If `:none` (the default), then `missing` entries in `x` or
-   `y` lead to `missing` entries in the return. If `:pairwise`, when either of the `i`th
-   entries of the vectors used to calculate an element of the return is `missing`, both
-   entries are skipped. If `:listwise`, when any entry in the `i`th row of `x` or the `i`th
-   row of `y` is `missing` then all entries in the `i`th rows are skipped; note that this
-   might skip a high proportion of entries. Only allowed when `x` or `y` is a matrix.
+   `y` give rise to `missing` entries in the return. If `:pairwise`, when either of the
+   `i`th entries of the vectors required to calculate an element of the return is `missing`,
+   both entries are skipped. If `:listwise`, when any entry in the `i`th row of `x` or the
+   `i`th row of `y` is `missing` then the entire `i`th rows are skipped; note that
+   this might skip a high proportion of entries. Only allowed when `x` or `y` is a matrix.
 """
-function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:none) where {T,U}
+function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x;
+    skipmissing::Symbol=:none) where {T,U}
 
     Base.require_one_based_indexing(x, y)
 
-    size(x, 1) == size(y, 1) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
+    size(x, 1) == size(y, 1) || throw(DimensionMismatch("x and y have 
+                                                         inconsistent dimensions"))
 
     symmetric = x === y
 
     missing_allowed = missing isa eltype(x) || missing isa eltype(y)
-    skipmissing in [:none, :pairwise, :listwise] || throw(ArgumentError("skipmissing must be one of :none, :pairwise or :listwise"))
+    skipmissing in [:none, :pairwise, :listwise] || throw(ArgumentError("skipmissing must \
+                       be one of :none, :pairwise or :listwise, but got :$skipmissing"))
 
     # Degenerate case - U and/or T not defined.
     if x isa Matrix{Missing} || y isa Matrix{Missing}
@@ -92,7 +56,7 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
 
     if missing_allowed
         if skipmissing == :listwise
-            x, y = handle_listwise!(x, y)
+            x, y = handle_listwise(x, y)
         end
     end
 
@@ -154,7 +118,8 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:non
 
         for i = 1:(symmetric ? j - 1 : nc)
             ycoli .= view(y, :, i)
-            C[j, i] = corkendall_kernel!(sortedxcolj, ycoli, permx, scratch_py, scratch_sy, scratch_fx, scratch_fy, skipmissing)
+            C[j, i] = corkendall_kernel!(sortedxcolj, ycoli, permx, scratch_py,
+                scratch_sy, scratch_fx, scratch_fy, skipmissing)
             symmetric && (C[i, j] = C[j, i])
         end
     end
@@ -165,10 +130,12 @@ function corkendall(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none)
 
     Base.require_one_based_indexing(x, y)
 
-    length(x) == length(y) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
+    length(x) == length(y) || throw(DimensionMismatch("x and y have \
+                                                       inconsistent dimensions"))
 
     missing_allowed = missing isa eltype(x) || missing isa eltype(y)
-    skipmissing in [:none, :pairwise] || throw(ArgumentError("skipmissing must be one of :none or :pairwise"))
+    skipmissing in [:none, :pairwise] || throw(ArgumentError("skipmissing must be one of \
+    :none or :pairwise, but got :$skipmissing"))
 
     if missing_allowed && skipmissing == :none
         if any(ismissing, x) || any(ismissing, y)
@@ -182,13 +149,14 @@ function corkendall(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none)
     x = copy(x)
 
     if missing_allowed && skipmissing == :pairwise
-        x, y = handle_pairwise!(x, y, similar(x, T), similar(y, U))
+        x, y = handle_pairwise(x, y)
     end
 
     permx = sortperm(x)
     permute!(x, permx)
 
-    return corkendall_kernel!(x, y, permx, similar(y), similar(y), similar(x, T), similar(y, U), skipmissing)
+    return corkendall_kernel!(x, y, permx, similar(y), similar(y),
+        similar(x, T), similar(y, U), skipmissing)
 end
 
 #= corkendall returns a vector in this case, inconsistent with with Statistics.cor and
@@ -243,7 +211,7 @@ function corkendall_kernel!(sortedx::RoMVector{T}, y::RoMVector{U},
     end
 
     if missing isa eltype(sortedx) || missing isa eltype(scratch_py)
-        sortedx, permutedy = handle_pairwise!(sortedx, scratch_py, scratch_fx, scratch_fy)
+        sortedx, permutedy = handle_pairwise(sortedx, scratch_py; scratch_fx, scratch_fy)
     else
         permutedy = scratch_py
     end
@@ -262,9 +230,11 @@ function corkendall_kernel!(sortedx::RoMVector{T}, y::RoMVector{U},
         if sortedx[i-1] == sortedx[i]
             k += 1
         elseif k > 0
-            # Sort the corresponding chunk of permutedy, so the rows of hcat(sortedx,permutedy)
-            # are sorted first on sortedx, then (where sortedx values are tied) on permutedy.
-            # Hence double ties can be counted by calling countties.
+            #=
+            Sort the corresponding chunk of permutedy, so rows of hcat(sortedx,permutedy)
+            are sorted first on sortedx, then (where sortedx values are tied) on permutedy.
+            Hence double ties can be counted by calling countties.
+            =#
             sort!(view(permutedy, (i-k-1):(i-1)))
             ntiesx += div(widen(k) * (k + 1), 2) # Must use wide integers here
             ndoubleties += countties(permutedy, i - k - 1, i - 1)
@@ -402,14 +372,16 @@ function insertion_sort!(v::AbstractVector, lo::Integer, hi::Integer)
 end
 
 """
-    handle_pairwise!(x::RoMVector{T}, y::RoMVector{U},
+    handle_pairwise(x::RoMVector{T}, y::RoMVector{U},
     scratch_fx::AbstractVector{T}, scratch_fy::AbstractVector{U}) where {T,U}
 
 Return a pair `(a,b)`, filtered copies of `(x,y)`, in which elements `x[i]` and
-`y[i]` are filtered out if  `ismissing(x[i])||ismissing(y[i])`.
+`y[i]` are excluded if  `ismissing(x[i])||ismissing(y[i])`. The element types of `a` and
+`b` are `T` and `U` so that `Missing` is not an element type of either.
 """
-function handle_pairwise!(x::RoMVector{T}, y::RoMVector{U},
-    scratch_fx::AbstractVector{T}, scratch_fy::AbstractVector{U}) where {T,U}
+function handle_pairwise(x::RoMVector{T}, y::RoMVector{U};
+    scratch_fx::AbstractVector{T}=similar(x, T),
+    scratch_fy::AbstractVector{U}=similar(y, U)) where {T,U}
 
     j = 0
 
@@ -425,12 +397,13 @@ function handle_pairwise!(x::RoMVector{T}, y::RoMVector{U},
 end
 
 """
-    handle_listwise!(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T,U}
+    handle_listwise(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T,U}
 
 Return a pair `(a,b)`, filtered copies of `(x,y)`, in which the rows `x[i,:]` and
-`y[i,:]` are both filtered out if `any(ismissing,x[i,:])||any(ismissing,y[i,:])`.
+`y[i,:]` are both excluded if `any(ismissing,x[i,:])||any(ismissing,y[i,:])`. The element
+types of `a` and `b` are `T` and `U` so that `Missing` is not an element type of either.
 """
-function handle_listwise!(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T,U}
+function handle_listwise(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T,U}
 
     nrx = size(x, 1)
     nry = size(y, 1)

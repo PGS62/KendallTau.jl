@@ -1,8 +1,39 @@
 using KendallTau
 using Test
 using Random
+
 include("corkendall_naive.jl")
 include("compare_implementations.jl")
+
+@testset "corkendall_auxiliary_fns" begin
+
+    #Auxiliary functions for corkendall
+    x = [1, 2, 3, missing, 4]
+    y = [missing, 1, 2, 3, 4]
+    u = [missing, missing, 1, 2]
+    v = [3, 4, missing, missing]
+
+    mx = [1 2
+        missing 3
+        4 missing
+        missing missing
+        5 6]
+
+    @test KendallTau.handle_pairwise(x, y) == ([2, 3, 4], [1, 2, 4])
+    @test KendallTau.handle_pairwise(float.(x), y) == ([2.0, 3.0, 4.0], [1, 2, 4])
+    @test KendallTau.handle_pairwise(x, float.(y)) == ([2, 3, 4], [1.0, 2.0, 4.0])
+    @test KendallTau.handle_pairwise(u, v) == (Int64[], Int64[])
+    @test KendallTau.handle_listwise(mx, mx) == ([1 2; 5 6], [1 2; 5 6])
+
+    v = collect(100:-1:1)
+    KendallTau.insertion_sort!(v, 1, 100)
+    @test v == 1:100
+
+    v = collect(1000:-1:1)
+    KendallTau.merge_sort!(v, 1, 1000)
+    @test v == 1:1000
+
+end
 
 @testset "corkendall" begin
 
@@ -179,23 +210,6 @@ include("compare_implementations.jl")
 
     end
 
-    #Auxiliary functions for corkendall
-    x = [1, 2, 3, missing, 4]
-    y = [missing, 1, 2, 3, 4]
-    u = [missing, missing, 1, 2]
-    v = [3, 4, missing, missing]
-
-    mx = [1 2
-        missing 3
-        4 missing
-        missing missing
-        5 6]
-
-    @test KendallTau.handle_pairwise!(x, y, similar(x), similar(y)) == ([2, 3, 4], [1, 2, 4])
-    @test KendallTau.handle_pairwise!(float.(x), y, similar(float.(x)), similar(y)) == ([2.0, 3.0, 4.0], [1, 2, 4])
-    @test KendallTau.handle_pairwise!(x, float.(y), similar(x), similar(float.(y))) == ([2, 3, 4], [1.0, 2.0, 4.0])
-    @test KendallTau.handle_pairwise!(u, v, similar(u), similar(v)) == (Int64[], Int64[])
-    @test KendallTau.handle_listwise!(mx, mx) == ([1 2; 5 6], [1 2; 5 6])
 
     smallx = randn(MersenneTwister(123), 1000, 3)
     indicators = rand(MersenneTwister(456), 1000, 3) .< 0.05

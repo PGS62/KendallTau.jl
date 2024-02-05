@@ -404,7 +404,7 @@ function how_scaleable(fns, nr::Integer, ncs::Vector{<:Integer},
         marker=:circle,
         xaxis=:log,
         yaxis=:log,
-        size=(1500, 1000),
+        size=(900, 600),
         grid=true)
 
 end

@@ -486,3 +486,55 @@ A ╲ B │            numcols(x)   StatsBase.corkendall  KendallTau.corkendall
 7     │                 128.0               0.285385              0.0280557
 8     │                 256.0                 1.1547               0.110696
 ###################################################################
+
+
+julia> how_scaleable(fns,1000,2 .^ (1:12),false,false,true)
+###################################################################
+Executing how_scaleable 2024-02-05T12:08:53.214
+ComputerName = DESKTOP-HSGAM5S
+fns[1] = StatsBase.corkendall
+fns[2] = KendallTau.corkendall
+ncs = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096]
+with_missings = false
+use_benchmark_tools = false
+Threads.nthreads() = 20
+nc = 2, nr = 1000, f = StatsBase.corkendall,  time = 0.0011769
+nc = 2, nr = 1000, f = KendallTau.corkendall,  time = 0.0103372, ratio = 0.11385094609758929
+nc = 4, nr = 1000, f = StatsBase.corkendall,  time = 0.0004849
+nc = 4, nr = 1000, f = KendallTau.corkendall,  time = 0.0009406, ratio = 0.5155220072294281
+nc = 8, nr = 1000, f = StatsBase.corkendall,  time = 0.0019536
+nc = 8, nr = 1000, f = KendallTau.corkendall,  time = 0.0027633, ratio = 0.7069807838454024
+nc = 16, nr = 1000, f = StatsBase.corkendall,  time = 0.0084139
+nc = 16, nr = 1000, f = KendallTau.corkendall,  time = 0.0024703, ratio = 3.406023559891511
+nc = 32, nr = 1000, f = StatsBase.corkendall,  time = 0.0386484
+nc = 32, nr = 1000, f = KendallTau.corkendall,  time = 0.0053999, ratio = 7.1572436526602345
+nc = 64, nr = 1000, f = StatsBase.corkendall,  time = 0.4622757
+nc = 64, nr = 1000, f = KendallTau.corkendall,  time = 0.0098453, ratio = 46.95394756889074
+nc = 128, nr = 1000, f = StatsBase.corkendall,  time = 0.2959822
+nc = 128, nr = 1000, f = KendallTau.corkendall,  time = 0.0306628, ratio = 9.652810571767743
+nc = 256, nr = 1000, f = StatsBase.corkendall,  time = 1.1365017
+nc = 256, nr = 1000, f = KendallTau.corkendall,  time = 0.1254557, ratio = 9.058988152790187
+nc = 512, nr = 1000, f = StatsBase.corkendall,  time = 4.5060678
+nc = 512, nr = 1000, f = KendallTau.corkendall,  time = 0.4610122, ratio = 9.774291873403785
+nc = 1024, nr = 1000, f = StatsBase.corkendall,  time = 18.2435851
+nc = 1024, nr = 1000, f = KendallTau.corkendall,  time = 1.8419572, ratio = 9.904456574778177
+nc = 2048, nr = 1000, f = StatsBase.corkendall,  time = 73.7546561
+nc = 2048, nr = 1000, f = KendallTau.corkendall,  time = 7.707059, ratio = 9.569753663492131
+nc = 4096, nr = 1000, f = StatsBase.corkendall,  time = 298.6694524
+nc = 4096, nr = 1000, f = KendallTau.corkendall,  time = 30.1120506, ratio = 9.918602235611282
+12×3 Named Matrix{Float64}
+A ╲ B │            numcols(x)   StatsBase.corkendall  KendallTau.corkendall
+──────┼────────────────────────────────────────────────────────────────────
+1     │                   2.0              0.0011769              0.0103372
+2     │                   4.0              0.0004849              0.0009406
+3     │                   8.0              0.0019536              0.0027633
+4     │                  16.0              0.0084139              0.0024703
+5     │                  32.0              0.0386484              0.0053999
+6     │                  64.0               0.462276              0.0098453
+7     │                 128.0               0.295982              0.0306628
+8     │                 256.0                 1.1365               0.125456
+9     │                 512.0                4.50607               0.461012
+10    │                1024.0                18.2436                1.84196
+11    │                2048.0                73.7547                7.70706
+12    │                4096.0                298.669                30.1121
+###################################################################
