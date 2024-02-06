@@ -54,10 +54,8 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x;
         return collect(transpose(corkendall(y, x; skipmissing)))
     end
 
-    if missing_allowed
-        if skipmissing == :listwise
-            x, y = handle_listwise(x, y)
-        end
+    if missing_allowed && skipmissing == :listwise
+        x, y = handle_listwise(x, y)
     end
 
     m, nr = size(x)
