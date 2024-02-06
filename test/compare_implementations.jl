@@ -20,12 +20,9 @@ The function also checks that `fn1` and `fn2` never mutate their arguments.
     or elements in the input vectors.
 - `numtests::Integer`: the functions are tested `numtests` times - for various combinations
     of matrix and vector input.
-- `fns_handle_missings::Bool` pass `true` if both `fn1` and `fn2` handle input arrays
-    containing missing values and have `skipmissing` keyword argument.
 """
 function compare_implementations(fn1::Function=corkendall, fn2::Function=corkendall_naive;
-    abstol::Float64=1e-14, maxcols::Integer, maxrows::Integer, numtests::Integer,
-    fns_handle_missings::Bool)
+    abstol::Float64=1e-14, maxcols::Integer, maxrows::Integer, numtests::Integer)
 
     prob_missing = 0.05
     fn1name = string(Base.parentmodule(fn1)) * "." * string(fn1)
@@ -61,19 +58,13 @@ function compare_implementations(fn1::Function=corkendall, fn2::Function=corkend
             nrows = 2
         end
 
-        if fns_handle_missings
-            cases = 1:14
-        else
-            cases = [1, 4, 7, 10, 13]
-        end
-
         matrixx() = repeat(randn(rng, (nrows ÷ 2, ncols1)), 2)
         matrixy() = repeat(randn(rng, (nrows ÷ 2, ncols2)), 2)
         vectorx() = repeat(randn(rng, nrows ÷ 2), 2)
         vectory = vectorx
         sprinklemissing(x) = ifelse.(rand(rng, size(x)...) .< prob_missing, missing, x)
 
-        for j in cases
+        for j in 1:14
             if j == 1
                 #one matrix case, no missings, skipmissing = :none
                 arg1 = matrixx()
@@ -107,12 +98,12 @@ function compare_implementations(fn1::Function=corkendall, fn2::Function=corkend
                 arg2 = vectory()
                 skipmissing = :none
             elseif j == 8
-                #vector-matrix case, with missings, skipmissings = :pairwise
+                #vector-matrix case, with missings, skipmissing = :pairwise
                 arg1 = sprinklemissing(vectorx())
                 arg2 = sprinklemissing(matrixy())
                 skipmissing = :pairwise
             elseif j == 9
-                #vector-matrix case, with missings, skipmissings = :listwise
+                #vector-matrix case, with missings, skipmissing = :listwise
                 arg1 = sprinklemissing(vectorx())
                 arg2 = sprinklemissing(matrixy())
                 skipmissing = :listwise
@@ -120,24 +111,24 @@ function compare_implementations(fn1::Function=corkendall, fn2::Function=corkend
                 #matrix-vector case, no missings, skipmissing = :none
                 arg1 = matrixx()
                 arg2 = vectory()
-                skipmissings = :none
+                skipmissing = :none
             elseif j == 11
-                #matrix-vector case, with missings, skipmissings = :pairwise
+                #matrix-vector case, with missings, skipmissing = :pairwise
                 arg1 = sprinklemissing(matrixx())
                 arg2 = sprinklemissing(vectory())
-                skipmissings = :pairwise
+                skipmissing = :pairwise
             elseif j == 12
-                #matrix-vector case, with missings, skipmissings = :listwise
+                #matrix-vector case, with missings, skipmissing = :listwise
                 arg1 = sprinklemissing(matrixx())
                 arg2 = sprinklemissing(vectory())
-                skipmissings = :listwise
+                skipmissing = :listwise
             elseif j == 13
                 #vector-vector case, no missings, skipmissing = :none
                 arg1 = vectorx()
                 arg2 = vectory()
                 skipmissing = :none
             elseif j == 14
-                #vector-vector case, with missings, skipmissings = :pairwise
+                #vector-vector case, with missings, skipmissing = :pairwise
                 arg1 = sprinklemissing(vectorx())
                 arg2 = sprinklemissing(vectory())
                 skipmissing = :pairwise
@@ -149,27 +140,19 @@ function compare_implementations(fn1::Function=corkendall, fn2::Function=corkend
             end
 
             if j <= 3
-                if missing isa eltype(arg1)
-                    res1 = fn1(arg1, skipmissing=:pairwise)
-                else
-                    res1 = fn1(arg1)
-                end
+
+                res1 = fn1(arg1; skipmissing)
                 myisequal(arg1, arg1_backup) ||
                     @error("Detected that function $fn1name mutated its argument, $casedesc")
-                res2 = fn2(arg1)
+                res2 = fn2(arg1; skipmissing)
                 myisequal(arg1, arg1_backup) ||
                     @error("Detected that function $fn2name mutated its argument, $casedesc")
             else
                 arg2_backup = copy(arg2)
-
-                if missing isa eltype(arg1) || missing isa eltype(arg2)
-                    res1 = fn1(arg1, arg2, skipmissing=:pairwise)
-                else
-                    res1 = fn1(arg1, arg2)
-                end
+                res1 = fn1(arg1, arg2; skipmissing)
                 (myisequal(arg1, arg1_backup) && myisequal(arg2, arg2_backup)) ||
                     @error("Detected that function $fn1name mutated one of its argument, $casedesc")
-                res2 = fn2(arg1, arg2)
+                res2 = fn2(arg1, arg2; skipmissing)
                 (myisequal(arg1, arg1_backup) && myisequal(arg2, arg2_backup)) ||
                     @error("Detected that function $fn2name mutated one of its argument, $casedesc")
             end
@@ -181,7 +164,7 @@ function compare_implementations(fn1::Function=corkendall, fn2::Function=corkend
 
             # test for equality, if that fails print to the screen the argument(s) and the two returns
             if !myisapprox(res1, res2, abstol)
-                if j == 1
+                if j <= 3
                     return res1, res2, arg1
                 else
                     return res1, res2, arg1, arg2

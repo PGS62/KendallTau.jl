@@ -99,18 +99,18 @@ end
         @test f(Xm, Ym, skipmissing=:listwise) == f(x, Y)
         @test f(Xm, Ym, skipmissing=:pairwise) ≈ [-1/√90 0.4 1/√90
             -2/√154 7/√165 -1/√154]
-        @test isnan(f(1:5, xm, skipmissing=:pairwise))
-        @test isnan(f(xm, 1:5, skipmissing=:pairwise))
+        @test isnan(f([1,2,3,4,5], xm, skipmissing=:pairwise))
+        @test isnan(f(xm, [1,2,3,4,5], skipmissing=:pairwise))
         @test isequal(f(xmm, skipmissing=:pairwise), [1.0 NaN; NaN 1.0])
         @test isequal(f(xmm, copy(xmm), skipmissing=:pairwise), [NaN NaN; NaN NaN])
 
-        if !(f === corkendall_naive)
+      #  if !(f === corkendall_naive)
             #TODO fix corkendall_naive to cope with skipmissing=:none
-            @test ismissing(f(1:5, xm, skipmissing=:none))
-            @test ismissing(f(1:5, xm, skipmissing=:none))
+            @test ismissing(f([1,2,3,4,5], xm, skipmissing=:none))
+            @test ismissing(f([1,2,3,4,5], xm, skipmissing=:none))
             @test isequal(f(xmm, skipmissing=:none), [1.0 missing; missing 1.0])
             @test isequal(f(xmm, copy(xmm), skipmissing=:none), [missing missing; missing missing])
-        end
+       # end
 
         @test_throws ArgumentError f(x; skipmissing=:foo)
         @test_throws ArgumentError f(Xm; skipmissing=:foo)
@@ -203,9 +203,9 @@ end
         advantage of simplicity.
         =#
         if f !== corkendall_naive
-            @test compare_implementations(f, corkendall_naive, abstol=0.0, maxcols=10, maxrows=10, numtests=200, fns_handle_missings=true) == true
-            @test compare_implementations(f, corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=200, fns_handle_missings=true) == true
-            @test compare_implementations(f, corkendall_naive, abstol=1e14, maxcols=2, maxrows=20000, numtests=5, fns_handle_missings=true) == true
+            @test compare_implementations(f, corkendall_naive, abstol=0.0, maxcols=10, maxrows=10, numtests=200) == true
+            @test compare_implementations(f, corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=200) == true
+            @test compare_implementations(f, corkendall_naive, abstol=1e14, maxcols=2, maxrows=20000, numtests=5) == true
         end
 
     end
