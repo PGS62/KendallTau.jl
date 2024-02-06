@@ -1,18 +1,140 @@
-#RoM stands for "Real or Missing"
+using KendallTau
+
+# RoM = "Real or Missing"
 const RoMVector{T<:Real} = AbstractVector{<:Union{T,Missing}}
 const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
 
 """
-    corkendall_naive(x::AbstractVector{<:Real}, y::AbstractVector{<:Real})
+    corkendall_naive(x, y=x; skipmissing::Symbol=:none)
 
-Naive implementation of Kendall Tau. Slow O(n²) but simple, so good for testing against
-implementations that use Knight's algorithm.
+Compute Kendall's rank correlation coefficient, τ. `x` and `y` must be either vectors or
+matrices, with elements that are either real numbers or `missing`. Uses naive (order n²)
+algorithm, so use for testing against version using Knight's algorithm.
+
+# Keyword argument
+
+- `skipmissing::Symbol=:none`: If `:none` (the default), then `missing` entries in `x` or
+   `y` give rise to `missing` entries in the return. If `:pairwise`, when either of the
+   `i`th entries of the vectors required to calculate an element of the return is `missing`,
+   both entries are skipped. If `:listwise`, when any entry in the `i`th row of `x` or the
+   `i`th row of `y` is `missing` then the entire `i`th rows are skipped; note that
+   this might skip a high proportion of entries. Only allowed when `x` or `y` is a matrix.
 """
-function corkendall_naive(x::AbstractVector{<:Real}, y::AbstractVector{<:Real})
-    length(x) == length(y) || throw(DimensionMismatch("Vectors must have same length"))
+function corkendall_naive(x::RoMMatrix{T}, y::RoMMatrix{U}=x;
+    skipmissing::Symbol=:none) where {T,U}
+
+    Base.require_one_based_indexing(x, y)
+
+    size(x, 1) == size(y, 1) || throw(DimensionMismatch("x and y have 
+                                                         inconsistent dimensions"))
+
+    symmetric = x === y
+
+    missing_allowed = missing isa eltype(x) || missing isa eltype(y)
+    skipmissing in [:none, :pairwise, :listwise] || throw(ArgumentError("skipmissing must \
+                       be one of :none, :pairwise or :listwise, but got :$skipmissing"))
+
+    # Degenerate case - U and/or T not defined.
+    if x isa Matrix{Missing} || y isa Matrix{Missing}
+        offdiag = missing_allowed && skipmissing == :none ? missing : NaN
+        nr, nc = size(x, 2), size(y, 2)
+        if symmetric
+            return ifelse.((1:nr) .== (1:nc)', 1.0, offdiag)
+        else
+            return fill(offdiag, nr, nc)
+        end
+    end
+
+    if missing_allowed
+        if skipmissing == :listwise
+            x, y = KendallTau.handle_listwise(x, y)
+        end
+    end
+
+    m, nr = size(x)
+    nc = size(y, 2)
+
+    if missing_allowed && skipmissing == :none
+        C = ones(Union{Missing,Float64}, nr, nc)
+    else
+        C = ones(Float64, nr, nc)
+    end
+
+    for j = (symmetric ? 2 : 1):nr
+        for i = 1:(symmetric ? j - 1 : nc)
+            C[j, i] = corkendall_naive_kernel!(view(x,:,j), view(y,:,i),skipmissing)
+            symmetric && (C[i, j] = C[j, i])
+        end
+    end
+    return C
+end
+
+function corkendall_naive(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none) where {T,U}
+
+    Base.require_one_based_indexing(x, y)
+
+    length(x) == length(y) || throw(DimensionMismatch("x and y have \
+                                                       inconsistent dimensions"))
+
+    missing_allowed = missing isa eltype(x) || missing isa eltype(y)
+    skipmissing in [:none, :pairwise] || throw(ArgumentError("skipmissing must be one of \
+    :none or :pairwise, but got :$skipmissing"))
+
+    if missing_allowed && skipmissing == :none
+        if any(ismissing, x) || any(ismissing, y)
+            return missing
+        end
+    elseif x isa Vector{Missing} || y isa Vector{Missing}
+        # Degenerate case - U and/or T not defined.
+        return NaN
+    end
+
+    x = copy(x)
+
+    if missing_allowed && skipmissing == :pairwise
+        x, y = KendallTau.handle_pairwise(x, y)
+    end
+
+
+    return corkendall_naive_kernel!(x, y,skipmissing)
+end
+
+#= corkendall_naive returns a vector in this case, inconsistent with with Statistics.cor and
+StatsBase.corspearman, but consistent with StatsBase.corkendall.
+ =#
+function corkendall_naive(x::RoMMatrix, y::RoMVector; skipmissing::Symbol=:none)
+    return vec(corkendall_naive(x, reshape(y, (length(y), 1)); skipmissing))
+end
+
+function corkendall_naive(x::RoMVector, y::RoMMatrix; skipmissing::Symbol=:none)
+    return corkendall_naive(reshape(x, (length(x), 1)), y; skipmissing)
+end
+
+function corkendall_naive_kernel!(x::RoMVector{T}, y::RoMVector{U},
+     skipmissing::Symbol) where {T,U}
+
+    length(x) >= 2 || return NaN
+
+    if skipmissing == :none
+        if missing isa eltype(x) && any(ismissing, x)
+            return (missing)
+        elseif missing isa eltype(y) && any(ismissing, y)
+            return (missing)
+        end
+    end
+
+    if missing isa eltype(x) || missing isa eltype(y)
+        x, y = KendallTau.handle_pairwise(x, y)
+    end
+
+    if any(ismissing, x) || any(ismissing, y)
+        return missing
+    end
+
     if any(isnan, x) || any(isnan, y)
         return NaN
     end
+
     n = length(x)
     if n <= 1
         return NaN
@@ -38,90 +160,3 @@ function corkendall_naive(x::AbstractVector{<:Real}, y::AbstractVector{<:Real})
     numerator / denominator
 end
 
-function corkendall_naive(x::RoMVector, y::RoMVector)
-    a, b = handlemissings_naive(x, y)
-    corkendall_naive(a, b)
-end
-
-corkendall_naive(x::RoMMatrix, y::RoMVector) = Float64[corkendall_naive(x[:, i], y) for i in axes(x, 2)]
-
-corkendall_naive(x::RoMVector, y::RoMMatrix) = (n = size(y, 2); reshape(Float64[corkendall_naive(x, y[:, i]) for i = 1:n], 1, n))
-
-corkendall_naive(x::RoMMatrix, y::RoMMatrix) = Float64[corkendall_naive(x[:, i], y[:, j]) for i in axes(x, 2), j in axes(y, 2)]
-
-function corkendall_naive(x::RoMMatrix)
-    n = size(x, 2)
-    C = ones(Float64, n, n)
-    for j in 2:n, i in 1:j-1
-        C[j, i] = C[i, j] = corkendall_naive(x[:, i], x[:, j])
-    end
-    return C
-end
-
-function corkendall_naive(x::AbstractArray; skipmissing::Symbol)
-    if skipmissing == :listwise
-        x = handlemissings_naive(x)
-    end
-    if skipmissing == :pairwise || skipmissing == :listwise
-        return corkendall_naive(x)
-    elseif skipmissing == :none && !(missing isa eltype(x))
-        return corkendall_naive(x)
-    else
-        throw(ArgumentError("keyword argument skipmissing has unrecognised value `:$skipmissing`"))
-    end
-end
-
-function corkendall_naive(x::AbstractArray, y::AbstractArray; skipmissing::Symbol)
-    if skipmissing == :listwise
-        x, y = handlemissings_naive(x, y)
-    end
-    if skipmissing == :pairwise || skipmissing == :listwise
-        return corkendall_naive(x, y)
-    elseif skipmissing == :none && !(missing isa eltype(x)) & !(ismissing isa eltype(y))
-        return corkendall_naive(x, y)
-    else
-        throw(ArgumentError("keyword argument skipmissing has unrecognised value `:$skipmissing`"))
-    end
-end
-
-"""
-    handlemissings_naive(x::RoMVector,y::RoMVector)
-
-Simpler but slower version of handlemissings.
-"""
-function handlemissings_naive(x::RoMVector, y::RoMVector)
-    length(x) == length(y) || throw(DimensionMismatch("Vectors must be same length"))
-    keep = .!(ismissing.(x) .| ismissing.(y))
-    x = x[keep]
-    y = y[keep]
-    x = collect(skipmissing(x))
-    y = collect(skipmissing(y))
-    x, y
-end
-
-#Alternative (simpler but slower) implementation of handlemissings
-function handlemissings_naive(x::AbstractMatrix)
-    choose = [!any(ismissing, view(x, i, :)) for i in axes(x, 1)]
-    x[choose, :]
-end
-
-function handlemissings_naive(x::AbstractMatrix, y::AbstractMatrix)
-    choose1 = [!any(ismissing, view(x, i, :)) for i in axes(x, 1)]
-    choose2 = [!any(ismissing, view(y, i, :)) for i in axes(y, 1)]
-    choose = choose1 .& choose2
-    x[choose, :], y[choose, :]
-end
-
-function handlemissings_naive(x::AbstractVector, y::AbstractMatrix)
-    choose1 = .!ismissing.(x)
-    choose2 = [!any(ismissing, view(y, i, :)) for i in axes(y, 1)]
-    choose = choose1 .& choose2
-    x[choose], y[choose, :]
-end
-
-function handlemissings_naive(x::AbstractMatrix, y::AbstractVector)
-    choose1 = [!any(ismissing, view(x, i, :)) for i in axes(x, 1)]
-    choose2 = .!ismissing.(y)
-    choose = choose1 .& choose2
-    x[choose, :], y[choose]
-end

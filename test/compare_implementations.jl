@@ -181,7 +181,28 @@ function compare_implementations(fn1::Function=corkendall, fn2::Function=corkend
 
             # test for equality, if that fails print to the screen the argument(s) and the two returns
             if !myisapprox(res1, res2, abstol)
-                if j == 1
+                @show j
+                global garg1= arg1
+                if j >=4
+                global garg2 = arg2
+                end
+                global gres1 = res1
+                global gres2=res2
+                @show size(arg1)
+                if j >=4
+                @show size(arg2)
+                end
+                @show arg1
+                if j>=4
+                @show arg2
+                end
+                @show res1
+                @show res2
+@show eltype(res1)
+@show eltype(res2)
+@show isequal.(res1,res2)
+
+                if j <=3
                     return res1, res2, arg1
                 else
                     return res1, res2, arg1, arg2
