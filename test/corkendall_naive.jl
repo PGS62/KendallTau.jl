@@ -23,16 +23,11 @@ algorithm, so use for testing against version using Knight's algorithm.
 function corkendall_naive(x::RoMMatrix{T}, y::RoMMatrix{U}=x;
     skipmissing::Symbol=:none) where {T,U}
 
-    Base.require_one_based_indexing(x, y)
-
-    size(x, 1) == size(y, 1) || throw(DimensionMismatch("x and y have 
-                                                         inconsistent dimensions"))
+    KendallTau.corkendall_validateargs(x, y, skipmissing, true)
 
     symmetric = x === y
 
     missing_allowed = missing isa eltype(x) || missing isa eltype(y)
-    skipmissing in [:none, :pairwise, :listwise] || throw(ArgumentError("skipmissing must \
-                       be one of :none, :pairwise or :listwise, but got :$skipmissing"))
 
     # Degenerate case - U and/or T not defined.
     if x isa Matrix{Missing} || y isa Matrix{Missing}
@@ -69,14 +64,9 @@ end
 
 function corkendall_naive(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none) where {T,U}
 
-    Base.require_one_based_indexing(x, y)
-
-    length(x) == length(y) || throw(DimensionMismatch("x and y have \
-                                                       inconsistent dimensions"))
+    KendallTau.corkendall_validateargs(x, y, skipmissing, false)
 
     missing_allowed = missing isa eltype(x) || missing isa eltype(y)
-    skipmissing in [:none, :pairwise] || throw(ArgumentError("skipmissing must be one of \
-    :none or :pairwise, but got :$skipmissing"))
 
     if x isa Vector{Missing} || y isa Vector{Missing}
         # Degenerate case - U and/or T not defined.
@@ -104,9 +94,6 @@ function corkendall_naive(x::RoMVector, y::RoMMatrix; skipmissing::Symbol=:none)
 end
 
 function corkendall_naive_kernel!(x, y, skipmissing::Symbol)
-
-    length(x) == length(y) || throw(DimensionMismatch("x and y have \
-                                                     inconsistent dimensions"))
 
     length(x) >= 2 || return NaN
 

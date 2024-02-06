@@ -24,14 +24,16 @@ println("Julia Version $VERSION")
 @show size(xm)
 @show typeof(xm)
 
-print("KendallTau.corkendall(x)$(" "^26)")
+print("KendallTau.corkendall(x)                          ")
 @time res_1 = KendallTau.corkendall(x)
 print("KendallTau.corkendall(xm; skipmissing = :pairwise)")
 @time res_2 = KendallTau.corkendall(xm; skipmissing=:pairwise)
 print("KendallTau.corkendall(xm; skipmissing = :listwise)")
 @time res_3 = KendallTau.corkendall(xm; skipmissing=:listwise)
-println("="^100)
+print("StatsBase.corkendall(x)                           ")
+@time res_4 = StatsBase.corkendall(x)
 
+println("="^100)
 
 #=
 ====================================================================================================

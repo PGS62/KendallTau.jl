@@ -8,34 +8,12 @@
 const RoMVector{T<:Real} = AbstractVector{<:Union{T,Missing}}
 const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
 
-function corkendall_degenerate(x, y, skipmissing::Symbol=:none)
-
-    corkendall_validateargs(x, y, skipmissing)
-    offdiag = skipmissing == :none ? missing : NaN
-    nr, nc = size(x, 2), size(y, 2)
-    if x === y
-        return ifelse.((1:nr) .== (1:nc)', 1.0, offdiag)
-    else
-        return fill(offdiag, nr, nc)
-    end
-end
-
-function corkendall_validateargs(x, y, skipmissing)
-    Base.require_one_based_indexing(x, y)
-    size(x, 1) == size(y, 1) || throw(DimensionMismatch("x and y have 
-                                                         inconsistent dimensions"))
-    skipmissing == :none || skipmissing == :pairwise || skipmissing == :listwise ||
-        throw(ArgumentError("skipmissing must be one of :none, :pairwise or :listwise, \
-        but got :$skipmissing"))
-end
-
-
 """
     corkendall(x, y=x; skipmissing::Symbol=:none)
 
 Compute Kendall's rank correlation coefficient, τ. `x` and `y` must be either vectors or
-matrices, with elements that are either real numbers or `missing`. Uses multiple threads if
-available.
+matrices, with elements that are either real numbers or `missing`. When either x or y is a
+matrix the function uses multiple threads if available.
 
 # Keyword argument
 
@@ -46,9 +24,10 @@ available.
    `i`th row of `y` is `missing` then the entire `i`th rows are skipped; note that
    this might skip a high proportion of entries. Only allowed when `x` or `y` is a matrix.
 """
-
 function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x;
     skipmissing::Symbol=:none) where {T,U}
+
+    corkendall_validateargs(x, y, skipmissing, true)
 
     missing_allowed = missing isa eltype(x) || missing isa eltype(y)
     nr, nc = size(x, 2), size(y, 2)
@@ -63,7 +42,12 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x;
     end
 
     if x isa Matrix{Missing} || y isa Matrix{Missing}
-        return corkendall_degenerate(x, y, skipmissing)
+        offdiag = skipmissing == :none ? missing : NaN
+        if x === y
+            return ifelse.((1:nr) .== (1:nc)', 1.0, offdiag)
+        else
+            return fill(offdiag, nr, nc)
+        end
     end
 
     if skipmissing == :none && missing_allowed
@@ -71,14 +55,15 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x;
     else
         C = ones(Float64, nr, nc)
     end
-    
+    #=
+    Function barrier: The types of x, y and C vary according to the value of skipmissing, so
+    this function is type unstable. By contrast, _corkendall is type stable.
+    =#
     return (_corkendall(x, y; C, skipmissing))
 
 end
 
 function _corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:none, C) where {T,U}
-
-    corkendall_validateargs(x, y, skipmissing)
 
     symmetric = x === y
 
@@ -87,8 +72,7 @@ function _corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:no
         return collect(transpose(corkendall(y, x; skipmissing)))
     end
 
-    m, nr = size(x)
-    nc = size(y, 2)
+    (m, nr), nc = size(x), size(y, 2)
 
     # Avoid unnecessary allocation when nthreads is large but output matrix is small.
     n_duplicates = min(Threads.nthreads(), symmetric ? nr - 1 : nr)
@@ -149,7 +133,7 @@ end
 
 function corkendall(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none) where {T,U}
 
-    corkendall_validateargs(x, y, skipmissing)
+    corkendall_validateargs(x, y, skipmissing, false)
 
     missing_allowed = missing isa eltype(x) || missing isa eltype(y)
 
@@ -184,6 +168,21 @@ end
 
 function corkendall(x::RoMVector, y::RoMMatrix; skipmissing::Symbol=:none)
     return corkendall(reshape(x, (length(x), 1)), y; skipmissing)
+end
+
+function corkendall_validateargs(x, y, skipmissing, allowlistwise::Bool)
+    Base.require_one_based_indexing(x, y)
+    size(x, 1) == size(y, 1) ||
+        throw(DimensionMismatch("x and y have inconsistent dimensions"))
+    if allowlistwise
+        skipmissing == :none || skipmissing == :pairwise || skipmissing == :listwise ||
+            throw(ArgumentError("skipmissing must be one of :none, :pairwise or :listwise, \
+            but got :$skipmissing"))
+    else
+        skipmissing == :none || skipmissing == :pairwise ||
+            throw(ArgumentError("skipmissing must be either :none or :pairwise, but \
+            got :$skipmissing"))
+    end
 end
 
 # Auxiliary functions for Kendall's rank correlation
@@ -392,8 +391,8 @@ end
     scratch_fx::AbstractVector{T}, scratch_fy::AbstractVector{U}) where {T,U}
 
 Return a pair `(a,b)`, filtered copies of `(x,y)`, in which elements `x[i]` and
-`y[i]` are excluded if  `ismissing(x[i])||ismissing(y[i])`. The element types of `a` and
-`b` are `T` and `U` so that `Missing` is not an element type of either.
+`y[i]` are excluded if  `ismissing(x[i])||ismissing(y[i])`. `Missing` is not an element type
+of either returned vector.
 """
 function handle_pairwise(x::RoMVector{T}, y::RoMVector{U};
     scratch_fx::AbstractVector{T}=similar(x, T),
@@ -411,9 +410,6 @@ function handle_pairwise(x::RoMVector{T}, y::RoMVector{U};
 
     return view(scratch_fx, 1:j), view(scratch_fy, 1:j)
 end
-
-handle_listwise(x::AbstractMatrix{<:Real}, y::AbstractMatrix{<:Real}) = x, y
-
 
 """
     handle_listwise(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T,U}
