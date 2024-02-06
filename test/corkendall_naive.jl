@@ -45,10 +45,8 @@ function corkendall_naive(x::RoMMatrix{T}, y::RoMMatrix{U}=x;
         end
     end
 
-    if missing_allowed
-        if skipmissing == :listwise
-            x, y = KendallTau.handle_listwise(x, y)
-        end
+    if missing_allowed && skipmissing == :listwise
+        x, y = KendallTau.handle_listwise(x, y)
     end
 
     m, nr = size(x)
@@ -62,7 +60,7 @@ function corkendall_naive(x::RoMMatrix{T}, y::RoMMatrix{U}=x;
 
     for j = (symmetric ? 2 : 1):nr
         for i = 1:(symmetric ? j - 1 : nc)
-            C[j, i] = corkendall_naive_kernel!(view(x,:,j), view(y,:,i),skipmissing)
+            C[j, i] = corkendall_naive_kernel!(view(x, :, j), view(y, :, i), skipmissing)
             symmetric && (C[i, j] = C[j, i])
         end
     end
@@ -80,13 +78,9 @@ function corkendall_naive(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=
     skipmissing in [:none, :pairwise] || throw(ArgumentError("skipmissing must be one of \
     :none or :pairwise, but got :$skipmissing"))
 
-    if missing_allowed && skipmissing == :none
-        if any(ismissing, x) || any(ismissing, y)
-            return missing
-        end
-    elseif x isa Vector{Missing} || y isa Vector{Missing}
+    if x isa Vector{Missing} || y isa Vector{Missing}
         # Degenerate case - U and/or T not defined.
-        return NaN
+        return skipmissing == :none ? missing : NaN
     end
 
     x = copy(x)
@@ -95,8 +89,7 @@ function corkendall_naive(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=
         x, y = KendallTau.handle_pairwise(x, y)
     end
 
-
-    return corkendall_naive_kernel!(x, y,skipmissing)
+    return corkendall_naive_kernel!(x, y, skipmissing)
 end
 
 #= corkendall_naive returns a vector in this case, inconsistent with with Statistics.cor and
@@ -110,29 +103,17 @@ function corkendall_naive(x::RoMVector, y::RoMMatrix; skipmissing::Symbol=:none)
     return corkendall_naive(reshape(x, (length(x), 1)), y; skipmissing)
 end
 
-function corkendall_naive_kernel!(x::RoMVector{T}, y::RoMVector{U},
-     skipmissing::Symbol) where {T,U}
+function corkendall_naive_kernel!(x, y, skipmissing::Symbol)
+
+    length(x) == length(y) || throw(DimensionMismatch("x and y have \
+                                                     inconsistent dimensions"))
 
     length(x) >= 2 || return NaN
 
-    if skipmissing == :none
-        if missing isa eltype(x) && any(ismissing, x)
-            return (missing)
-        elseif missing isa eltype(y) && any(ismissing, y)
-            return (missing)
+    if skipmissing == :pairwise
+        if missing isa eltype(x) || missing isa eltype(y)
+            x, y = KendallTau.handle_pairwise(x, y)
         end
-    end
-
-    if missing isa eltype(x) || missing isa eltype(y)
-        x, y = KendallTau.handle_pairwise(x, y)
-    end
-
-    if any(ismissing, x) || any(ismissing, y)
-        return missing
-    end
-
-    if any(isnan, x) || any(isnan, y)
-        return NaN
     end
 
     n = length(x)
