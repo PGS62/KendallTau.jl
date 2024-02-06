@@ -7,6 +7,8 @@ xm = ifelse.(x .< 0.05, missing, x);
 #compile...
 res = KendallTau.corkendall(x)
 res = KendallTau.corkendall(xm; skipmissing=:pairwise)
+res = KendallTau.corkendall(xm; skipmissing=:listwise)
+res = KendallTau.corkendall(xm; skipmissing=:none)
 res = StatsBase.corkendall(x)
 
 x = rand(MersenneTwister(0), 1000, 1000);
@@ -56,5 +58,21 @@ KendallTau.corkendall(x)                            1.716595 seconds (1.26 k all
 KendallTau.corkendall(xm; skipmissing = :pairwise)  1.738789 seconds (1.26 k allocations: 16.236 MiB)
 KendallTau.corkendall(xm; skipmissing = :listwise)  0.002477 seconds (268 allocations: 22.915 MiB)
 ====================================================================================================
+
+#NOTE INCREASE IN ALLOCATIONS BELOW (happens in both Julia 1.10 and Julia 1.8.5)
+====================================================================================================
+Dates.now() = DateTime("2024-02-06T11:49:28.575")
+ENV["COMPUTERNAME"] = "DESKTOP-HSGAM5S"
+Julia Version 1.10.0
+Threads.nthreads() = 20
+size(x) = (1000, 1000)
+typeof(x) = Matrix{Float64}
+size(xm) = (1000, 1000)
+typeof(xm) = Matrix{Union{Missing, Float64}}
+KendallTau.corkendall(x)                            1.815646 seconds (7.06 M allocations: 162.469 MiB)
+KendallTau.corkendall(xm; skipmissing = :pairwise)  1.839040 seconds (7.01 M allocations: 161.448 MiB)
+KendallTau.corkendall(xm; skipmissing = :listwise)  0.028546 seconds (4.59 M allocations: 146.560 MiB)
+====================================================================================================
+
 
 =#
