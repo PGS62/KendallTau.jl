@@ -1,4 +1,4 @@
-import CSV
+using CSV: write, File, getnames
 import DataFrames
 import Tables
 import Statistics
@@ -59,7 +59,7 @@ function corkendall_fromfile(file1::String, file2::String, outputfile::String,
         DataFrames.insertcols!(datatowrite, 1, Symbol("") => String.(names1))
     end
 
-    filename = CSV.write(outputfile, datatowrite, header=writeheaders)
+    filename = write(outputfile, datatowrite, header=writeheaders)
 
     if whattoreturn == "filename"
         return filename
@@ -93,7 +93,7 @@ function csvread(filename::String, ignorefirstrow::Bool, ignorefirstcol::Bool;
     types = Union{Missing,Float64}
     strict = true
 
-    filedata = CSV.File(filename; header, drop, missingstring, types, strict)
+    filedata = File(filename; header, drop, missingstring, types, strict)
     data = Tables.matrix(filedata)
 
     #Convert to Array{Float64} if there are in fact no missings
@@ -101,7 +101,7 @@ function csvread(filename::String, ignorefirstrow::Bool, ignorefirstcol::Bool;
         data = identity.(data)
     end
 
-    names = CSV.getnames(filedata)
+    names = getnames(filedata)
 
     return data, names
 end
@@ -163,7 +163,7 @@ function comparecorrelationfiles(file1::String, file2::String)
 
     absdiffs = abs.(data1 .- data2)
 
-    return (maximum(absdiffs), median(absdiffs))
+    return (maximum(absdiffs), Statistics.median(absdiffs))
 
 end
 

@@ -2,9 +2,6 @@ using KendallTau
 using Test
 using Random
 
-include("corkendall_naive.jl")
-include("compare_implementations.jl")
-
 @testset "corkendall_auxiliary_fns" begin
 
     #Auxiliary functions for corkendall
@@ -25,6 +22,12 @@ include("compare_implementations.jl")
     @test KendallTau.handle_pairwise(u, v) == (Int64[], Int64[])
     @test KendallTau.handle_listwise(mx, mx) == ([1 2; 5 6], [1 2; 5 6])
 
+    #Test handling of symmetric inputs
+    res1, res2 = KendallTau.handle_listwise(mx, mx)
+    @test res1 === res2
+    res1, res2 = KendallTau.handle_listwise(mx, copy(mx))
+    @test !(res1 === res2)
+
     v = collect(100:-1:1)
     KendallTau.insertion_sort!(v, 1, 100)
     @test v == 1:100
@@ -34,6 +37,7 @@ include("compare_implementations.jl")
     @test v == 1:1000
 
 end
+
 
 @testset "corkendall" begin
 
@@ -102,16 +106,38 @@ end
         @test isnan(f([1, 2, 3, 4, 5], xm, skipmissing=:pairwise))
         @test isnan(f(xm, [1, 2, 3, 4, 5], skipmissing=:pairwise))
         @test isequal(f(xmm, skipmissing=:pairwise), [1.0 NaN; NaN 1.0])
+        @test isequal(f(xmm, skipmissing=:none), [1.0 missing; missing 1.0])
+        @test isequal(f(xmm, xmm, skipmissing=:none), [1.0 missing; missing 1.0])
+        @test isequal(f(xmm, copy(xmm), skipmissing=:none), [missing missing; missing missing])
+        @test isequal(f(xmm, xmm, skipmissing=:listwise), [1.0 NaN; NaN 1.0])
+        @test isequal(f(xmm, copy(xmm), skipmissing=:listwise), [NaN NaN; NaN NaN])
+
         @test isequal(f(xmm, copy(xmm), skipmissing=:pairwise), [NaN NaN; NaN NaN])
 
         @test ismissing(f([1, 2, 3, 4, 5], xm, skipmissing=:none))
         @test ismissing(f([1, 2, 3, 4, 5], xm, skipmissing=:none))
         @test isequal(f(xmm, skipmissing=:none), [1.0 missing; missing 1.0])
         @test isequal(f(xmm, copy(xmm), skipmissing=:none), [missing missing; missing missing])
-        @test_throws ArgumentError f([1,2,3,4],[4,3,2,1], skipmissing = :listwise)
+        @test isequal(f(hcat(Y, xm), skipmissing=:none), vcat(hcat(f(Y, skipmissing=:none), [missing, missing, missing]), [missing missing missing 1.0]))
+        @test_throws ArgumentError f([1, 2, 3, 4], [4, 3, 2, 1], skipmissing=:listwise)
+
+        #interaction of NaNs and missing inputs with skipmissing argument
+        nan_and_missing = hcat(fill(NaN,10,1),fill(missing,10,1))
+        @test isequal(f(nan_and_missing,skipmissing=:none),[1.0 missing;missing 1.0])
+        @test isequal(f(nan_and_missing,copy(nan_and_missing),skipmissing=:none),[NaN missing;missing missing])
+        @test isequal(f(nan_and_missing,skipmissing=:pairwise),[1.0 NaN;NaN 1.0])
+        @test isequal(f(nan_and_missing,copy(nan_and_missing),skipmissing=:pairwise),[NaN NaN;NaN NaN])
+        @test isequal(f(nan_and_missing,skipmissing=:listwise),[1.0 NaN;NaN 1.0])
+        @test isequal(f(nan_and_missing,copy(nan_and_missing),skipmissing=:listwise),[NaN NaN;NaN NaN])
 
         @test_throws ArgumentError f(x; skipmissing=:foo)
         @test_throws ArgumentError f(Xm; skipmissing=:foo)
+
+        #when inputs have fewer than 2 rows return should be NaN even when inputs are missing
+        @test isnan(f(Float64[],Float64[]))
+        @test isnan(f([1],[1]))
+        @test isnan(f([missing],[missing]))
+        @test isequal(f([missing],[missing missing]),[NaN NaN])
 
         c11 = f(x1, x1)
         c12 = f(x1, x2)
@@ -196,21 +222,8 @@ end
         n_reps = Threads.nthreads()
         @test f(repeat(hcat(a, b), outer=[1, n_reps])) == repeat(f(hcat(a, b)), outer=[n_reps, n_reps])
 
-        #= Test functions against corkendall_naive, a "reference implementation" that has the
-        advantage of simplicity.
-        =#
-        if f !== corkendall_naive
-            @test compare_implementations(f, corkendall_naive, abstol=0.0, maxcols=10, maxrows=10, numtests=200) == true
-            @test compare_implementations(f, corkendall_naive, abstol=0.0, maxcols=10, maxrows=100, numtests=200) == true
-            @test compare_implementations(f, corkendall_naive, abstol=1e14, maxcols=2, maxrows=20000, numtests=5) == true
-        end
-
     end
 
-    smallx = randn(MersenneTwister(123), 1000, 3)
-    indicators = rand(MersenneTwister(456), 1000, 3) .< 0.05
-    smallx = ifelse.(indicators, missing, smallx)
-    @test corkendall_naive(smallx, skipmissing=:pairwise) == KendallTau.corkendall(smallx, skipmissing=:pairwise)
-    @test corkendall_naive(smallx, skipmissing=:listwise) == KendallTau.corkendall(smallx, skipmissing=:listwise)
 
 end
+

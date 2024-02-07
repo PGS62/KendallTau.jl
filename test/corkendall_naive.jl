@@ -1,8 +1,8 @@
-using KendallTau: corkendall_validateargs, handle_listwise, handle_pairwise
+using KendallTau: corkendall_validateargs, handle_listwise, handle_pairwise, RoMVector, RoMMatrix
 
 # RoM = "Real or Missing"
-const RoMVector{T<:Real} = AbstractVector{<:Union{T,Missing}}
-const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
+#const RoMVector{T<:Real} = AbstractVector{<:Union{T,Missing}}
+#const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
 
 """
     corkendall_naive(x, y=x; skipmissing::Symbol=:none)
@@ -29,10 +29,11 @@ function corkendall_naive(x::RoMMatrix{T}, y::RoMMatrix{U}=x;
 
     missing_allowed = missing isa eltype(x) || missing isa eltype(y)
 
-    # Degenerate case - U and/or T not defined.
+    (m, nr), nc = size(x), size(y, 2)
+
+    #Degenerate case - T and/or U not defined.
     if x isa Matrix{Missing} || y isa Matrix{Missing}
-        offdiag = missing_allowed && skipmissing == :none ? missing : NaN
-        nr, nc = size(x, 2), size(y, 2)
+        offdiag = (m >= 2 && skipmissing == :none) ? missing : NaN
         if symmetric
             return ifelse.((1:nr) .== (1:nc)', 1.0, offdiag)
         else
@@ -66,11 +67,17 @@ function corkendall_naive(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=
 
     corkendall_validateargs(x, y, skipmissing, false)
 
+    length(x)>=2 || return(NaN)
+
     missing_allowed = missing isa eltype(x) || missing isa eltype(y)
 
-    if x isa Vector{Missing} || y isa Vector{Missing}
-        # Degenerate case - U and/or T not defined.
-        return skipmissing == :none ? missing : NaN
+    if missing_allowed && skipmissing == :none
+        if any(ismissing, x) || any(ismissing, y)
+            return missing
+        end
+    elseif x isa Vector{Missing} || y isa Vector{Missing}
+        #Degenerate case - T and/or U not defined.
+        return NaN
     end
 
     x = copy(x)
@@ -100,6 +107,12 @@ function corkendall_naive_kernel!(x, y, skipmissing::Symbol)
     if skipmissing == :pairwise
         if missing isa eltype(x) || missing isa eltype(y)
             x, y = handle_pairwise(x, y)
+        end
+    elseif skipmissing == :none
+        if missing isa eltype(x) || missing isa eltype(y)
+            if any(ismissing, x) || any(ismissing, y)
+                return (missing)
+            end
         end
     end
 
