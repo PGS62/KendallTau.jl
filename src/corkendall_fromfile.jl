@@ -1,8 +1,7 @@
 using CSV: write, File, getnames
-import DataFrames
-import Tables
-import Statistics
-using DelimitedFiles
+using DataFrames: DataFrame, insertcols!
+using Tables: matrix
+using Statistics: median
 
 """
     corkendall_fromfile(file1::String, file2::String, outputfile::String,
@@ -53,10 +52,10 @@ function corkendall_fromfile(file1::String, file2::String, outputfile::String,
         res = sin.(π / 2 .* res)
     end
 
-    datatowrite = DataFrames.DataFrame(res, names2)
+    datatowrite = DataFrame(res, names2)
 
     if writeheaders
-        DataFrames.insertcols!(datatowrite, 1, Symbol("") => String.(names1))
+        insertcols!(datatowrite, 1, Symbol("") => String.(names1))
     end
 
     filename = write(outputfile, datatowrite, header=writeheaders)
@@ -68,10 +67,10 @@ function corkendall_fromfile(file1::String, file2::String, outputfile::String,
             if size(res) == (1, 1)
                 return 1.0
             else
-                return Statistics.median(offdiag(res))
+                return median(offdiag(res))
             end
         else
-            return Statistics.median(res)
+            return median(res)
         end
     else
         throw("whattoreturn my be either 'filename' or 'median', but got '$whattoreturn'")
@@ -94,7 +93,7 @@ function csvread(filename::String, ignorefirstrow::Bool, ignorefirstcol::Bool;
     strict = true
 
     filedata = File(filename; header, drop, missingstring, types, strict)
-    data = Tables.matrix(filedata)
+    data = matrix(filedata)
 
     #Convert to Array{Float64} if there are in fact no missings
     if isnothing(findfirst(ismissing, data))
@@ -163,47 +162,6 @@ function comparecorrelationfiles(file1::String, file2::String)
 
     absdiffs = abs.(data1 .- data2)
 
-    return (maximum(absdiffs), Statistics.median(absdiffs))
+    return (maximum(absdiffs), median(absdiffs))
 
 end
-
-#Use DelimitedFiles for fewer dependencies
-function csvread2(filename::String, ignorefirstrow::Bool, ignorefirstcol::Bool;
-    missingstring::Union{Nothing,String,Vector{String}}="")
-
-    contents = DelimitedFiles.readdlm(filename, ',')
-    contents = ifelse.(contents .== missingstring, missing, contents)
-    firstrow = ignorefirstrow ? 2 : 1
-    firstcol = ignorefirstcol ? 2 : 1
-    if firstrow == firstcol == 1
-        data = contents
-    else
-        data = contents[firstrow:end, firstcol:end]
-    end
-    data = identity.(data)
-    if firstrow == 0
-        names = "Column" .* string.(1:(size(data, 2)))
-    else
-        names = Symbol.(contents[1, firstcol:end])
-    end
-    return (data, names)
-
-end
-
-function testcsvread2()
-    #csvread2("data/y_withheaders.csv",true,true,missingstring="NA")
-
-    base_folder = raw"C:\Users\phili\OneDrive\ISDA SIMM\Solum Validation C-VIII 2023\EQ_delta"
-    #ISDA's calculation of KendallTau
-    isda_results_file = joinpath(base_folder, raw"9_correlations\eq_delta-kendall_recent_1-10d.csv")
-
-    @time res1 = csvread2(isda_results_file, true, true, missingstring="NA")
-    @time res2 = csvread(isda_results_file, true, true, missingstring="NA")
-
-    res1 == res2
-
-end
-
-
-
-

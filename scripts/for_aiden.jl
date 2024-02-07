@@ -1,5 +1,4 @@
 using KendallTau
-using Statistics
 
 """
     test_corkendall_fromfile()

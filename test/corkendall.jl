@@ -1,6 +1,5 @@
 using KendallTau
 using Test
-using Random
 
 @testset "corkendall_auxiliary_fns" begin
 

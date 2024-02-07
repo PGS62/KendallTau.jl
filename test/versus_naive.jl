@@ -1,6 +1,6 @@
 using KendallTau
 using Test
-using Random
+using Random: randn,rand,MersenneTwister
 
 #=
 Note that corkendall and corkendall_naive share some subroutines, notably handle_pairwise
@@ -19,6 +19,5 @@ and handle_listwise. If those were bugged then this test would likely give a fal
     @test corkendall_naive(smallx, skipmissing=:pairwise) == KendallTau.corkendall(smallx, skipmissing=:pairwise)
     @test corkendall_naive(smallx, skipmissing=:listwise) == KendallTau.corkendall(smallx, skipmissing=:listwise)
     @test isequal(corkendall_naive(smallx, skipmissing=:none) , KendallTau.corkendall(smallx, skipmissing=:none))
-
 
 end

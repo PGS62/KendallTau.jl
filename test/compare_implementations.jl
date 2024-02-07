@@ -1,3 +1,4 @@
+using Random: rand, randn
 """
     compare_implementations(fn1=corkendall, fn2=corkendall_naive; abstol::Float64=1e-14,
     maxcols::Integer, maxrows::Integer, numtests::Integer,
