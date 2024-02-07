@@ -1,4 +1,4 @@
-using KendallTau
+using KendallTau: corkendall_validateargs, handle_listwise, handle_pairwise
 
 # RoM = "Real or Missing"
 const RoMVector{T<:Real} = AbstractVector{<:Union{T,Missing}}
@@ -23,7 +23,7 @@ algorithm, so use for testing against version using Knight's algorithm.
 function corkendall_naive(x::RoMMatrix{T}, y::RoMMatrix{U}=x;
     skipmissing::Symbol=:none) where {T,U}
 
-    KendallTau.corkendall_validateargs(x, y, skipmissing, true)
+    corkendall_validateargs(x, y, skipmissing, true)
 
     symmetric = x === y
 
@@ -41,7 +41,7 @@ function corkendall_naive(x::RoMMatrix{T}, y::RoMMatrix{U}=x;
     end
 
     if missing_allowed && skipmissing == :listwise
-        x, y = KendallTau.handle_listwise(x, y)
+        x, y = handle_listwise(x, y)
     end
 
     m, nr = size(x)
@@ -64,7 +64,7 @@ end
 
 function corkendall_naive(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none) where {T,U}
 
-    KendallTau.corkendall_validateargs(x, y, skipmissing, false)
+    corkendall_validateargs(x, y, skipmissing, false)
 
     missing_allowed = missing isa eltype(x) || missing isa eltype(y)
 
@@ -76,7 +76,7 @@ function corkendall_naive(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=
     x = copy(x)
 
     if missing_allowed && skipmissing == :pairwise
-        x, y = KendallTau.handle_pairwise(x, y)
+        x, y = handle_pairwise(x, y)
     end
 
     return corkendall_naive_kernel!(x, y, skipmissing)
@@ -99,7 +99,7 @@ function corkendall_naive_kernel!(x, y, skipmissing::Symbol)
 
     if skipmissing == :pairwise
         if missing isa eltype(x) || missing isa eltype(y)
-            x, y = KendallTau.handle_pairwise(x, y)
+            x, y = handle_pairwise(x, y)
         end
     end
 

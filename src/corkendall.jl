@@ -32,13 +32,8 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x;
     missing_allowed = missing isa eltype(x) || missing isa eltype(y)
     nr, nc = size(x, 2), size(y, 2)
 
-    symmetric = x === y
-
     if missing_allowed && skipmissing == :listwise
         x, y = handle_listwise(x, y)
-        if symmetric
-            y = x
-        end
     end
 
     if x isa Matrix{Missing} || y isa Matrix{Missing}
@@ -420,39 +415,30 @@ types of `a` and `b` are `T` and `U` so that `Missing` is not an element type of
 """
 function handle_listwise(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T,U}
 
-    nrx = size(x, 1)
-    nry = size(y, 1)
-    nrx == nry || throw(DimensionMismatch("x and y have inconsistent dimensions"))
+    axes(x, 1) == axes(y, 1) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
 
     a = similar(x, T)
-    b = similar(y, U)
     k = 0
 
-    @inbounds for i in axes(x, 1)
-        include = true
-        for j in axes(x, 2)
-            if ismissing(x[i, j])
-                include = false
-                break
-            end
-        end
-        if include
-            for j in axes(y, 2)
-                if ismissing(y[i, j])
-                    include = false
-                    break
-                end
-            end
-            if include
+    symmetric = x === y
+
+    if symmetric
+        @inbounds for i in axes(x, 1)
+            if all(j -> !ismissing(x[i, j]), axes(x, 2))
                 k += 1
-                for j in axes(x, 2)
-                    a[k, j] = x[i, j]
-                end
-                for j in axes(y, 2)
-                    b[k, j] = y[i, j]
-                end
+                a[k, :] .= view(x, i, :)
             end
         end
+        return view(a, 1:k, :), view(a, 1:k, :)
+    else
+        b = similar(y, U)
+        @inbounds for i in axes(x, 1)
+            if all(j -> !ismissing(x[i, j]), axes(x, 2)) && all(j -> !ismissing(y[i, j]), axes(y, 2))
+                k += 1
+                a[k, :] .= view(x, i, :)
+                b[k, :] .= view(y, i, :)
+            end
+        end
+        return view(a, 1:k, :), view(b, 1:k, :)
     end
-    return view(a, 1:k, :), view(b, 1:k, :)
 end
