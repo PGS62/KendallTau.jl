@@ -8,7 +8,7 @@ This (unregistered) Julia package exposes a function `corkendall` that is a cand
 
 The package also contains a function `speedtest` that prints a comparison of the execution speed of two (or more) implementations of Kendall Tau. `speedtest` demonstrates that the new version of `corkendall` is about ~~five~~ ~~six~~ seven times faster than the existing StatsBase version. See [# 634](https://github.com/JuliaStats/StatsBase.jl/issues/634).
 
-## Update February 2023
+## Update February 2024
 The code of `corkendall` from this package was incorporated in StatsBase on 8 February 2021 (see [this](https://github.com/JuliaStats/StatsBase.jl/commit/11ac5b596405367b3217d3d962e22523fef9bb0d) commit).
 
 More recently I have made further changes:
@@ -18,21 +18,23 @@ More recently I have made further changes:
 3) A new function `corkendall_fromfile` takes arguments as names of csv files containing the input and output data.
 
 ### Help
-```
+```julia
 help?> KendallTau.corkendall
   corkendall(x, y=x; skipmissing::Symbol=:none)
 
-  Compute Kendall's rank correlation coefficient, τ. x and y must both be either vectors
-  or matrices, with elements that are either real numbers or missing values.
+  Compute Kendall's rank correlation coefficient, τ. x and y must be either vectors or matrices, and
+  entries may be missing.
+
+  Uses multiple threads when either x or y is a matrix.
 
   Keyword argument
-  ≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+  ≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
 
-    •  skipmissing::Symbol=:none: if :none, missing values in either x or y cause the
-       function to raise an error. Use :pairwise to skip entries with a missing value
-       in either of the two vectors used to calculate (an element of) the return. Use
-       :listwise to skip entries where a missing value appears anywhere in a given
-       row of x or y; note that this might drop a high proportion of entries.
+    •  skipmissing::Symbol=:none: If :none (the default), missing entries in x or y give rise to
+       missing entries in the return. If :pairwise when calculating an element of the return, both
+       ith entries of the input vectors are skipped if either is missing. If :listwise the ith rows
+       of both x and y are skipped if missing appears in either; note that this might skip a high
+       proportion of entries. Only allowed when x or y is a matrix.
 ```
 
 ## Performance
