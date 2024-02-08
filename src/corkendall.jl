@@ -14,12 +14,13 @@ Uses multiple threads when either `x` or `y` is a matrix.
 
 # Keyword argument
 
-- `skipmissing::Symbol=:none`: If `:none` (the default), `missing` entries in `x` or
-   `y` give rise to `missing` entries in the return. If `:pairwise`, when either of the
-   `i`th entries of the vectors required to calculate an element of the return is `missing`,
-   both entries are skipped. If `:listwise`, when any entry in the `i`th row of `x` or the
-   `i`th row of `y` is `missing` then the entire `i`th rows are skipped; note that
-   this might skip a high proportion of entries. Only allowed when `x` or `y` is a matrix.
+- `skipmissing::Symbol=:none`: If `:none` (the default), `missing` entries in `x` or `y`
+    give rise to `missing` entries in the return. If `:pairwise` when calculating an element
+    of the return, both `i`th entries of the input vectors are skipped if either is missing.
+    If `:listwise` `x` and `y` are pre-processed by skipping the `i`th row of both if
+    `missing` appears in the `i`th row of either; note that this might skip a high
+    proportion of entries. Only allowed when `x` or `y` is a matrix.
+
 """
 function corkendall(x::AbstractMatrix, y::AbstractMatrix=x;
     skipmissing::Symbol=:none)
@@ -377,7 +378,7 @@ function handle_pairwise(x::AbstractVector, y::AbstractVector;
     scratch_fx::AbstractVector=similar(x),
     scratch_fy::AbstractVector=similar(y))
 
-    axes(x, 1) == axes(y, 1) || throw(DimensionMismatch("x and y have inconsistent dimensions"))   
+    axes(x, 1) == axes(y, 1) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
 
     j = 0
     @inbounds for i in eachindex(x)
