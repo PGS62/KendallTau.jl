@@ -27,7 +27,7 @@ function corkendall(x::AbstractMatrix, y::AbstractMatrix=x;
     corkendall_validateargs(x, y, skipmissing, true)
 
     missing_allowed = missing isa eltype(x) || missing isa eltype(y)
-    (m, nr), nc = size(x), size(y, 2)
+    nr, nc = size(x, 2), size(y, 2)
 
     if missing_allowed && skipmissing == :listwise
         x, y = handle_listwise(x, y)
@@ -39,14 +39,14 @@ function corkendall(x::AbstractMatrix, y::AbstractMatrix=x;
         C = ones(Float64, nr, nc)
     end
     #=
-    Function barrier: The types of x, y and C vary according to the value of skipmissing, so
+    Function barrier: The type of C varies according to the value of skipmissing, so
     this function is type unstable. By contrast, _corkendall is type stable.
     =#
     return (_corkendall(x, y; C, skipmissing))
 
 end
 
-function _corkendall(x::AbstractMatrix{T}, y::AbstractMatrix{U}=x; skipmissing::Symbol=:none, C) where {T,U}
+function _corkendall(x::AbstractMatrix, y::AbstractMatrix=x; skipmissing::Symbol=:none, C)
 
     symmetric = x === y
 
@@ -74,9 +74,9 @@ function _corkendall(x::AbstractMatrix{T}, y::AbstractMatrix{U}=x; skipmissing::
     ycolis = duplicate(similar(y, m), n_duplicates)
     sortedxcoljs = duplicate(similar(x, m), n_duplicates)
     permxs = duplicate(zeros(Int, m), n_duplicates)
-    scratch_fxs = duplicate(Vector{nonmissingtype(T)}(undef, m), n_duplicates)
-    scratch_fys = duplicate(Vector{nonmissingtype(U)}(undef, m), n_duplicates)
-    scratch_sys = duplicate(Vector{nonmissingtype(U)}(undef, m), n_duplicates)
+    scratch_fxs = duplicate(similar(x, m), n_duplicates)
+    scratch_fys = duplicate(similar(y, m), n_duplicates)
+    scratch_sys = duplicate(similar(y, m), n_duplicates)
 
     #= Use the "static scheduler". This is the "quickfix, but not recommended longterm" way
     of avoiding concurrency bugs when using Threads.threadid().
@@ -114,7 +114,7 @@ function _corkendall(x::AbstractMatrix{T}, y::AbstractMatrix{U}=x; skipmissing::
     return C
 end
 
-function corkendall(x::AbstractVector{T}, y::AbstractVector{U}; skipmissing::Symbol=:none) where {T,U}
+function corkendall(x::AbstractVector, y::AbstractVector; skipmissing::Symbol=:none)
 
     corkendall_validateargs(x, y, skipmissing, false)
 
@@ -132,7 +132,7 @@ function corkendall(x::AbstractVector{T}, y::AbstractVector{U}; skipmissing::Sym
     permute!(x, permx)
 
     return corkendall_kernel!(x, y, permx, similar(y), similar(y),
-        similar(x, nonmissingtype(T)), similar(y, nonmissingtype(U)), skipmissing)
+        similar(x), similar(y), skipmissing)
 end
 
 #= corkendall returns a vector in this case, inconsistent with with Statistics.cor and
@@ -365,19 +365,21 @@ function insertion_sort!(v::AbstractVector, lo::Integer, hi::Integer)
 end
 
 """
-    handle_pairwise(x::AbstractVector{T}, y::AbstractVector{U},
-    scratch_fx::AbstractVector{T}, scratch_fy::AbstractVector{U}) where {T,U}
+    handle_pairwise(x::AbstractVector, y::AbstractVector;
+    scratch_fx::AbstractVector=similar(x),
+    scratch_fy::AbstractVector=similar(y))
 
 Return a pair `(a,b)`, filtered copies of `(x,y)`, in which elements `x[i]` and
 `y[i]` are excluded if  `ismissing(x[i])||ismissing(y[i])`. `Missing` is not an element type
 of either returned vector.
 """
-function handle_pairwise(x::AbstractVector{T}, y::AbstractVector{U};
-    scratch_fx::AbstractVector=similar(x, nonmissingtype(T)),
-    scratch_fy::AbstractVector=similar(y, nonmissingtype(U))) where {T,U}
+function handle_pairwise(x::AbstractVector, y::AbstractVector;
+    scratch_fx::AbstractVector=similar(x),
+    scratch_fy::AbstractVector=similar(y))
+
+    axes(x, 1) == axes(y, 1) || throw(DimensionMismatch("x and y have inconsistent dimensions"))   
 
     j = 0
-
     @inbounds for i in eachindex(x)
         if !(ismissing(x[i]) || ismissing(y[i]))
             j += 1
@@ -390,19 +392,19 @@ function handle_pairwise(x::AbstractVector{T}, y::AbstractVector{U};
 end
 
 """
-    handle_listwise(x::AbstractMatrix{T}, y::AbstractMatrix{U}) where {T,U}
+    handle_listwise(x::AbstractMatrix, y::AbstractMatrix)
 
 Return a pair `(a,b)`, filtered copies of `(x,y)`, in which the rows `x[i,:]` and
 `y[i,:]` are both excluded if `any(ismissing,x[i,:])||any(ismissing,y[i,:])`. The element
 types of `a` and `b` are `T` and `U` so that `Missing` is not an element type of either.
 """
-function handle_listwise(x::AbstractMatrix{T}, y::AbstractMatrix{U}) where {T,U}
+function handle_listwise(x::AbstractMatrix, y::AbstractMatrix)
 
     axes(x, 1) == axes(y, 1) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
 
     symmetric = x === y
 
-    a = similar(x, nonmissingtype(T))
+    a = similar(x)
 
     k = 0
     if symmetric
@@ -414,7 +416,7 @@ function handle_listwise(x::AbstractMatrix{T}, y::AbstractMatrix{U}) where {T,U}
         end
         return view(a, 1:k, :), view(a, 1:k, :)
     else
-        b = similar(y, nonmissingtype(U))
+        b = similar(y)
         @inbounds for i in axes(x, 1)
             if all(j -> !ismissing(x[i, j]), axes(x, 2)) && all(j -> !ismissing(y[i, j]), axes(y, 2))
                 k += 1
