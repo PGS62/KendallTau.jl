@@ -228,8 +228,10 @@ end
         n_reps = Threads.nthreads()
         @test f(repeat(hcat(a, b), outer=[1, n_reps])) == repeat(f(hcat(a, b)), outer=[n_reps, n_reps])
 
-    end
+        # Works for Strings (!) in fact for any type for which isless is defined.
+        @test f(["a", "b", "c"], ["z", "y", "x"]) == -1.0
 
+    end
 
 end
 

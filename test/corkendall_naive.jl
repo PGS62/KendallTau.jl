@@ -125,7 +125,7 @@ function corkendall_naive_kernel!(x, y, skipmissing::Symbol)
 
     numerator, tiesx, tiesy = 0, 0, 0
     for i in 2:n, j in 1:(i-1)
-        k = sign(x[i] - x[j]) * sign(y[i] - y[j])
+        k = signdiff(x[i], x[j]) * signdiff(y[i], y[j])
         if k == 0
             if x[i] == x[j]
                 tiesx += 1
@@ -141,3 +141,22 @@ function corkendall_naive_kernel!(x, y, skipmissing::Symbol)
     denominator = sqrt(float(npairs - tiesx) * float(npairs - tiesy))
     numerator / denominator
 end
+
+function signdiff(a::T, b::U) where {T<:Real,U<:Real}
+    sign(a - b)
+end
+
+function signdiff(a, b)
+    if a < b
+        return -1
+    elseif a > b
+        return 1
+    elseif a == b
+        return 0
+    else
+        throw("Cannot compare inputs")
+    end
+end
+
+
+
