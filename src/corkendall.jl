@@ -20,7 +20,6 @@ Uses multiple threads when either `x` or `y` is a matrix.
     If `:listwise` `x` and `y` are pre-processed by skipping the `i`th row of both if
     `missing` appears in the `i`th row of either; note that this might skip a high
     proportion of entries. Only allowed when `x` or `y` is a matrix.
-
 """
 function corkendall(x::AbstractMatrix, y::AbstractMatrix=x;
     skipmissing::Symbol=:none)
@@ -43,11 +42,12 @@ function corkendall(x::AbstractMatrix, y::AbstractMatrix=x;
     Function barrier: The type of C varies according to the value of skipmissing, so
     this function is type unstable. By contrast, _corkendall is type stable.
     =#
-    return (_corkendall(x, y; C, skipmissing))
+    return (_corkendall(x, y, C, skipmissing))
 
 end
 
-function _corkendall(x::AbstractMatrix, y::AbstractMatrix=x; skipmissing::Symbol=:none, C)
+function _corkendall(x::AbstractMatrix, y::AbstractMatrix,
+    C::AbstractMatrix, skipmissing::Symbol)
 
     symmetric = x === y
 
@@ -107,8 +107,8 @@ function _corkendall(x::AbstractMatrix, y::AbstractMatrix=x; skipmissing::Symbol
 
         for i = 1:(symmetric ? j - 1 : nc)
             ycoli .= view(y, :, i)
-            C[j, i] = corkendall_kernel!(sortedxcolj, ycoli, permx, scratch_py,
-                scratch_sy, scratch_fx, scratch_fy, skipmissing)
+            C[j, i] = corkendall_kernel!(sortedxcolj, ycoli, permx, skipmissing;
+                scratch_py, scratch_sy, scratch_fx, scratch_fy)
             symmetric && (C[i, j] = C[j, i])
         end
     end
@@ -132,8 +132,7 @@ function corkendall(x::AbstractVector, y::AbstractVector; skipmissing::Symbol=:n
     permx = sortperm(x)
     permute!(x, permx)
 
-    return corkendall_kernel!(x, y, permx, similar(y), similar(y),
-        similar(x), similar(y), skipmissing)
+    return corkendall_kernel!(x, y, permx, skipmissing)
 end
 
 #= corkendall returns a vector in this case, inconsistent with with Statistics.cor and
@@ -168,10 +167,12 @@ end
 # Journal of the American Statistical Association, vol. 61, no. 314, 1966, pp. 436–439.
 # JSTOR, www.jstor.org/stable/2282833.
 """
-    corkendall_kernel!(sortedx::AbstractVector, y::AbstractVector,
-    permx::AbstractVector{<:Integer}, scratch_py::AbstractVector,
-    scratch_sy::AbstractVector, scratch_fx::AbstractVector,
-    scratch_fy::AbstractVector, skipmissing::Symbol)
+    corkendall_kernel!(sortedx::AbstractVector, y::AbstractVector, skipmissing::Symbol;
+    permx::AbstractVector{<:Integer},
+    scratch_py::AbstractVector=similar(y),
+    scratch_sy::AbstractVector=similar(y),
+    scratch_fx::AbstractVector=similar(x),
+    scratch_fy::AbstractVector=similar(y))
 
 Kendall correlation between two vectors but omitting the initial sorting of the first
 argument. Calculating Kendall correlation between `x` and `y` is thus a two stage process:
@@ -184,9 +185,11 @@ subsequent arguments:
    allocation.
 """
 function corkendall_kernel!(sortedx::AbstractVector, y::AbstractVector,
-    permx::AbstractVector{<:Integer}, scratch_py::AbstractVector,
-    scratch_sy::AbstractVector, scratch_fx::AbstractVector,
-    scratch_fy::AbstractVector, skipmissing::Symbol)
+    permx::AbstractVector{<:Integer}, skipmissing::Symbol;
+    scratch_py::AbstractVector=similar(y),
+    scratch_sy::AbstractVector=similar(y),
+    scratch_fx::AbstractVector=similar(sortedx),
+    scratch_fy::AbstractVector=similar(y))
 
     length(sortedx) >= 2 || return NaN
 
@@ -208,7 +211,8 @@ function corkendall_kernel!(sortedx::AbstractVector, y::AbstractVector,
         permutedy = scratch_py
     end
 
-    isnan2(x::Float64) = isnan(x)
+    # isnan2 needed so that corkendall works for any type for which isless is defined
+    isnan2(x::T) where {T<:Number} = isnan(x)
     isnan2(x) = false
     if any(isnan2, sortedx) || any(isnan2, permutedy)
         return NaN
@@ -371,8 +375,7 @@ end
     scratch_fy::AbstractVector=similar(y))
 
 Return a pair `(a,b)`, filtered copies of `(x,y)`, in which elements `x[i]` and
-`y[i]` are excluded if  `ismissing(x[i])||ismissing(y[i])`. `Missing` is not an element type
-of either returned vector.
+`y[i]` are excluded if  `ismissing(x[i])||ismissing(y[i])`.
 """
 function handle_pairwise(x::AbstractVector, y::AbstractVector;
     scratch_fx::AbstractVector=similar(x),
@@ -396,8 +399,7 @@ end
     handle_listwise(x::AbstractMatrix, y::AbstractMatrix)
 
 Return a pair `(a,b)`, filtered copies of `(x,y)`, in which the rows `x[i,:]` and
-`y[i,:]` are both excluded if `any(ismissing,x[i,:])||any(ismissing,y[i,:])`. The element
-types of `a` and `b` are `T` and `U` so that `Missing` is not an element type of either.
+`y[i,:]` are both excluded if `any(ismissing,x[i,:])||any(ismissing,y[i,:])`.
 """
 function handle_listwise(x::AbstractMatrix, y::AbstractMatrix)
 
