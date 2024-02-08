@@ -8,7 +8,7 @@
     corkendall(x, y=x; skipmissing::Symbol=:none)
 
 Compute Kendall's rank correlation coefficient, τ. `x` and `y` must be either vectors or
-matrices, and elements may be `missing`.
+matrices, and entries may be `missing`.
 
 Uses multiple threads when either `x` or `y` is a matrix.
 
