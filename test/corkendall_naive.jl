@@ -1,52 +1,61 @@
 using KendallTau: corkendall_validateargs, handle_listwise, handle_pairwise
-
-# RoM = "Real or Missing"
-const RoMVector{T<:Real} = AbstractVector{<:Union{T,Missing}}
-const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
+#######################################
+#
+#   Kendall correlation
+#
+#######################################
 
 """
     corkendall_naive(x, y=x; skipmissing::Symbol=:none)
 
 Compute Kendall's rank correlation coefficient, τ. `x` and `y` must be either vectors or
-matrices, with elements that are either real numbers or `missing`. Uses naive (order n²)
-algorithm, so use for testing against version using Knight's algorithm.
+matrices, and elements may be `missing`.
+
+Uses multiple threads when either `x` or `y` is a matrix.
 
 # Keyword argument
 
-- `skipmissing::Symbol=:none`: If `:none` (the default), then `missing` entries in `x` or
+- `skipmissing::Symbol=:none`: If `:none` (the default), `missing` entries in `x` or
    `y` give rise to `missing` entries in the return. If `:pairwise`, when either of the
    `i`th entries of the vectors required to calculate an element of the return is `missing`,
    both entries are skipped. If `:listwise`, when any entry in the `i`th row of `x` or the
    `i`th row of `y` is `missing` then the entire `i`th rows are skipped; note that
    this might skip a high proportion of entries. Only allowed when `x` or `y` is a matrix.
 """
-function corkendall_naive(x::RoMMatrix{T}, y::RoMMatrix{U}=x;
-    skipmissing::Symbol=:none) where {T,U}
+function corkendall_naive(x::AbstractMatrix, y::AbstractMatrix=x;
+    skipmissing::Symbol=:none)
 
     corkendall_validateargs(x, y, skipmissing, true)
 
-    symmetric = x === y
-
     missing_allowed = missing isa eltype(x) || missing isa eltype(y)
-
-    (m, nr), nc = size(x), size(y, 2)
-
-    #Degenerate case - T and/or U not defined.
-    if x isa Matrix{Missing} || y isa Matrix{Missing}
-        offdiag = (m >= 2 && skipmissing == :none) ? missing : NaN
-        if symmetric
-            return ifelse.((1:nr) .== (1:nc)', 1.0, offdiag)
-        else
-            return fill(offdiag, nr, nc)
-        end
-    end
+    nr, nc = size(x, 2), size(y, 2)
 
     if missing_allowed && skipmissing == :listwise
         x, y = handle_listwise(x, y)
     end
 
-    m, nr = size(x)
-    nc = size(y, 2)
+    if skipmissing == :none && missing_allowed
+        C = ones(Union{Missing,Float64}, nr, nc)
+    else
+        C = ones(Float64, nr, nc)
+    end
+    #=
+    Function barrier: The type of C varies according to the value of skipmissing, so
+    this function is type unstable. By contrast, _corkendall_naive is type stable.
+    =#
+    return (_corkendall_naive(x, y; C, skipmissing))
+
+end
+
+function _corkendall_naive(x::AbstractMatrix, y::AbstractMatrix=x; skipmissing::Symbol=:none, C)
+
+    symmetric = x === y
+
+    (m, nr), nc = size(x), size(y, 2)
+
+    # Avoid unnecessary allocation when nthreads is large but output matrix is small.
+
+    missing_allowed = missing isa eltype(x) || missing isa eltype(y)
 
     if missing_allowed && skipmissing == :none
         C = ones(Union{Missing,Float64}, nr, nc)
@@ -61,42 +70,34 @@ function corkendall_naive(x::RoMMatrix{T}, y::RoMMatrix{U}=x;
         end
     end
     return C
+
 end
 
-function corkendall_naive(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none) where {T,U}
+function corkendall_naive(x::AbstractVector, y::AbstractVector; skipmissing::Symbol=:none)
 
     corkendall_validateargs(x, y, skipmissing, false)
 
-    length(x)>=2 || return(NaN)
-
-    missing_allowed = missing isa eltype(x) || missing isa eltype(y)
-
-    if missing_allowed && skipmissing == :none
-        if any(ismissing, x) || any(ismissing, y)
-            return missing
-        end
-    elseif x isa Vector{Missing} || y isa Vector{Missing}
-        #Degenerate case - T and/or U not defined.
-        return NaN
-    end
+    length(x) >= 2 || return NaN
+    x === y && return (1.0)
 
     x = copy(x)
 
-    if missing_allowed && skipmissing == :pairwise
+    if skipmissing == :pairwise && (missing isa eltype(x) || missing isa eltype(y))
         x, y = handle_pairwise(x, y)
+        length(x) >= 2 || return NaN
     end
 
     return corkendall_naive_kernel!(x, y, skipmissing)
 end
 
 #= corkendall_naive returns a vector in this case, inconsistent with with Statistics.cor and
-StatsBase.corspearman, but consistent with StatsBase.corkendall.
+StatsBase.corspearman, but consistent with StatsBase.corkendall_naive.
  =#
-function corkendall_naive(x::RoMMatrix, y::RoMVector; skipmissing::Symbol=:none)
+function corkendall_naive(x::AbstractMatrix, y::AbstractVector; skipmissing::Symbol=:none)
     return vec(corkendall_naive(x, reshape(y, (length(y), 1)); skipmissing))
 end
 
-function corkendall_naive(x::RoMVector, y::RoMMatrix; skipmissing::Symbol=:none)
+function corkendall_naive(x::AbstractVector, y::AbstractMatrix; skipmissing::Symbol=:none)
     return corkendall_naive(reshape(x, (length(x), 1)), y; skipmissing)
 end
 
@@ -140,4 +141,3 @@ function corkendall_naive_kernel!(x, y, skipmissing::Symbol)
     denominator = sqrt(float(npairs - tiesx) * float(npairs - tiesy))
     numerator / denominator
 end
-
