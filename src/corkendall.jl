@@ -4,17 +4,13 @@
 #
 #######################################
 
-# RoM = "Real or Missing"
-const RoMVector{T<:Real} = AbstractVector{<:Union{T,Missing}}
-const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
-
 """
     corkendall(x, y=x; skipmissing::Symbol=:none)
 
 Compute Kendall's rank correlation coefficient, τ. `x` and `y` must be either vectors or
-matrices, with elements that are either real numbers or `missing`.
+matrices, and elements may be `missing`.
 
-When either `x` or `y` is a matrix the function uses multiple threads if available.
+Uses multiple threads when either `x` or `y` is a matrix.
 
 # Keyword argument
 
@@ -25,24 +21,13 @@ When either `x` or `y` is a matrix the function uses multiple threads if availab
    `i`th row of `y` is `missing` then the entire `i`th rows are skipped; note that
    this might skip a high proportion of entries. Only allowed when `x` or `y` is a matrix.
 """
-function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x;
-    skipmissing::Symbol=:none) where {T,U}
+function corkendall(x::AbstractMatrix, y::AbstractMatrix=x;
+    skipmissing::Symbol=:none)
 
     corkendall_validateargs(x, y, skipmissing, true)
-    symmetric = x===y
 
     missing_allowed = missing isa eltype(x) || missing isa eltype(y)
     (m, nr), nc = size(x), size(y, 2)
-
-    #Degenerate case - T and/or U not defined.
-    if x isa Matrix{Missing} || y isa Matrix{Missing}
-        offdiag = (m >= 2 && skipmissing == :none) ? missing : NaN
-        if symmetric
-            return ifelse.((1:nr) .== (1:nc)', 1.0, offdiag)
-        else
-            return fill(offdiag, nr, nc)
-        end
-    end
 
     if missing_allowed && skipmissing == :listwise
         x, y = handle_listwise(x, y)
@@ -61,7 +46,7 @@ function corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x;
 
 end
 
-function _corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:none, C) where {T,U}
+function _corkendall(x::AbstractMatrix{T}, y::AbstractMatrix{U}=x; skipmissing::Symbol=:none, C) where {T,U}
 
     symmetric = x === y
 
@@ -89,9 +74,9 @@ function _corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:no
     ycolis = duplicate(similar(y, m), n_duplicates)
     sortedxcoljs = duplicate(similar(x, m), n_duplicates)
     permxs = duplicate(zeros(Int, m), n_duplicates)
-    scratch_fxs = duplicate(Vector{T}(undef, m), n_duplicates)
-    scratch_fys = duplicate(Vector{U}(undef, m), n_duplicates)
-    scratch_sys = duplicate(Vector{U}(undef, m), n_duplicates)
+    scratch_fxs = duplicate(Vector{nonmissingtype(T)}(undef, m), n_duplicates)
+    scratch_fys = duplicate(Vector{nonmissingtype(U)}(undef, m), n_duplicates)
+    scratch_sys = duplicate(Vector{nonmissingtype(U)}(undef, m), n_duplicates)
 
     #= Use the "static scheduler". This is the "quickfix, but not recommended longterm" way
     of avoiding concurrency bugs when using Threads.threadid().
@@ -129,26 +114,16 @@ function _corkendall(x::RoMMatrix{T}, y::RoMMatrix{U}=x; skipmissing::Symbol=:no
     return C
 end
 
-function corkendall(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none) where {T,U}
+function corkendall(x::AbstractVector{T}, y::AbstractVector{U}; skipmissing::Symbol=:none) where {T,U}
 
     corkendall_validateargs(x, y, skipmissing, false)
 
     length(x) >= 2 || return NaN
-
-    missing_allowed = missing isa eltype(x) || missing isa eltype(y)
-
-    if missing_allowed && skipmissing == :none
-        if any(ismissing, x) || any(ismissing, y)
-            return missing
-        end
-    elseif x isa Vector{Missing} || y isa Vector{Missing}
-        #Degenerate case - T and/or U not defined.
-        return NaN
-    end
+    x === y && return (1.0)
 
     x = copy(x)
 
-    if missing_allowed && skipmissing == :pairwise
+    if skipmissing == :pairwise && (missing isa eltype(x) || missing isa eltype(y))
         x, y = handle_pairwise(x, y)
         length(x) >= 2 || return NaN
     end
@@ -157,17 +132,17 @@ function corkendall(x::RoMVector{T}, y::RoMVector{U}; skipmissing::Symbol=:none)
     permute!(x, permx)
 
     return corkendall_kernel!(x, y, permx, similar(y), similar(y),
-        similar(x, T), similar(y, U), skipmissing)
+        similar(x, nonmissingtype(T)), similar(y, nonmissingtype(U)), skipmissing)
 end
 
 #= corkendall returns a vector in this case, inconsistent with with Statistics.cor and
 StatsBase.corspearman, but consistent with StatsBase.corkendall.
  =#
-function corkendall(x::RoMMatrix, y::RoMVector; skipmissing::Symbol=:none)
+function corkendall(x::AbstractMatrix, y::AbstractVector; skipmissing::Symbol=:none)
     return vec(corkendall(x, reshape(y, (length(y), 1)); skipmissing))
 end
 
-function corkendall(x::RoMVector, y::RoMMatrix; skipmissing::Symbol=:none)
+function corkendall(x::AbstractVector, y::AbstractMatrix; skipmissing::Symbol=:none)
     return corkendall(reshape(x, (length(x), 1)), y; skipmissing)
 end
 
@@ -192,10 +167,10 @@ end
 # Journal of the American Statistical Association, vol. 61, no. 314, 1966, pp. 436–439.
 # JSTOR, www.jstor.org/stable/2282833.
 """
-    corkendall_kernel!(sortedx::RoMVector{T}, y::RoMVector{U},
-    permx::AbstractVector{<:Integer}, scratch_py::RoMVector{U},
-    scratch_sy::RoMVector{U}, scratch_fx::AbstractVector{T},
-    scratch_fy::AbstractVector{U}) where {T,U}
+    corkendall_kernel!(sortedx::AbstractVector, y::AbstractVector,
+    permx::AbstractVector{<:Integer}, scratch_py::AbstractVector,
+    scratch_sy::AbstractVector, scratch_fx::AbstractVector,
+    scratch_fy::AbstractVector, skipmissing::Symbol)
 
 Kendall correlation between two vectors but omitting the initial sorting of the first
 argument. Calculating Kendall correlation between `x` and `y` is thus a two stage process:
@@ -207,10 +182,10 @@ subsequent arguments:
 - `scratch_fx, scratch_fy`: Vectors used to filter `missing`s from `x` and `y` without
    allocation.
 """
-function corkendall_kernel!(sortedx::RoMVector{T}, y::RoMVector{U},
-    permx::AbstractVector{<:Integer}, scratch_py::RoMVector{U},
-    scratch_sy::RoMVector{U}, scratch_fx::AbstractVector{T},
-    scratch_fy::AbstractVector{U}, skipmissing::Symbol) where {T,U}
+function corkendall_kernel!(sortedx::AbstractVector, y::AbstractVector,
+    permx::AbstractVector{<:Integer}, scratch_py::AbstractVector,
+    scratch_sy::AbstractVector, scratch_fx::AbstractVector,
+    scratch_fy::AbstractVector, skipmissing::Symbol)
 
     length(sortedx) >= 2 || return NaN
 
@@ -232,7 +207,9 @@ function corkendall_kernel!(sortedx::RoMVector{T}, y::RoMVector{U},
         permutedy = scratch_py
     end
 
-    if any(isnan, sortedx) || any(isnan, permutedy)
+    isnan2(x::Float64) = isnan(x)
+    isnan2(x) = false
+    if any(isnan2, sortedx) || any(isnan2, permutedy)
         return NaN
     end
     n = length(sortedx)
@@ -277,7 +254,7 @@ end
 
 Return the number of ties within `x[lo:hi]`. Assumes `x` is sorted.
 """
-function countties(x::AbstractVector{<:Real}, lo::Integer, hi::Integer)
+function countties(x::AbstractVector, lo::Integer, hi::Integer)
     # Use of widen below prevents possible overflow errors when
     # length(x) exceeds 2^16 (32 bit) or 2^32 (64 bit)
     thistiecount = result = widen(0)
@@ -388,16 +365,16 @@ function insertion_sort!(v::AbstractVector, lo::Integer, hi::Integer)
 end
 
 """
-    handle_pairwise(x::RoMVector{T}, y::RoMVector{U},
+    handle_pairwise(x::AbstractVector{T}, y::AbstractVector{U},
     scratch_fx::AbstractVector{T}, scratch_fy::AbstractVector{U}) where {T,U}
 
 Return a pair `(a,b)`, filtered copies of `(x,y)`, in which elements `x[i]` and
 `y[i]` are excluded if  `ismissing(x[i])||ismissing(y[i])`. `Missing` is not an element type
 of either returned vector.
 """
-function handle_pairwise(x::RoMVector{T}, y::RoMVector{U};
-    scratch_fx::AbstractVector{T}=similar(x, T),
-    scratch_fy::AbstractVector{U}=similar(y, U)) where {T,U}
+function handle_pairwise(x::AbstractVector{T}, y::AbstractVector{U};
+    scratch_fx::AbstractVector=similar(x, nonmissingtype(T)),
+    scratch_fy::AbstractVector=similar(y, nonmissingtype(U))) where {T,U}
 
     j = 0
 
@@ -413,28 +390,19 @@ function handle_pairwise(x::RoMVector{T}, y::RoMVector{U};
 end
 
 """
-    handle_listwise(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T,U}
+    handle_listwise(x::AbstractMatrix{T}, y::AbstractMatrix{U}) where {T,U}
 
 Return a pair `(a,b)`, filtered copies of `(x,y)`, in which the rows `x[i,:]` and
 `y[i,:]` are both excluded if `any(ismissing,x[i,:])||any(ismissing,y[i,:])`. The element
 types of `a` and `b` are `T` and `U` so that `Missing` is not an element type of either.
 """
-function handle_listwise(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T,U}
+function handle_listwise(x::AbstractMatrix{T}, y::AbstractMatrix{U}) where {T,U}
 
     axes(x, 1) == axes(y, 1) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
 
     symmetric = x === y
 
-    #Degenerate case - T and/or U not defined.
-    if x isa Matrix{Missing} || y isa Matrix{Missing}
-        if symmetric
-            return view(x, [], :), view(x, [], :)
-        else
-            return view(x, [], :), view(y, [], :)
-        end
-    end
-
-    a = similar(x, T)
+    a = similar(x, nonmissingtype(T))
 
     k = 0
     if symmetric
@@ -446,7 +414,7 @@ function handle_listwise(x::RoMMatrix{T}, y::RoMMatrix{U}) where {T,U}
         end
         return view(a, 1:k, :), view(a, 1:k, :)
     else
-        b = similar(y, U)
+        b = similar(y, nonmissingtype(U))
         @inbounds for i in axes(x, 1)
             if all(j -> !ismissing(x[i, j]), axes(x, 2)) && all(j -> !ismissing(y[i, j]), axes(y, 2))
                 k += 1

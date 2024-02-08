@@ -1,8 +1,8 @@
-using KendallTau: corkendall_validateargs, handle_listwise, handle_pairwise, RoMVector, RoMMatrix
+using KendallTau: corkendall_validateargs, handle_listwise, handle_pairwise
 
 # RoM = "Real or Missing"
-#const RoMVector{T<:Real} = AbstractVector{<:Union{T,Missing}}
-#const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
+const RoMVector{T<:Real} = AbstractVector{<:Union{T,Missing}}
+const RoMMatrix{T<:Real} = AbstractMatrix{<:Union{T,Missing}}
 
 """
     corkendall_naive(x, y=x; skipmissing::Symbol=:none)
