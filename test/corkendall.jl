@@ -76,7 +76,7 @@ end
         # n = 78_000 tests for overflow errors on 32 bit
         # Testing for overflow errors on 64bit would require n be too large for practicality
         # This also tests merge_sort! since n is (much) greater than SMALL_THRESHOLD.
-        if !(f === corkendall_naive)
+        if (f === KendallTau.corkendall)
             n = 78_000
             # Test with many repeats
             @test f(repeat(x1, n), repeat(y, n)) ≈ -1 / sqrt(90)
@@ -121,22 +121,22 @@ end
         @test_throws ArgumentError f([1, 2, 3, 4], [4, 3, 2, 1], skipmissing=:listwise)
 
         #interaction of NaNs and missing inputs with skipmissing argument
-        nan_and_missing = hcat(fill(NaN,10,1),fill(missing,10,1))
-        @test isequal(f(nan_and_missing,skipmissing=:none),[1.0 missing;missing 1.0])
-        @test isequal(f(nan_and_missing,copy(nan_and_missing),skipmissing=:none),[NaN missing;missing missing])
-        @test isequal(f(nan_and_missing,skipmissing=:pairwise),[1.0 NaN;NaN 1.0])
-        @test isequal(f(nan_and_missing,copy(nan_and_missing),skipmissing=:pairwise),[NaN NaN;NaN NaN])
-        @test isequal(f(nan_and_missing,skipmissing=:listwise),[1.0 NaN;NaN 1.0])
-        @test isequal(f(nan_and_missing,copy(nan_and_missing),skipmissing=:listwise),[NaN NaN;NaN NaN])
+        nan_and_missing = hcat(fill(NaN, 10, 1), fill(missing, 10, 1))
+        @test isequal(f(nan_and_missing, skipmissing=:none), [1.0 missing; missing 1.0])
+        @test isequal(f(nan_and_missing, copy(nan_and_missing), skipmissing=:none), [NaN missing; missing missing])
+        @test isequal(f(nan_and_missing, skipmissing=:pairwise), [1.0 NaN; NaN 1.0])
+        @test isequal(f(nan_and_missing, copy(nan_and_missing), skipmissing=:pairwise), [NaN NaN; NaN NaN])
+        @test isequal(f(nan_and_missing, skipmissing=:listwise), [1.0 NaN; NaN 1.0])
+        @test isequal(f(nan_and_missing, copy(nan_and_missing), skipmissing=:listwise), [NaN NaN; NaN NaN])
 
         @test_throws ArgumentError f(x; skipmissing=:foo)
         @test_throws ArgumentError f(Xm; skipmissing=:foo)
 
         #when inputs have fewer than 2 rows return should be NaN even when inputs are missing
-        @test isnan(f(Float64[],Float64[]))
-        @test isnan(f([1],[1]))
-        @test isnan(f([missing],[missing]))
-        @test isequal(f([missing],[missing missing]),[NaN NaN])
+        @test isnan(f(Float64[], Float64[]))
+        @test isnan(f([1], [1]))
+        @test isnan(f([missing], [missing]))
+        @test isequal(f([missing], [missing missing]), [NaN NaN])
 
         c11 = f(x1, x1)
         c12 = f(x1, x2)
@@ -191,6 +191,7 @@ end
         Xnan[1, 1] = NaN
         Ynan = copy(Y)
         Ynan[2, 1] = NaN
+        xnan = [NaN, 1, 2, 3]
 
         @test isnan(f([1.0, NaN, 2.0], [2.0, 1.0, 3.4]))
         @test all(isnan, f([1.0, NaN], [1 2; 3 4]))
@@ -210,6 +211,12 @@ end
             @test isequal(f(Xnan, Ynan[:, k]),
                 [f(Xnan[:, i], Ynan[:, k]) for i in axes(Xnan, 2)])
         end
+
+        @test isequal(f(Xnan), [1.0 NaN; NaN 1.0])
+        @test isequal(f(Xnan, Xnan), [1.0 NaN; NaN 1.0])
+        @test isequal(f(Xnan, copy(Xnan)), [NaN NaN; NaN 1.0])
+        @test isequal(f(xnan, xnan), 1.0)
+        @test isequal(f(xnan, copy(xnan)), NaN)
 
         # Wrong dimensions
         @test_throws DimensionMismatch f([1], [1, 2])
