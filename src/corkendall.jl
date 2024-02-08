@@ -17,9 +17,9 @@ Uses multiple threads when either `x` or `y` is a matrix.
 - `skipmissing::Symbol=:none`: If `:none` (the default), `missing` entries in `x` or `y`
     give rise to `missing` entries in the return. If `:pairwise` when calculating an element
     of the return, both `i`th entries of the input vectors are skipped if either is missing.
-    If `:listwise` `x` and `y` are pre-processed by skipping the `i`th row of both if
-    `missing` appears in the `i`th row of either; note that this might skip a high
-    proportion of entries. Only allowed when `x` or `y` is a matrix.
+    If `:listwise` the `i`th rows of both `x` and `y` are skipped if `missing` appears in
+    either; note that this might skip a high proportion of entries. Only allowed when `x` or
+    `y` is a matrix.
 """
 function corkendall(x::AbstractMatrix, y::AbstractMatrix=x;
     skipmissing::Symbol=:none)
@@ -38,10 +38,8 @@ function corkendall(x::AbstractMatrix, y::AbstractMatrix=x;
     else
         C = ones(Float64, nr, nc)
     end
-    #=
-    Function barrier: The type of C varies according to the value of skipmissing, so
-    this function is type unstable. By contrast, _corkendall is type stable.
-    =#
+    # Use a function barrier because The type of C varies according to the value of
+    # skipmissing.
     return (_corkendall(x, y, C, skipmissing))
 
 end
