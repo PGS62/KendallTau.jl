@@ -7,7 +7,7 @@
 This (unregistered) Julia package exports a function `corkendall` that is a candidate to replace the function of the same name in StatsBase.
 
 ## Update February 2024
-The code of `corkendall` from this package was incorporated into StatsBase on 8 February 2021 (see [this](https://github.com/JuliaStats/StatsBase.jl/commit/11ac5b596405367b3217d3d962e22523fef9bb0d) commit).
+The code of `corkendall` from this package was incorporated into StatsBase on 8 February 2021 (issue [634](https://github.com/JuliaStats/StatsBase.jl/issues/634), commit [647](https://github.com/JuliaStats/StatsBase.jl/commit/11ac5b596405367b3217d3d962e22523fef9bb0d)).
 With further changes, `corkendall` is again a candidate to be incorporated into StatsBase.
 
 - The function is now multi-threaded. On a PC with 12 cores, it's about nine times faster than the StatsBase version.
