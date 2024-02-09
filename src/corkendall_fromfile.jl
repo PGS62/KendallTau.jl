@@ -106,15 +106,12 @@ function csvread(filename::String, ignorefirstrow::Bool, ignorefirstcol::Bool;
 end
 
 function testcsvread()
-    #csvread(raw"C:\Users\phili\OneDrive\ISDA SIMM\SolumWorking\2023\StressBalance\EQ\correlation\EQ_returns_1.csv",true,true)
-
     csvread(raw"C:\Users\phili\OneDrive\ISDA SIMM\SolumWorking\2023\CRQ\correlation\CRQ_returns_1.csv", false, false, missingstring="NA")
 end
 
 function offdiag(A::AbstractMatrix)
     [A[ι] for ι in CartesianIndices(A) if ι[1] ≠ ι[2]]
 end
-
 
 """
     comparecorrelationfiles(file1::String, file2::String)
