@@ -41,12 +41,8 @@ function compare_implementations(fn1::Function=corkendall, fn2::Function=corkend
 
     rng = MersenneTwister(1)# make this test code deterministic
 
-    printevery = max(1, numtests ÷ 50)
     for i = 1:numtests÷5
 
-        if mod(i, printevery) == 0
-            println("Testing $fn1name vs $fn2name $(5i)/$numtests")
-        end
         # random sizes of the argument arrays
         ncols1 = rand(rng, 1:maxcols)
         ncols2 = rand(rng, 1:maxcols)

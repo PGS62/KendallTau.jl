@@ -38,7 +38,7 @@ function corkendall(x::AbstractMatrix, y::AbstractMatrix=x;
     else
         C = ones(Float64, nr, nc)
     end
-    # Use a function barrier because The type of C varies according to the value of
+    # Use a function barrier because the type of C varies according to the value of
     # skipmissing.
     return (_corkendall(x, y, C, skipmissing))
 

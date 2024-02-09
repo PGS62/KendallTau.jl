@@ -35,8 +35,10 @@ using Test
     KendallTau.merge_sort!(v, 1, 1000)
     @test v == 1:1000
 
-end
+    KendallTau.midpoint(1, 10) == 5
+    KendallTau.midpoint(1, widen(10)) == 5
 
+end
 
 @testset "corkendall" begin
 
@@ -56,7 +58,6 @@ end
     # corkendall and friends
     for f in (KendallTau.corkendall, corkendall_naive)
 
-        println("f = $(Base.parentmodule(f)).$(Base.nameof(f))")
         # Check error, handling of NaN, Inf etc
         @test_throws DimensionMismatch f([1, 2, 3, 4], [1, 2, 3])
         @test isnan(f([1, 2], [3, NaN]))
@@ -95,64 +96,70 @@ end
 
         # Test handling of missings
         @test f(vcat(missing, a), vcat(missing, b), skipmissing=:pairwise) == f(a, b)
-        @test f(vcat(a, missing), vcat(missing, b), skipmissing=:pairwise) == f(a[2:end], b[1:(end-1)])
-        @test f(hcat(vcat(a, missing), vcat(missing, b)), skipmissing=:listwise) == f(hcat(a[2:end], b[1:(end-1)]))
+        @test f(vcat(a, missing), vcat(missing, b), skipmissing=:pairwise) ==
+              f(a[2:end], b[1:(end-1)])
+        @test f(hcat(vcat(a, missing), vcat(missing, b)), skipmissing=:listwise) ==
+              f(hcat(a[2:end], b[1:(end-1)]))
         @test f(Xm, Xm, skipmissing=:pairwise) == f(x, x)
         @test f(Xm, Xm, skipmissing=:listwise) == f(x, x)
         @test f(Xm, Ym, skipmissing=:listwise) == f(x, Y)
-        @test f(Xm, Ym, skipmissing=:pairwise) ≈ [-1/√90 0.4 1/√90
-            -2/√154 7/√165 -1/√154]
+        @test f(Xm, Ym, skipmissing=:pairwise) ≈ [-1/√90 0.4 1/√90; -2/√154 7/√165 -1/√154]
         @test isnan(f([1, 2, 3, 4, 5], xm, skipmissing=:pairwise))
         @test isnan(f(xm, [1, 2, 3, 4, 5], skipmissing=:pairwise))
         @test isequal(f(xmm, skipmissing=:pairwise), [1.0 NaN; NaN 1.0])
         @test isequal(f(xmm, skipmissing=:none), [1.0 missing; missing 1.0])
         @test isequal(f(xmm, xmm, skipmissing=:none), [1.0 missing; missing 1.0])
-        @test isequal(f(xmm, copy(xmm), skipmissing=:none), [missing missing; missing missing])
+        @test isequal(f(xmm, copy(xmm), skipmissing=:none),
+            [missing missing; missing missing])
         @test isequal(f(xmm, xmm, skipmissing=:listwise), [1.0 NaN; NaN 1.0])
         @test isequal(f(xmm, copy(xmm), skipmissing=:listwise), [NaN NaN; NaN NaN])
-
         @test isequal(f(xmm, copy(xmm), skipmissing=:pairwise), [NaN NaN; NaN NaN])
-
         @test ismissing(f([1, 2, 3, 4, 5], xm, skipmissing=:none))
         @test ismissing(f([1, 2, 3, 4, 5], xm, skipmissing=:none))
         @test isequal(f(xmm, skipmissing=:none), [1.0 missing; missing 1.0])
-        @test isequal(f(xmm, copy(xmm), skipmissing=:none), [missing missing; missing missing])
-        @test isequal(f(hcat(Y, xm), skipmissing=:none), vcat(hcat(f(Y, skipmissing=:none), [missing, missing, missing]), [missing missing missing 1.0]))
+        @test isequal(f(xmm, copy(xmm), skipmissing=:none),
+            [missing missing; missing missing])
+        @test isequal(f(hcat(Y, xm), skipmissing=:none), vcat(hcat(f(Y, skipmissing=:none),
+                [missing, missing, missing]), [missing missing missing 1.0]))
         @test_throws ArgumentError f([1, 2, 3, 4], [4, 3, 2, 1], skipmissing=:listwise)
 
-        #interaction of NaNs and missing inputs with skipmissing argument
+        #Interaction of NaN and missing with skipmissing argument
         nan_and_missing = hcat(fill(NaN, 10, 1), fill(missing, 10, 1))
         @test isequal(f(nan_and_missing, skipmissing=:none), [1.0 missing; missing 1.0])
-        @test isequal(f(nan_and_missing, copy(nan_and_missing), skipmissing=:none), [NaN missing; missing missing])
+        @test isequal(f(nan_and_missing, copy(nan_and_missing), skipmissing=:none),
+            [NaN missing; missing missing])
         @test isequal(f(nan_and_missing, skipmissing=:pairwise), [1.0 NaN; NaN 1.0])
-        @test isequal(f(nan_and_missing, copy(nan_and_missing), skipmissing=:pairwise), [NaN NaN; NaN NaN])
+        @test isequal(f(nan_and_missing, copy(nan_and_missing), skipmissing=:pairwise),
+            [NaN NaN; NaN NaN])
         @test isequal(f(nan_and_missing, skipmissing=:listwise), [1.0 NaN; NaN 1.0])
-        @test isequal(f(nan_and_missing, copy(nan_and_missing), skipmissing=:listwise), [NaN NaN; NaN NaN])
+        @test isequal(f(nan_and_missing, copy(nan_and_missing), skipmissing=:listwise),
+            [NaN NaN; NaN NaN])
 
+        #Reject nonsense skipmissing argument
         @test_throws ArgumentError f(x; skipmissing=:foo)
         @test_throws ArgumentError f(Xm; skipmissing=:foo)
 
-        #when inputs have fewer than 2 rows return should be NaN even when inputs are missing
-        @test isnan(f(Float64[], Float64[]))
+        #Inputs have fewer than 2 rows
+        @test isnan(f([], []))
         @test isnan(f([1], [1]))
+        @test isequal(f([1;;], [1;;]), [NaN;;])
+        @test isequal(f([1;;]), [1.0;;])
         @test isnan(f([missing], [missing]))
         @test isequal(f([missing], [missing missing]), [NaN NaN])
+        @test isequal(f([missing missing]), [1.0 NaN; NaN 1.0])
+        @test isequal(f([missing missing], [missing missing]), [NaN NaN; NaN NaN])
 
         c11 = f(x1, x1)
         c12 = f(x1, x2)
         c22 = f(x2, x2)
-
-        # AbstractMatrix{<:Real}, AbstractMatrix{<:Real}
-        @test f(x, x) ≈ [c11 c12; c12 c22]
-        # AbstractMatrix{<:Real}
-        @test f(x) ≈ [c11 c12; c12 c22]
-
         @test c11 == 1.0
         @test c22 == 1.0
         @test c12 == 3 / sqrt(20)
+        @test f(x, x) ≈ [c11 c12; c12 c22]
+        @test f(x) ≈ [c11 c12; c12 c22]
+
         # Finished testing for overflow, so redefine n for speedier tests
         n = 100
-
         @test f(repeat(x, n), repeat(x, n)) ≈ [c11 c12; c12 c22]
         @test f(repeat(x, n)) ≈ [c11 c12; c12 c22]
 
@@ -182,9 +189,6 @@ end
         @test f(w, w) == [1 0 1/3; 0 1 0; 1/3 0 1]
         @test f(w[:, 1], w) == [1 0 1 / 3]
         @test f(w, w[:, 1]) == [1; 0; 1 / 3]
-
-        KendallTau.midpoint(1, 10) == 5
-        KendallTau.midpoint(1, widen(10)) == 5
 
         # NaN handling
         Xnan = copy(x)
@@ -226,7 +230,8 @@ end
 
         # x has sufficient columns to ensure that variable use_atomic evaluates to false
         n_reps = Threads.nthreads()
-        @test f(repeat(hcat(a, b), outer=[1, n_reps])) == repeat(f(hcat(a, b)), outer=[n_reps, n_reps])
+        @test f(repeat(hcat(a, b), outer=[1, n_reps])) == repeat(f(hcat(a, b)),
+            outer=[n_reps, n_reps])
 
         # Works for Strings (!) in fact for any type for which isless is defined.
         @test f(["a", "b", "c"], ["z", "y", "x"]) == -1.0
@@ -234,4 +239,3 @@ end
     end
 
 end
-
