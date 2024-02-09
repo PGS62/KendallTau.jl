@@ -4,6 +4,8 @@
 #
 #######################################
 
+using OhMyThreads: TaskLocalValue
+
 """
     corkendall(x, y=x; skipmissing::Symbol=:none)
 
@@ -40,11 +42,11 @@ function corkendall(x::AbstractMatrix, y::AbstractMatrix=x;
     end
     # Use a function barrier because the type of C varies according to the value of
     # skipmissing.
-    return (_corkendall(x, y, C, skipmissing))
+    return (_corkendall_TLV(x, y, C, skipmissing))
 
 end
 
-function _corkendall(x::AbstractMatrix, y::AbstractMatrix,
+function _corkendall_OLD_SKOOL(x::AbstractMatrix, y::AbstractMatrix,
     C::AbstractMatrix, skipmissing::Symbol)
 
     symmetric = x === y
@@ -112,6 +114,56 @@ function _corkendall(x::AbstractMatrix, y::AbstractMatrix,
     end
     return C
 end
+
+function _corkendall_TLV(x::AbstractMatrix{T}, y::AbstractMatrix{U},
+    C::AbstractMatrix, skipmissing::Symbol) where {T,U}
+
+    symmetric = x === y
+
+    # Swap x and y for more efficient threaded loop.
+    if size(x, 2) < size(y, 2)
+        return collect(transpose(corkendall(y, x; skipmissing)))
+    end
+
+    (m, nr), nc = size(x), size(y, 2)
+
+    Threads.@threads for j = (symmetric ? 2 : 1):nr
+
+        scratch_py = TaskLocalValue{Vector{U}}(() -> similar(y, m))
+        scratch_sy = TaskLocalValue{Vector{U}}(() -> similar(y, m))
+        ycoli = TaskLocalValue{Vector{U}}(() -> similar(y, m))
+        sortedxcolj = TaskLocalValue{Vector{T}}(() -> similar(x, m))
+        permx = TaskLocalValue{Vector{Int}}(() -> zeros(Int, m))
+        scratch_fx = TaskLocalValue{Vector{T}}(() -> similar(x, m))
+        scratch_fy = TaskLocalValue{Vector{U}}(() -> similar(y, m))
+
+        sortperm!(permx[], view(x, :, j))
+        @inbounds for k in eachindex(sortedxcolj[])
+            sortedxcolj[][k] = x[permx[][k], j]
+        end
+
+        for i = 1:(symmetric ? j - 1 : nc)
+            ycoli[] .= view(y, :, i)
+            C[j, i] = corkendall_kernel!(sortedxcolj[], ycoli[], permx[], skipmissing;
+                scratch_py=scratch_py[], scratch_sy=scratch_sy[], scratch_fx=scratch_fx[], scratch_fy=scratch_fy[])
+            symmetric && (C[i, j] = C[j, i])
+        end
+    end
+    return C
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 function corkendall(x::AbstractVector, y::AbstractVector; skipmissing::Symbol=:none)
 
