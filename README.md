@@ -4,21 +4,17 @@
 
 # KendallTau.jl
 
-This (unregistered) Julia package exposes a function `corkendall` that is a candidate to replace the function of the same name in the StatsBase package.
-
-The package also contains a function `speedtest` that prints a comparison of the execution speed of two (or more) implementations of Kendall Tau. `speedtest` demonstrates that the new version of `corkendall` is about seven times faster than the existing StatsBase version. See [# 634](https://github.com/JuliaStats/StatsBase.jl/issues/634).
+This (unregistered) Julia package exports a function `corkendall` that is a candidate to replace the function of the same name in StatsBase.
 
 ## Update February 2024
-The code of `corkendall` from this package was incorporated in StatsBase on 8 February 2021 (see [this](https://github.com/JuliaStats/StatsBase.jl/commit/11ac5b596405367b3217d3d962e22523fef9bb0d) commit).
+The code of `corkendall` from this package was incorporated into StatsBase on 8 February 2021 (see [this](https://github.com/JuliaStats/StatsBase.jl/commit/11ac5b596405367b3217d3d962e22523fef9bb0d) commit).
+With further changes, `corkendall` is again a candidate to be incorporated into StatsBase.
 
-More recently I have made further changes:
-
-1) The function is now multi-threaded. On a PC with 12 cores and 20 logical processors this gives an approximate 9 times speed-up relative to `StatsBase.corkendall`
-2) `KendallTau.corkendall` now has a `skipmissings` keyword argument, to control the treatment of missing values.
-3) A new function `corkendall_fromfile` takes arguments as names of csv files containing the input and output data.
+- The function is now multi-threaded. On a PC with 12 cores, it's about nine times faster than the StatsBase version.
+- There is now a `skipmissing` keyword argument to control the treatment of missing values.
 
 ### Help
-```julia
+```
 help?> KendallTau.corkendall
   corkendall(x, y=x; skipmissing::Symbol=:none)
 
@@ -38,7 +34,7 @@ help?> KendallTau.corkendall
 ```
 
 ## Performance
-In the REPL output below, note the large reduction in number and size of allocations. This was key to obtaining the full benefit of multi-threading.
+Note the reduction in number and size of allocations. This was key to obtaining the full benefit of multi-threading.
 ```julia
 julia> using StatsBase,KendallTau,Random #StatsBase v0.34.2
 
@@ -74,10 +70,6 @@ Platform Info:
   LIBM: libopenlibm
   LLVM: libLLVM-15.0.7 (ORCJIT, alderlake)
   Threads: 29 on 20 virtual cores
-Environment:
-  JULIA_NUM_THREADS = 20
-  JULIA_PKG_DEVDIR = C:\Projects
-  JULIA_EDITOR = code
 ```
 
 ### Performance against size of `x`
@@ -85,4 +77,4 @@ Environment:
 
 
 Philip Swannell
-8 February 2024
+9 February 2024
