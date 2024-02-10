@@ -42,80 +42,11 @@ function corkendall(x::AbstractMatrix, y::AbstractMatrix=x;
     end
     # Use a function barrier because the type of C varies according to the value of
     # skipmissing.
-    return (_corkendall_TLV(x, y, C, skipmissing))
+    return (_corkendall(x, y, C, skipmissing))
 
 end
 
-function _corkendall_OLD_SKOOL(x::AbstractMatrix, y::AbstractMatrix,
-    C::AbstractMatrix, skipmissing::Symbol)
-
-    symmetric = x === y
-
-    # Swap x and y for more efficient threaded loop.
-    if size(x, 2) < size(y, 2)
-        return collect(transpose(corkendall(y, x; skipmissing)))
-    end
-
-    (m, nr), nc = size(x), size(y, 2)
-
-    # Avoid unnecessary allocation when nthreads is large but output matrix is small.
-    n_duplicates = min(Threads.nthreads(), symmetric ? nr - 1 : nr)
-
-    use_atomic = n_duplicates < Threads.nthreads()
-    if use_atomic
-        a = Threads.Atomic{Int}(1)
-    end
-
-    #= Create scratch vectors so that threaded code can be non-allocating, a requirement for
-    good multi-threaded performance. One vector per thread to avoid cross-talk between
-    threads.
-    =#
-    duplicate(x, n) = [copy(x) for _ in 1:n]
-    scratch_pys = duplicate(similar(y, m), n_duplicates)
-    ycolis = duplicate(similar(y, m), n_duplicates)
-    sortedxcoljs = duplicate(similar(x, m), n_duplicates)
-    permxs = duplicate(zeros(Int, m), n_duplicates)
-    scratch_fxs = duplicate(similar(x, m), n_duplicates)
-    scratch_fys = duplicate(similar(y, m), n_duplicates)
-    scratch_sys = duplicate(similar(y, m), n_duplicates)
-
-    #= Use the "static scheduler". This is the "quickfix, but not recommended longterm" way
-    of avoiding concurrency bugs when using Threads.threadid().
-    https://julialang.org/blog/2023/07/PSA-dont-use-threadid/#fixing_buggy_code_which_uses_this_pattern
-    TODO Adopt a "better fix" as outlined in that blog.
-    =#
-    Threads.@threads :static for j = (symmetric ? 2 : 1):nr
-
-        if use_atomic
-            id = Threads.atomic_add!(a, 1)[]
-        else
-            id = Threads.threadid()
-        end
-
-        scratch_py = scratch_pys[id]
-        scratch_sy = scratch_sys[id]
-        ycoli = ycolis[id]
-        sortedxcolj = sortedxcoljs[id]
-        permx = permxs[id]
-        scratch_fx = scratch_fxs[id]
-        scratch_fy = scratch_fys[id]
-
-        sortperm!(permx, view(x, :, j))
-        @inbounds for k in eachindex(sortedxcolj)
-            sortedxcolj[k] = x[permx[k], j]
-        end
-
-        for i = 1:(symmetric ? j - 1 : nc)
-            ycoli .= view(y, :, i)
-            C[j, i] = corkendall_kernel!(sortedxcolj, ycoli, permx, skipmissing;
-                scratch_py, scratch_sy, scratch_fx, scratch_fy)
-            symmetric && (C[i, j] = C[j, i])
-        end
-    end
-    return C
-end
-
-function _corkendall_TLV(x::AbstractMatrix{T}, y::AbstractMatrix{U},
+function _corkendall(x::AbstractMatrix{T}, y::AbstractMatrix{U},
     C::AbstractMatrix, skipmissing::Symbol) where {T,U}
 
     symmetric = x === y
@@ -151,19 +82,6 @@ function _corkendall_TLV(x::AbstractMatrix{T}, y::AbstractMatrix{U},
     end
     return C
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 function corkendall(x::AbstractVector, y::AbstractVector; skipmissing::Symbol=:none)
 
