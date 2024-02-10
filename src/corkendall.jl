@@ -58,15 +58,15 @@ function _corkendall(x::AbstractMatrix{T}, y::AbstractMatrix{U},
 
     (m, nr), nc = size(x), size(y, 2)
 
-    Threads.@threads for j = (symmetric ? 2 : 1):nr
+    scratch_py = TaskLocalValue{Vector{U}}(() -> similar(y, m))
+    scratch_sy = TaskLocalValue{Vector{U}}(() -> similar(y, m))
+    ycoli = TaskLocalValue{Vector{U}}(() -> similar(y, m))
+    sortedxcolj = TaskLocalValue{Vector{T}}(() -> similar(x, m))
+    permx = TaskLocalValue{Vector{Int}}(() -> zeros(Int, m))
+    scratch_fx = TaskLocalValue{Vector{T}}(() -> similar(x, m))
+    scratch_fy = TaskLocalValue{Vector{U}}(() -> similar(y, m))
 
-        scratch_py = TaskLocalValue{Vector{U}}(() -> similar(y, m))
-        scratch_sy = TaskLocalValue{Vector{U}}(() -> similar(y, m))
-        ycoli = TaskLocalValue{Vector{U}}(() -> similar(y, m))
-        sortedxcolj = TaskLocalValue{Vector{T}}(() -> similar(x, m))
-        permx = TaskLocalValue{Vector{Int}}(() -> zeros(Int, m))
-        scratch_fx = TaskLocalValue{Vector{T}}(() -> similar(x, m))
-        scratch_fy = TaskLocalValue{Vector{U}}(() -> similar(y, m))
+    Threads.@threads for j = (symmetric ? 2 : 1):nr
 
         sortperm!(permx[], view(x, :, j))
         @inbounds for k in eachindex(sortedxcolj[])
