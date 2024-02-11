@@ -58,25 +58,33 @@ function _corkendall(x::AbstractMatrix{T}, y::AbstractMatrix{U},
 
     (m, nr), nc = size(x), size(y, 2)
 
-    scratch_py = TaskLocalValue{Vector{U}}(() -> similar(y, m))
-    scratch_sy = TaskLocalValue{Vector{U}}(() -> similar(y, m))
-    ycoli = TaskLocalValue{Vector{U}}(() -> similar(y, m))
-    sortedxcolj = TaskLocalValue{Vector{T}}(() -> similar(x, m))
-    permx = TaskLocalValue{Vector{Int}}(() -> zeros(Int, m))
-    scratch_fx = TaskLocalValue{Vector{T}}(() -> similar(x, m))
-    scratch_fy = TaskLocalValue{Vector{U}}(() -> similar(y, m))
+    tlv_scratch_py = TaskLocalValue{Vector{U}}(() -> similar(y, m))
+    tlv_scratch_sy = TaskLocalValue{Vector{U}}(() -> similar(y, m))
+    tlv_ycoli = TaskLocalValue{Vector{U}}(() -> similar(y, m))
+    tlv_sortedxcolj = TaskLocalValue{Vector{T}}(() -> similar(x, m))
+    tlv_permx = TaskLocalValue{Vector{Int}}(() -> zeros(Int, m))
+    tlv_scratch_fx = TaskLocalValue{Vector{T}}(() -> similar(x, m))
+    tlv_scratch_fy = TaskLocalValue{Vector{U}}(() -> similar(y, m))
 
     Threads.@threads for j = (symmetric ? 2 : 1):nr
 
-        sortperm!(permx[], view(x, :, j))
-        @inbounds for k in eachindex(sortedxcolj[])
-            sortedxcolj[][k] = x[permx[][k], j]
+        scratch_py::Vector{U} = tlv_scratch_py[]
+        scratch_sy::Vector{U} = tlv_scratch_sy[]
+        ycoli::Vector{U} = tlv_ycoli[]
+        sortedxcolj::Vector{T} = tlv_sortedxcolj[]
+        permx::Vector{Int} = tlv_permx[]
+        scratch_fx::Vector{T} = tlv_scratch_fx[]
+        scratch_fy::Vector{U} = tlv_scratch_fy[]
+
+        sortperm!(permx, view(x, :, j))
+        @inbounds for k in eachindex(sortedxcolj)
+            sortedxcolj[k] = x[permx[k], j]
         end
 
         for i = 1:(symmetric ? j - 1 : nc)
-            ycoli[] .= view(y, :, i)
-            C[j, i] = corkendall_kernel!(sortedxcolj[], ycoli[], permx[], skipmissing;
-                scratch_py=scratch_py[], scratch_sy=scratch_sy[], scratch_fx=scratch_fx[], scratch_fy=scratch_fy[])
+            ycoli .= view(y, :, i)
+            C[j, i] = corkendall_kernel!(sortedxcolj, ycoli, permx, skipmissing;
+                scratch_py, scratch_sy, scratch_fx, scratch_fy)
             symmetric && (C[i, j] = C[j, i])
         end
     end
