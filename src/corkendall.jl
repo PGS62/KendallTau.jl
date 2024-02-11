@@ -84,7 +84,7 @@ function _corkendall(x::AbstractMatrix{T}, y::AbstractMatrix{U},
         for i = 1:(symmetric ? j - 1 : nc)
             ycoli .= view(y, :, i)
             C[j, i] = corkendall_kernel!(sortedxcolj, ycoli, permx, skipmissing;
-                scratch_py=scratch_py, scratch_sy=scratch_sy, scratch_fx=scratch_fx, scratch_fy=scratch_fy)
+                scratch_py, scratch_sy, scratch_fx, scratch_fy)
             symmetric && (C[i, j] = C[j, i])
         end
     end
