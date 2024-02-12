@@ -1,6 +1,5 @@
 module KendallTau
 
-
 include("corkendall.jl")
 include("corkendall_fromfile.jl")
 
