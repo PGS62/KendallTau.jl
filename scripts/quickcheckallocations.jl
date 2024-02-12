@@ -76,5 +76,19 @@ KendallTau.corkendall(xm; skipmissing = :pairwise)  1.839040 seconds (7.01 M all
 KendallTau.corkendall(xm; skipmissing = :listwise)  0.028546 seconds (4.59 M allocations: 146.560 MiB)
 ====================================================================================================
 
-
+#40% slower for pairwise case ☹️
+====================================================================================================
+Dates.now() = DateTime("2024-02-12T14:47:45.720")
+ENV["COMPUTERNAME"] = "DESKTOP-HSGAM5S"
+Julia Version 1.10.0
+Threads.nthreads() = 20
+size(x) = (1000, 1000)
+typeof(x) = Matrix{Float64}
+size(xm) = (1000, 1000)
+typeof(xm) = Matrix{Union{Missing, Float64}}
+KendallTau.corkendall(x)                            1.752084 seconds (1.28 k allocations: 16.478 MiB)
+KendallTau.corkendall(xm; skipmissing = :pairwise)  2.562678 seconds (1.28 k allocations: 16.242 MiB)
+KendallTau.corkendall(xm; skipmissing = :listwise)  0.003729 seconds (289 allocations: 16.242 MiB)
+StatsBase.corkendall(x)                            18.081175 seconds (3.00 M allocations: 17.090 GiB, 3.83% gc time)
+====================================================================================================
 =#
