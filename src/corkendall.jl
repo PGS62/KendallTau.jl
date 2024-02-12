@@ -56,25 +56,23 @@ function _corkendall(x::AbstractMatrix{T}, y::AbstractMatrix{U},
 
     (m, nr), nc = size(x), size(y, 2)
 
+    # Return a vector of length m from task local storage, initialising when necessary
+    function vector_from_tls(key::Symbol, similarto::AbstractArray{V})::Vector{V} where {V}
+        haskey(task_local_storage(), key) || task_local_storage(key, similar(similarto, m))
+        return (task_local_storage(key))
+    end
+
+    z = zeros(Int, 1)
+
     Threads.@threads for j = (symmetric ? 2 : 1):nr
 
-        if !haskey(task_local_storage(), :scratch_py)
-            task_local_storage(:scratch_py, similar(y, m))
-            task_local_storage(:scratch_sy, similar(y, m))
-            task_local_storage(:ycoli, similar(y, m))
-            task_local_storage(:sortedxcolj, similar(x, m))
-            task_local_storage(:permx, zeros(Int, m))
-            task_local_storage(:scratch_fx, similar(x, m))
-            task_local_storage(:scratch_fy, similar(y, m))
-        end
-
-        scratch_py::Vector{U} = task_local_storage(:scratch_py)
-        scratch_sy::Vector{U} = task_local_storage(:scratch_sy)
-        ycoli::Vector{U} = task_local_storage(:ycoli)
-        sortedxcolj::Vector{T} = task_local_storage(:sortedxcolj)
-        permx::Vector{Int} = task_local_storage(:permx)
-        scratch_fx::Vector{T} = task_local_storage(:scratch_fx)
-        scratch_fy::Vector{U} = task_local_storage(:scratch_fy)
+        scratch_py = vector_from_tls(:scratch_py, y)
+        scratch_sy = vector_from_tls(:scratch_sy, y)
+        ycoli = vector_from_tls(:ycoli, y)
+        sortedxcolj = vector_from_tls(:sortedxcolj, x)
+        permx = vector_from_tls(:permx, z)
+        scratch_fx = vector_from_tls(:scratch_fx, x)
+        scratch_fy = vector_from_tls(:scratch_fy, y)
 
         sortperm!(permx, view(x, :, j))
         @inbounds for k in eachindex(sortedxcolj)
