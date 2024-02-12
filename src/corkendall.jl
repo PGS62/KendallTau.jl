@@ -62,17 +62,19 @@ function _corkendall(x::AbstractMatrix{T}, y::AbstractMatrix{U},
         return (task_local_storage(key))
     end
 
-    z = zeros(Int, 1)
+    z = Int[]
+    nmtx = nonmissingtype(eltype(x))[]
+    nmty = nonmissingtype(eltype(y))[]
 
     Threads.@threads for j = (symmetric ? 2 : 1):nr
 
         scratch_py = vector_from_tls(:scratch_py, y)
-        scratch_sy = vector_from_tls(:scratch_sy, y)
+        scratch_sy = vector_from_tls(:scratch_sy, nmty)
         ycoli = vector_from_tls(:ycoli, y)
         sortedxcolj = vector_from_tls(:sortedxcolj, x)
         permx = vector_from_tls(:permx, z)
-        scratch_fx = vector_from_tls(:scratch_fx, x)
-        scratch_fy = vector_from_tls(:scratch_fy, y)
+        scratch_fx = vector_from_tls(:scratch_fx, nmtx)
+        scratch_fy = vector_from_tls(:scratch_fy, nmty)
 
         sortperm!(permx, view(x, :, j))
         @inbounds for k in eachindex(sortedxcolj)
