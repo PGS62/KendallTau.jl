@@ -57,24 +57,26 @@ function _corkendall(x::AbstractMatrix{T}, y::AbstractMatrix{U},
     (m, nr), nc = size(x), size(y, 2)
 
     # Return a vector of length m from task local storage, initialising when necessary
-    function vector_from_tls(key::Symbol, similarto::AbstractArray{V})::Vector{V} where {V}
+    function task_local_vector(key::Symbol, similarto::AbstractArray{V})::Vector{V} where {V}
         haskey(task_local_storage(), key) || task_local_storage(key, similar(similarto, m))
         return (task_local_storage(key))
     end
 
-    z = Int[]
+    intarray = Int[]
     nmtx = nonmissingtype(eltype(x))[]
     nmty = nonmissingtype(eltype(y))[]
 
     Threads.@threads for j = (symmetric ? 2 : 1):nr
 
-        scratch_py = vector_from_tls(:scratch_py, y)
-        scratch_sy = vector_from_tls(:scratch_sy, nmty)
-        ycoli = vector_from_tls(:ycoli, y)
-        sortedxcolj = vector_from_tls(:sortedxcolj, x)
-        permx = vector_from_tls(:permx, z)
-        scratch_fx = vector_from_tls(:scratch_fx, nmtx)
-        scratch_fy = vector_from_tls(:scratch_fy, nmty)
+        sortedxcolj = task_local_vector(:sortedxcolj, x)
+        scratch_py = task_local_vector(:scratch_py, y)
+        ycoli = task_local_vector(:ycoli, y)
+        permx = task_local_vector(:permx, intarray)
+        # Ensure missing is not an element type of scratch_sy, scratch_fx, scratch_fy for
+        # improved performance.
+        scratch_sy = task_local_vector(:scratch_sy, nmty)
+        scratch_fx = task_local_vector(:scratch_fx, nmtx)
+        scratch_fy = task_local_vector(:scratch_fy, nmty)
 
         sortperm!(permx, view(x, :, j))
         @inbounds for k in eachindex(sortedxcolj)
