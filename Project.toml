@@ -1,7 +1,7 @@
 name = "KendallTau"
 uuid = "aff0c2a8-f755-4235-a8c7-7336d8be0b73"
 authors = ["Philip Swannell"]
-version = "3.0.1"
+version = "3.0.2"
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
