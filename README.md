@@ -4,7 +4,7 @@
 
 # KendallTau.jl
 
-This (unregistered) Julia package exports a function `corkendall` that is a candidate to replace the function of the same name in StatsBase.
+This package exports a function `corkendall` that is a candidate to replace the function of the same name in StatsBase.
 
 ## Update February 2024
 The code of `corkendall` from this package was incorporated into StatsBase on 8 February 2021 (issue [634](https://github.com/JuliaStats/StatsBase.jl/issues/634), commit [647](https://github.com/JuliaStats/StatsBase.jl/commit/11ac5b596405367b3217d3d962e22523fef9bb0d)).
