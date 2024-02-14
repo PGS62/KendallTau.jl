@@ -3,6 +3,7 @@
 #   Kendall correlation
 #
 #######################################
+using ChunkSplitters: chunks
 
 """
     corkendall(x, y=x; skipmissing::Symbol=:none)
@@ -65,29 +66,35 @@ function _corkendall(x::AbstractMatrix{T}, y::AbstractMatrix{U},
     intarray = Int[]
     nmtx = nonmissingtype(eltype(x))[]
     nmty = nonmissingtype(eltype(y))[]
+    alljs = (symmetric ? 2 : 1):nr
 
-    Threads.@threads for j = (symmetric ? 2 : 1):nr
+    #ChunkSplitters.chunks with split=:scatter provides better load balancing in symmetric case
+    Threads.@threads for thischunk in chunks(alljs; n=Threads.nthreads() * 4, split=:scatter)
 
-        sortedxcolj = task_local_vector(:sortedxcolj, x)
-        scratch_py = task_local_vector(:scratch_py, y)
-        ycoli = task_local_vector(:ycoli, y)
-        permx = task_local_vector(:permx, intarray)
-        # Ensure missing is not an element type of scratch_sy, scratch_fx, scratch_fy for
-        # improved performance.
-        scratch_sy = task_local_vector(:scratch_sy, nmty)
-        scratch_fx = task_local_vector(:scratch_fx, nmtx)
-        scratch_fy = task_local_vector(:scratch_fy, nmty)
+        for k in thischunk
+            j = alljs[k]
 
-        sortperm!(permx, view(x, :, j))
-        @inbounds for k in eachindex(sortedxcolj)
-            sortedxcolj[k] = x[permx[k], j]
-        end
+            sortedxcolj = task_local_vector(:sortedxcolj, x)
+            scratch_py = task_local_vector(:scratch_py, y)
+            ycoli = task_local_vector(:ycoli, y)
+            permx = task_local_vector(:permx, intarray)
+            # Ensuring missing is not an element type of scratch_sy, scratch_fx, scratch_fy
+            # gives improved performance.
+            scratch_sy = task_local_vector(:scratch_sy, nmty)
+            scratch_fx = task_local_vector(:scratch_fx, nmtx)
+            scratch_fy = task_local_vector(:scratch_fy, nmty)
 
-        for i = 1:(symmetric ? j - 1 : nc)
-            ycoli .= view(y, :, i)
-            C[j, i] = corkendall_kernel!(sortedxcolj, ycoli, permx, skipmissing;
-                scratch_py, scratch_sy, scratch_fx, scratch_fy)
-            symmetric && (C[i, j] = C[j, i])
+            sortperm!(permx, view(x, :, j))
+            @inbounds for k in eachindex(sortedxcolj)
+                sortedxcolj[k] = x[permx[k], j]
+            end
+
+            for i = 1:(symmetric ? j - 1 : nc)
+                ycoli .= view(y, :, i)
+                C[j, i] = corkendall_kernel!(sortedxcolj, ycoli, permx, skipmissing;
+                    scratch_py, scratch_sy, scratch_fx, scratch_fy)
+                symmetric && (C[i, j] = C[j, i])
+            end
         end
     end
     return C
