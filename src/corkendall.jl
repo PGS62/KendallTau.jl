@@ -418,12 +418,12 @@ end
 """
     equal_sum_subsets(n::Int, num_subsets::Int)::Vector{Vector{Int}}
 
-Divide the integers 1:n into a number of subsets such that the sum of the elements in each
-subset is nearly equal.
-
+Divide the integers 1:n into a number of subsets such that a) each subset has (approximately)
+the same number of elements; and b) the sum of the elements in each subset is nearly equal.
+If `n` is a multiple of `2 * num_subsets` both conditions hold exactly.
+    
 ## Example
-
-```jldoctest
+```julia-repl
 julia> KendallTau.equal_sum_subsets(30,5)
 5-element Vector{Vector{Int64}}:
  [30, 21, 20, 11, 10, 1]
@@ -431,7 +431,7 @@ julia> KendallTau.equal_sum_subsets(30,5)
  [28, 23, 18, 13, 8, 3]
  [27, 24, 17, 14, 7, 4]
  [26, 25, 16, 15, 6, 5]
- ```
+```
 """
 function equal_sum_subsets(n::Int, num_subsets::Int)#::Vector{Vector{Int}}
     subsets = [Int[] for _ in 1:num_subsets]
@@ -449,4 +449,3 @@ function equal_sum_subsets(n::Int, num_subsets::Int)#::Vector{Vector{Int}}
     filter!(x -> length(x) > 0, subsets)
     return (subsets)
 end
-
