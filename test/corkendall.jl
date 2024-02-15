@@ -35,8 +35,12 @@ using Test
     KendallTau.merge_sort!(v, 1, 1000)
     @test v == 1:1000
 
-    KendallTau.midpoint(1, 10) == 5
-    KendallTau.midpoint(1, widen(10)) == 5
+    @test KendallTau.midpoint(1, 10) == 5
+    @test KendallTau.midpoint(1, widen(10)) == 5
+
+    @test KendallTau.equal_sum_subsets(0,1)==Vector{Int64}[]
+    @test sum.(KendallTau.equal_sum_subsets(100,5)) == repeat([1010],5)
+    @test sort(vcat(KendallTau.equal_sum_subsets(500,7)...)) == collect(1:500)
 
 end
 

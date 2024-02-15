@@ -3,7 +3,6 @@
 #   Kendall correlation
 #
 #######################################
-using ChunkSplitters: chunks
 
 """
     corkendall(x, y=x; skipmissing::Symbol=:none)
@@ -68,8 +67,8 @@ function _corkendall(x::AbstractMatrix{T}, y::AbstractMatrix{U},
     nmty = nonmissingtype(eltype(y))[]
     alljs = (symmetric ? 2 : 1):nr
 
-    #ChunkSplitters.chunks with split=:scatter provides better load balancing in symmetric case
-    Threads.@threads for thischunk in chunks(alljs; n=Threads.nthreads() * 4, split=:scatter)
+    #Use equal_sum_subsets for good load balancing in symmetric case
+    Threads.@threads for thischunk in equal_sum_subsets(length(alljs), Threads.nthreads())
 
         for k in thischunk
             j = alljs[k]
@@ -415,3 +414,39 @@ function handle_listwise(x::AbstractMatrix, y::AbstractMatrix)
         return view(a, 1:k, :), view(b, 1:k, :)
     end
 end
+
+"""
+    equal_sum_subsets(n::Int, num_subsets::Int)::Vector{Vector{Int}}
+
+Divide the integers 1:n into a number of subsets such that the sum of the elements in each
+subset is nearly equal.
+
+## Example
+
+```jldoctest
+julia> KendallTau.equal_sum_subsets(30,5)
+5-element Vector{Vector{Int64}}:
+ [30, 21, 20, 11, 10, 1]
+ [29, 22, 19, 12, 9, 2]
+ [28, 23, 18, 13, 8, 3]
+ [27, 24, 17, 14, 7, 4]
+ [26, 25, 16, 15, 6, 5]
+ ```
+"""
+function equal_sum_subsets(n::Int, num_subsets::Int)#::Vector{Vector{Int}}
+    subsets = [Int[] for _ in 1:num_subsets]
+    writeto, scanup = 1, true
+    for i = n:-1:1
+        push!(subsets[writeto], i)
+        if scanup && writeto == num_subsets
+            scanup = false
+        elseif (!scanup) && writeto == 1
+            scanup = true
+        else
+            writeto += scanup ? 1 : -1
+        end
+    end
+    filter!(x -> length(x) > 0, subsets)
+    return (subsets)
+end
+
