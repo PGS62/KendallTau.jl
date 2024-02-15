@@ -10,8 +10,8 @@ This package exports a function `corkendall` that is a candidate to replace the 
 The code of `corkendall` from this package was incorporated into StatsBase on 8 February 2021 (issue [634](https://github.com/JuliaStats/StatsBase.jl/issues/634), commit [647](https://github.com/JuliaStats/StatsBase.jl/commit/11ac5b596405367b3217d3d962e22523fef9bb0d)).
 With further changes, `corkendall` is again a candidate to be incorporated into StatsBase.
 
-- The function is now multi-threaded. On a PC with 12 cores, it's about nine times faster than the StatsBase version.
-- There is now a `skipmissing` keyword argument to control the treatment of missing values.
+- The function is now multi-threaded. On a PC with 12 cores, it's about 14 times faster than the StatsBase version.
+- There is now a `skipmissing` keyword argument to control the treatment of missing values, along the lines of the `skipmissing` argument to `StatsBase.pairwise`.
 
 ### Help
 ```
@@ -36,23 +36,23 @@ help?> KendallTau.corkendall
 ## Performance
 Note the reduction in number and size of allocations. This was key to obtaining the full benefit of multi-threading.
 ```julia
-julia> using StatsBase,KendallTau,Random #StatsBase v0.34.2
+julia> using StatsBase, KendallTau, Random, BenchmarkTools #StatsBase v0.34.2
 
 julia> x = rand(1000,10);StatsBase.corkendall(x)==KendallTau.corkendall(x)#compile
 true
 
 julia> x = rand(1000,1000);
 
-julia> @time res_sb = StatsBase.corkendall(x);
- 17.309843 seconds (3.00 M allocations: 17.090 GiB, 4.80% gc time)
+julia> @btime res_sb = StatsBase.corkendall(x);
+  17.383 s (2999999 allocations: 17.09 GiB)
 
-julia> @time res_kt = KendallTau.corkendall(x);
-  1.850909 seconds (1.26 k allocations: 16.528 MiB)
+julia> @btime res_kt = KendallTau.corkendall(x);
+  1.196 s (1285 allocations: 16.48 MiB)
 
-julia> 17.309843/1.850909
-9.352076736349545
+julia> 17.383/1.196
+14.534280936454849
 
-julia> res_sb==res_kt
+julia> res_sb == res_kt
 true
 
 julia> Threads.nthreads()#12 cores, 20 logical processors
@@ -77,4 +77,4 @@ Platform Info:
 
 
 Philip Swannell
-9 February 2024
+15 February 2024
