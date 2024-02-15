@@ -4,14 +4,14 @@
 
 # KendallTau.jl
 
-This package exports a function `corkendall` that is a candidate to replace the function of the same name in StatsBase.
+This unregistered package exports functions `corkendall` and `corkendall_fromfile` for the calculation of Kendall's τ coefficient. See [Tau-b](https://en.wikipedia.org/wiki/Kendall_rank_correlation_coefficient) on Wikipedia. The [StatsBase](https://github.com/JuliaStats/StatsBase.jl) package has a function of the same name that was contributed from this package on 8 February 2021 (issue [634](https://github.com/JuliaStats/StatsBase.jl/issues/634), commit [647](https://github.com/JuliaStats/StatsBase.jl/commit/11ac5b596405367b3217d3d962e22523fef9bb0d)).
 
-## Update February 2024
-The code of `corkendall` from this package was incorporated into StatsBase on 8 February 2021 (issue [634](https://github.com/JuliaStats/StatsBase.jl/issues/634), commit [647](https://github.com/JuliaStats/StatsBase.jl/commit/11ac5b596405367b3217d3d962e22523fef9bb0d)).
-With further changes, `corkendall` is again a candidate to be incorporated into StatsBase.
+Since then, `KendallTau.corkendall` has improved in two ways:
 
-- The function is now multi-threaded. On a PC with 12 cores, it's about 14 times faster than the StatsBase version.
+- The function is now multi-threaded. On a PC with 12 cores, it's about 14 times faster than the current StatsBase version.
 - There is now a `skipmissing` keyword argument to control the treatment of missing values, along the lines of the `skipmissing` argument to `StatsBase.pairwise`.
+
+There is an open [issue](https://github.com/JuliaStats/StatsBase.jl/issues/849) in StatsBase to bring these two improvements to `StatsBase.corkendall`, after which time this package will be largely redundant.
 
 ### Help
 ```
