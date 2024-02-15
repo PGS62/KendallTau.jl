@@ -388,7 +388,7 @@ function how_scaleable(fns, nr::Integer, ncs::Vector{<:Integer},
 
     #=
     #Syntax for Plotly
-    plot([
+    PlotlyJS.plot([
             scatter(x=ncs, y=datatoplot[:, i], mode="line", name=fullnameof(fns[i])) for i in 1:length(fns)], Layout(; title=title,
             xaxis=attr(title="Num cols (num rows = $nr)", type="log"),
             yaxis=attr(title="Seconds", type="log")))
@@ -396,15 +396,17 @@ function how_scaleable(fns, nr::Integer, ncs::Vector{<:Integer},
 
     #Syntax for Plots.jl
     #cheatsheet: https://www.matecdev.com/posts/julia-plotting-linestyle-markers.html
+    #plotlyjs()
     plot(ncs, datatoplot,
         title=title,
         xlabel="Num cols (num rows = $nr)",
         ylabel="Seconds",
         label=hcat([fullnameof(fn) for fn in fns]...),
         marker=:circle,
-        xaxis=:log,
-        yaxis=:log,
+        scale=:log10,
         size=(900, 600),
+        gridalpha = .3,
+        minorgrid=true,
         grid=true)
 
 end

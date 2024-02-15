@@ -538,3 +538,78 @@ A ╲ B │            numcols(x)   StatsBase.corkendall  KendallTau.corkendall
 11    │                2048.0                73.7547                7.70706
 12    │                4096.0                298.669                30.1121
 ###################################################################
+
+julia> how_scaleable(fns,1000,2 .^ (1:12),false,true,true)
+###################################################################
+Executing how_scaleable 2024-02-15T17:48:55.502
+ComputerName = DESKTOP-HSGAM5S
+fns[1] = StatsBase.corkendall
+fns[2] = KendallTau.corkendall
+ncs = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096]
+with_missings = false
+use_benchmark_tools = true
+Threads.nthreads() = 20
+  34.300 μs (10 allocations: 59.72 KiB)
+nc = 2, nr = 1000, f = StatsBase.corkendall,  time = 3.43e-5
+  41.500 μs (137 allocations: 79.59 KiB)
+nc = 2, nr = 1000, f = KendallTau.corkendall,  time = 4.15e-5, ratio = 0.8265060240963855
+  230.200 μs (46 allocations: 286.50 KiB)
+nc = 4, nr = 1000, f = StatsBase.corkendall,  time = 0.0002302
+  115.900 μs (159 allocations: 207.50 KiB)
+nc = 4, nr = 1000, f = KendallTau.corkendall,  time = 0.0001159, ratio = 1.9861949956859364
+  1.016 ms (190 allocations: 1.14 MiB)
+nc = 8, nr = 1000, f = StatsBase.corkendall,  time = 0.0010159
+  263.200 μs (203 allocations: 463.50 KiB)
+nc = 8, nr = 1000, f = KendallTau.corkendall,  time = 0.0002632, ratio = 3.859802431610942
+  4.095 ms (766 allocations: 4.55 MiB)
+nc = 16, nr = 1000, f = StatsBase.corkendall,  time = 0.0040947
+  556.800 μs (291 allocations: 976.31 KiB)
+nc = 16, nr = 1000, f = KendallTau.corkendall,  time = 0.0005568, ratio = 7.353987068965517
+  16.677 ms (3070 allocations: 18.08 MiB)
+nc = 32, nr = 1000, f = StatsBase.corkendall,  time = 0.0166766
+  1.362 ms (357 allocations: 1.36 MiB)
+nc = 32, nr = 1000, f = KendallTau.corkendall,  time = 0.0013618, ratio = 12.245997943897782
+  68.482 ms (12287 allocations: 72.00 MiB)
+nc = 64, nr = 1000, f = StatsBase.corkendall,  time = 0.0684822
+  5.029 ms (390 allocations: 1.63 MiB)
+nc = 64, nr = 1000, f = KendallTau.corkendall,  time = 0.0050289, ratio = 13.617729523355006
+  283.618 ms (49151 allocations: 287.34 MiB)
+nc = 128, nr = 1000, f = StatsBase.corkendall,  time = 0.2836184
+  19.212 ms (454 allocations: 2.22 MiB)
+nc = 128, nr = 1000, f = KendallTau.corkendall,  time = 0.019212, ratio = 14.762565063501977
+  1.141 s (196607 allocations: 1.12 GiB)
+nc = 256, nr = 1000, f = StatsBase.corkendall,  time = 1.141304
+  77.052 ms (602 allocations: 3.59 MiB)
+nc = 256, nr = 1000, f = KendallTau.corkendall,  time = 0.0770524, ratio = 14.812049981570986
+  4.620 s (786431 allocations: 4.48 GiB)
+nc = 512, nr = 1000, f = StatsBase.corkendall,  time = 4.6204382
+  305.826 ms (858 allocations: 7.08 MiB)
+nc = 512, nr = 1000, f = KendallTau.corkendall,  time = 0.305826, ratio = 15.108062100671624
+  18.791 s (3145727 allocations: 17.92 GiB)
+nc = 1024, nr = 1000, f = StatsBase.corkendall,  time = 18.7909223
+  1.332 s (1390 allocations: 17.07 MiB)
+nc = 1024, nr = 1000, f = KendallTau.corkendall,  time = 1.3318308, ratio = 14.109091259940826
+  96.655 s (12582911 allocations: 71.67 GiB)
+nc = 2048, nr = 1000, f = StatsBase.corkendall,  time = 96.6550782
+  5.354 s (2414 allocations: 49.01 MiB)
+nc = 2048, nr = 1000, f = KendallTau.corkendall,  time = 5.3535305, ratio = 18.05445550370919
+  407.917 s (50331647 allocations: 286.65 GiB)
+nc = 4096, nr = 1000, f = StatsBase.corkendall,  time = 407.9171497
+  25.903 s (4551 allocations: 161.00 MiB)
+nc = 4096, nr = 1000, f = KendallTau.corkendall,  time = 25.9034814, ratio = 15.747580157314298
+12×3 Named Matrix{Float64}
+A ╲ B │            numcols(x)   StatsBase.corkendall  KendallTau.corkendall
+──────┼────────────────────────────────────────────────────────────────────
+1     │                   2.0                3.43e-5                4.15e-5
+2     │                   4.0              0.0002302              0.0001159
+3     │                   8.0              0.0010159              0.0002632
+4     │                  16.0              0.0040947              0.0005568
+5     │                  32.0              0.0166766              0.0013618
+6     │                  64.0              0.0684822              0.0050289
+7     │                 128.0               0.283618               0.019212
+8     │                 256.0                 1.1413              0.0770524
+9     │                 512.0                4.62044               0.305826
+10    │                1024.0                18.7909                1.33183
+11    │                2048.0                96.6551                5.35353
+12    │                4096.0                407.917                25.9035
+###################################################################
