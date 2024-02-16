@@ -67,7 +67,7 @@ function _corkendall(x::AbstractMatrix{T}, y::AbstractMatrix{U},
     nmty = nonmissingtype(eltype(y))[]
     alljs = (symmetric ? 2 : 1):nr
 
-    #Use equal_sum_subsets for good load balancing in symmetric case
+    #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
     Threads.@threads for thischunk in equal_sum_subsets(length(alljs), Threads.nthreads())
 
         for k in thischunk
@@ -366,8 +366,8 @@ function handle_pairwise(x::AbstractVector, y::AbstractVector;
     scratch_fy::AbstractVector=similar(y))
 
     axes(x, 1) == axes(y, 1) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
-
-    j = 0
+    lb = first(axes(x,1))
+    j = lb-1
     @inbounds for i in eachindex(x)
         if !(ismissing(x[i]) || ismissing(y[i]))
             j += 1
@@ -376,7 +376,7 @@ function handle_pairwise(x::AbstractVector, y::AbstractVector;
         end
     end
 
-    return view(scratch_fx, 1:j), view(scratch_fy, 1:j)
+    return view(scratch_fx, lb:j), view(scratch_fy, lb:j)
 end
 
 """
@@ -388,12 +388,13 @@ Return a pair `(a,b)`, filtered copies of `(x,y)`, in which the rows `x[i,:]` an
 function handle_listwise(x::AbstractMatrix, y::AbstractMatrix)
 
     axes(x, 1) == axes(y, 1) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
+    lb = first(axes(x,1))
 
     symmetric = x === y
 
     a = similar(x)
 
-    k = 0
+    k = lb-1
     if symmetric
         @inbounds for i in axes(x, 1)
             if all(j -> !ismissing(x[i, j]), axes(x, 2))
@@ -401,7 +402,7 @@ function handle_listwise(x::AbstractMatrix, y::AbstractMatrix)
                 a[k, :] .= view(x, i, :)
             end
         end
-        return view(a, 1:k, :), view(a, 1:k, :)
+        return view(a, lb:k, :), view(a, lb:k, :)
     else
         b = similar(y)
         @inbounds for i in axes(x, 1)
@@ -411,7 +412,7 @@ function handle_listwise(x::AbstractMatrix, y::AbstractMatrix)
                 b[k, :] .= view(y, i, :)
             end
         end
-        return view(a, 1:k, :), view(b, 1:k, :)
+        return view(a, lb:k, :), view(b, lb:k, :)
     end
 end
 
