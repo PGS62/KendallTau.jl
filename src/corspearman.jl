@@ -132,7 +132,7 @@ function _corspearman(x::AbstractMatrix{T}, y::AbstractMatrix{U},
 
     # Swap x and y for more efficient threaded loop.
     if size(x, 2) < size(y, 2)
-        return collect(transpose(_corspearman(y, x,C', skipmissing)))
+        return collect(transpose(_corspearman(y, x, C', skipmissing)))
     end
 
     (m, nr), nc = size(x), size(y, 2)
@@ -142,22 +142,29 @@ function _corspearman(x::AbstractMatrix{T}, y::AbstractMatrix{U},
     alljs = (symmetric ? 2 : 1):nr
 
     #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
-    Threads.@threads for thischunk in equal_sum_subsets(length(alljs), Threads.nthreads())
+    #Threads.@threads for thischunk in equal_sum_subsets(length(alljs), Threads.nthreads())
+        for thischunk in equal_sum_subsets(length(alljs), Threads.nthreads())
 
         for k in thischunk
             j = alljs[k]
 
-            # Ensuring missing is not an element type of scratch_sy, scratch_fx, scratch_fy
-            # gives improved performance.
             scratch_fx = task_local_vector(:scratch_fx, nmtx, m)
             scratch_fy = task_local_vector(:scratch_fy, nmty, m)
             ycoli = task_local_vector(:ycoli, y, m)
             xcolj = task_local_vector(:xcolj, x, m)
+            scratch_rksx = task_local_vector(:scratch_rksx, Float64[], m)
+@show typeof(scratch_rksx)
+
+            scratch_rksy = task_local_vector(:scratch_rksy, Float64[], m)
+            @show typeof(scratch_rksy)            
+            scratch_p = task_local_vector(:scratch_p, Int[], m)
+            @show typeof(scratch_p)                        
 
             for i = 1:(symmetric ? j - 1 : nc)
                 ycoli .= view(y, :, i)
                 xcolj .= view(x, :, j)
-                C[j, i] = corspearman_kernel!(xcolj, ycoli, skipmissing, scratch_fx, scratch_fy)
+                C[j, i] = corspearman_kernel!(xcolj, ycoli, skipmissing, scratch_fx,
+                    scratch_fy, scratch_rksx, scratch_rksy, scratch_p)
                 symmetric && (C[i, j] = C[j, i])
             end
         end
@@ -180,8 +187,9 @@ function corspearman(x::AbstractVector, y::AbstractMatrix; skipmissing::Symbol=:
 end
 
 """
-    corspearman_kernel!(x::AbstractVector, y::AbstractVector,skipmissing::Symbol,
-    scratch_fx=similar(x), scratch_fy=similar(y))
+    corspearman_kernel!(x::AbstractVector, y::AbstractVector, skipmissing::Symbol,
+    scratch_fx=similar(x), scratch_fy=similar(y),scratch_rksx=similar(x,Float64),
+    scratch_rksy=similar(y,Float64),scratch_p=similar(x,Int))
 
 TBW
 Subsequent arguments:
@@ -189,7 +197,8 @@ Subsequent arguments:
    allocation.
 """
 function corspearman_kernel!(x::AbstractVector, y::AbstractVector, skipmissing::Symbol,
-    scratch_fx=similar(x), scratch_fy=similar(y))
+    scratch_fx=similar(x), scratch_fy=similar(y), scratch_rksx=similar(x, Float64),
+    scratch_rksy=similar(y, Float64), scratch_p=similar(x, Int))
 
     length(x) >= 2 || return NaN
     x === y && return (1.0)
@@ -211,10 +220,26 @@ function corspearman_kernel!(x::AbstractVector, y::AbstractVector, skipmissing::
         return NaN
     end
 
-    ranksx = StatsBase.tiedrank(x)
-    ranksy = StatsBase.tiedrank(y)
+    #ranksx = StatsBase.tiedrank(x)
+    #ranksy = StatsBase.tiedrank(y)
+    n = length(x)
 
-    return StatsBase.cor(ranksx, ranksy)
+    @show length(scratch_rksx)
+    @show length(scratch_rksy)
+    @show length(x)
+    @show length(y)
+    @show length(scratch_p)
+
+    #throw("giveup")
+
+    StatsBase._tiedrank!(view(scratch_rksx,1:n), x, view(scratch_p,1:n))
+    throw("giveup2")
+    StatsBase._tiedrank!(view(scratch_rksy,1:n), y, view(scratch_p,1:n))
+
+throw("giveup3")
+
+
+    return StatsBase.cor(view(scratch_rksx,1:n), view(scratch_rksy,1:n))
 end
 
 """
