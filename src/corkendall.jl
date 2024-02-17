@@ -366,8 +366,8 @@ function handle_pairwise(x::AbstractVector, y::AbstractVector;
     scratch_fy::AbstractVector=similar(y))
 
     axes(x, 1) == axes(y, 1) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
-    lb = first(axes(x,1))
-    j = lb-1
+    lb = first(axes(x, 1))
+    j = lb - 1
     @inbounds for i in eachindex(x)
         if !(ismissing(x[i]) || ismissing(y[i]))
             j += 1
@@ -388,13 +388,13 @@ Return a pair `(a,b)`, filtered copies of `(x,y)`, in which the rows `x[i,:]` an
 function handle_listwise(x::AbstractMatrix, y::AbstractMatrix)
 
     axes(x, 1) == axes(y, 1) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
-    lb = first(axes(x,1))
+    lb = first(axes(x, 1))
 
     symmetric = x === y
 
     a = similar(x)
 
-    k = lb-1
+    k = lb - 1
     if symmetric
         @inbounds for i in axes(x, 1)
             if all(j -> !ismissing(x[i, j]), axes(x, 2))
@@ -435,7 +435,7 @@ julia> KendallTau.equal_sum_subsets(30,5)
 ```
 """
 function equal_sum_subsets(n::Int, num_subsets::Int)#::Vector{Vector{Int}}
-    subsets = [Int[] for _ in 1:num_subsets]
+    subsets = [Int[] for _ in 1:min(n, num_subsets)]
     writeto, scanup = 1, true
     for i = n:-1:1
         push!(subsets[writeto], i)
@@ -447,6 +447,5 @@ function equal_sum_subsets(n::Int, num_subsets::Int)#::Vector{Vector{Int}}
             writeto += scanup ? 1 : -1
         end
     end
-    filter!(x -> length(x) > 0, subsets)
     return (subsets)
 end
