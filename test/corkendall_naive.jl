@@ -1,4 +1,4 @@
-using KendallTau: corkendall_validateargs, handle_listwise, handle_pairwise
+using KendallTau: check_rankcor_args, handle_listwise, handle_pairwise
 #######################################
 #
 #   Kendall correlation
@@ -25,7 +25,7 @@ Uses multiple threads when either `x` or `y` is a matrix.
 function corkendall_naive(x::AbstractMatrix, y::AbstractMatrix=x;
     skipmissing::Symbol=:none)
 
-    corkendall_validateargs(x, y, skipmissing, true)
+    check_rankcor_args(x, y, skipmissing, true)
 
     missing_allowed = missing isa eltype(x) || missing isa eltype(y)
     nr, nc = size(x, 2), size(y, 2)
@@ -75,7 +75,7 @@ end
 
 function corkendall_naive(x::AbstractVector, y::AbstractVector; skipmissing::Symbol=:none)
 
-    corkendall_validateargs(x, y, skipmissing, false)
+    check_rankcor_args(x, y, skipmissing, false)
 
     length(x) >= 2 || return NaN
     x === y && return (1.0)

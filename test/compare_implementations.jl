@@ -21,9 +21,24 @@ The function also checks that `fn1` and `fn2` never mutate their arguments.
     or elements in the input vectors.
 - `numtests::Integer`: the functions are tested `numtests` times - for various combinations
     of matrix and vector input.
+
+Example usage:
+using Random, StatsBase, KendallTau
+compare_implementations(KendallTau.corspearman,StatsBase.corspearman;maxcols = 100,maxrows=1000,numtests=100,fns_handle_missing=false)
+
+
+using Random, StatsBase, KendallTau
+include("corkendall_naive.jl")
+compare_implementations(KendallTau.corkendall,corkendall_naive;maxcols = 100,maxrows=100,numtests=100,fns_handle_missing=true)
+
+
+
+
 """
+
+@__DIR__
 function compare_implementations(fn1::Function=corkendall, fn2::Function=corkendall_naive;
-    abstol::Float64=1e-14, maxcols::Integer, maxrows::Integer, numtests::Integer)
+    abstol::Float64=1e-14, maxcols::Integer, maxrows::Integer, numtests::Integer, fns_handle_missing::Bool)
 
     prob_missing = 0.05
     fn1name = string(Base.parentmodule(fn1)) * "." * string(fn1)
@@ -41,7 +56,13 @@ function compare_implementations(fn1::Function=corkendall, fn2::Function=corkend
 
     rng = MersenneTwister(1)# make this test code deterministic
 
-    for i = 1:numtests÷5
+    if fns_handle_missing
+        test_numbers = 1:14
+    else
+        test_numbers = [1, 4, 7, 10, 13]
+    end
+
+    for _ in 1:numtests÷length(test_numbers)
 
         # random sizes of the argument arrays
         ncols1 = rand(rng, 1:maxcols)
@@ -61,7 +82,7 @@ function compare_implementations(fn1::Function=corkendall, fn2::Function=corkend
         vectory = vectorx
         sprinklemissing(x) = ifelse.(rand(rng, size(x)...) .< prob_missing, missing, x)
 
-        for j in 1:14
+        for j in test_numbers
             if j == 1
                 #one matrix case, no missings, skipmissing = :none
                 arg1 = matrixx()
@@ -137,27 +158,52 @@ function compare_implementations(fn1::Function=corkendall, fn2::Function=corkend
             end
 
             if j <= 3
+                if fns_handle_missing
+                    res1 = fn1(arg1; skipmissing)
+                else
+                    res1 = fn1(arg1)
+                end
 
-                res1 = fn1(arg1; skipmissing)
                 myisequal(arg1, arg1_backup) ||
                     @error("Detected that function $fn1name mutated its argument, $casedesc")
-                res2 = fn2(arg1; skipmissing)
+
+                if fns_handle_missing
+                    res2 = fn2(arg1; skipmissing)
+                else
+                    res2 = fn2(arg1)
+                end
+
                 myisequal(arg1, arg1_backup) ||
                     @error("Detected that function $fn2name mutated its argument, $casedesc")
             else
                 arg2_backup = copy(arg2)
-                res1 = fn1(arg1, arg2; skipmissing)
+                if fns_handle_missing
+                    res1 = fn1(arg1, arg2; skipmissing)
+                else
+                    res1 = fn1(arg1, arg2)
+                end
+
                 (myisequal(arg1, arg1_backup) && myisequal(arg2, arg2_backup)) ||
                     @error("Detected that function $fn1name mutated one of its argument, $casedesc")
-                res2 = fn2(arg1, arg2; skipmissing)
+                if fns_handle_missing
+                    res2 = fn2(arg1, arg2; skipmissing)
+                else
+                    res2 = fn2(arg1, arg2)
+                end
+
                 (myisequal(arg1, arg1_backup) && myisequal(arg2, arg2_backup)) ||
                     @error("Detected that function $fn2name mutated one of its argument, $casedesc")
             end
 
+            if @isdefined arg2
+                @show j, typeof(arg1), size(arg1), typeof(arg2), size(arg2)
+            else
+                @show j, typeof(arg1), size(arg1)
+            end
             # test the test!
-            # if j ==2
-            #    res1[1] += 1
-            # end
+            #    if j ==4
+            #        res1[1] += 1
+            #     end
 
             # test for equality, if that fails print to the screen the argument(s) and the two returns
             if !myisapprox(res1, res2, abstol)

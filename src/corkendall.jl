@@ -24,7 +24,7 @@ Uses multiple threads when either `x` or `y` is a matrix.
 function corkendall(x::AbstractMatrix, y::AbstractMatrix=x;
     skipmissing::Symbol=:none)
 
-    corkendall_validateargs(x, y, skipmissing, true)
+    check_rankcor_args(x, y, skipmissing, true)
 
     missing_allowed = missing isa eltype(x) || missing isa eltype(y)
     nr, nc = size(x, 2), size(y, 2)
@@ -51,16 +51,10 @@ function _corkendall(x::AbstractMatrix{T}, y::AbstractMatrix{U},
 
     # Swap x and y for more efficient threaded loop.
     if size(x, 2) < size(y, 2)
-        return collect(transpose(corkendall(y, x; skipmissing)))
+        return collect(transpose(_corkendall(y, x, C', skipmissing)))
     end
 
     (m, nr), nc = size(x), size(y, 2)
-
-    # Return a vector of length m from task local storage, initialising when necessary
-    function task_local_vector(key::Symbol, similarto::AbstractArray{V})::Vector{V} where {V}
-        haskey(task_local_storage(), key) || task_local_storage(key, similar(similarto, m))
-        return (task_local_storage(key))
-    end
 
     intarray = Int[]
     nmtx = nonmissingtype(eltype(x))[]
@@ -73,15 +67,15 @@ function _corkendall(x::AbstractMatrix{T}, y::AbstractMatrix{U},
         for k in thischunk
             j = alljs[k]
 
-            sortedxcolj = task_local_vector(:sortedxcolj, x)
-            scratch_py = task_local_vector(:scratch_py, y)
-            ycoli = task_local_vector(:ycoli, y)
-            permx = task_local_vector(:permx, intarray)
+            sortedxcolj = task_local_vector(:sortedxcolj, x, m)
+            scratch_py = task_local_vector(:scratch_py, y, m)
+            ycoli = task_local_vector(:ycoli, y, m)
+            permx = task_local_vector(:permx, intarray, m)
             # Ensuring missing is not an element type of scratch_sy, scratch_fx, scratch_fy
             # gives improved performance.
-            scratch_sy = task_local_vector(:scratch_sy, nmty)
-            scratch_fx = task_local_vector(:scratch_fx, nmtx)
-            scratch_fy = task_local_vector(:scratch_fy, nmty)
+            scratch_sy = task_local_vector(:scratch_sy, nmty, m)
+            scratch_fx = task_local_vector(:scratch_fx, nmtx, m)
+            scratch_fy = task_local_vector(:scratch_fy, nmty, m)
 
             sortperm!(permx, view(x, :, j))
             @inbounds for k in eachindex(sortedxcolj)
@@ -101,7 +95,7 @@ end
 
 function corkendall(x::AbstractVector, y::AbstractVector; skipmissing::Symbol=:none)
 
-    corkendall_validateargs(x, y, skipmissing, false)
+    check_rankcor_args(x, y, skipmissing, false)
 
     length(x) >= 2 || return NaN
     x === y && return (1.0)
@@ -130,7 +124,7 @@ function corkendall(x::AbstractVector, y::AbstractMatrix; skipmissing::Symbol=:n
     return corkendall(reshape(x, (length(x), 1)), y; skipmissing)
 end
 
-function corkendall_validateargs(x, y, skipmissing, allowlistwise::Bool)
+function check_rankcor_args(x, y, skipmissing, allowlistwise::Bool)
     Base.require_one_based_indexing(x, y)
     size(x, 1) == size(y, 1) ||
         throw(DimensionMismatch("x and y have inconsistent dimensions"))
@@ -195,10 +189,7 @@ function corkendall_kernel!(sortedx::AbstractVector, y::AbstractVector,
         permutedy = scratch_py
     end
 
-    # isnan2 needed so that corkendall works for any type for which isless is defined
-    isnan2(x::T) where {T<:Number} = isnan(x)
-    isnan2(x) = false
-    if any(isnan2, sortedx) || any(isnan2, permutedy)
+    if any(isnan_safe, sortedx) || any(isnan_safe, permutedy)
         return NaN
     end
     n = length(sortedx)
@@ -448,4 +439,22 @@ function equal_sum_subsets(n::Int, num_subsets::Int)#::Vector{Vector{Int}}
         end
     end
     return (subsets)
+end
+
+#isnan_safe required for corkendall and corspearman to accept vectors whose element type
+#are not numbers but for which isless is defined and hence can be ranked.
+isnan_safe(x::T) where {T<:Number} = isnan(x)
+function isnan_safe(x)
+    false
+end
+
+"""
+    task_local_vector(key::Symbol, similarto::AbstractArray{V}, m::Int)::Vector{V} where {V}
+
+    Retrieve from task local storage a vector of length `m` and matching the element type of
+`similarto` from task local storage, with initialisation on first call during a task.
+"""
+function task_local_vector(key::Symbol, similarto::AbstractArray{V}, m::Int)::Vector{V} where {V}
+    haskey(task_local_storage(), key) || task_local_storage(key, similar(similarto, m))
+    return (task_local_storage(key))
 end

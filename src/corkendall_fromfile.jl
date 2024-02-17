@@ -1,7 +1,7 @@
 using CSV: write, File, getnames
 using DataFrames: DataFrame, insertcols!
 using Tables: matrix
-using Statistics: median
+using StatsBase: median
 
 """
     corkendall_fromfile(file1::String, file2::String, outputfile::String,
