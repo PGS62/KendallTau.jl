@@ -4,7 +4,7 @@
 #
 #######################################
 
-import StatsBase
+import StatsBase: _tiedrank!, cor
 
 """
     corspearman(x, y=x; skipmissing::Symbol=:none)
@@ -100,7 +100,7 @@ function cor_wrap(x, y)
         end
     end
     try
-        C = StatsBase.cor(x, y)
+        C = cor(x, y)
         if symmetric
             for i in axes(C, 1)
                 C[i, i] = 1.0
@@ -117,7 +117,7 @@ function cor_wrap(x, y)
 
         for j = (symmetric ? 2 : 1):nr
             for i = 1:(symmetric ? j - 1 : nc)
-                C[j, i] = StatsBase.cor(view(x, :, j), view(y, :, i))
+                C[j, i] = cor(view(x, :, j), view(y, :, i))
                 symmetric && (C[i, j] = C[j, i])
             end
         end
@@ -142,8 +142,7 @@ function _corspearman(x::AbstractMatrix{T}, y::AbstractMatrix{U},
     alljs = (symmetric ? 2 : 1):nr
 
     #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
-    #Threads.@threads for thischunk in equal_sum_subsets(length(alljs), Threads.nthreads())
-        for thischunk in equal_sum_subsets(length(alljs), Threads.nthreads())
+    Threads.@threads for thischunk in equal_sum_subsets(length(alljs), Threads.nthreads())
 
         for k in thischunk
             j = alljs[k]
@@ -153,12 +152,8 @@ function _corspearman(x::AbstractMatrix{T}, y::AbstractMatrix{U},
             ycoli = task_local_vector(:ycoli, y, m)
             xcolj = task_local_vector(:xcolj, x, m)
             scratch_rksx = task_local_vector(:scratch_rksx, Float64[], m)
-@show typeof(scratch_rksx)
-
             scratch_rksy = task_local_vector(:scratch_rksy, Float64[], m)
-            @show typeof(scratch_rksy)            
             scratch_p = task_local_vector(:scratch_p, Int[], m)
-            @show typeof(scratch_p)                        
 
             for i = 1:(symmetric ? j - 1 : nc)
                 ycoli .= view(y, :, i)
@@ -219,27 +214,14 @@ function corspearman_kernel!(x::AbstractVector, y::AbstractVector, skipmissing::
     if any(isnan_safe, x) || any(isnan_safe, y)
         return NaN
     end
-
-    #ranksx = StatsBase.tiedrank(x)
-    #ranksy = StatsBase.tiedrank(y)
     n = length(x)
 
-    @show length(scratch_rksx)
-    @show length(scratch_rksy)
-    @show length(x)
-    @show length(y)
-    @show length(scratch_p)
+    sortperm!(view(scratch_p, 1:n),x)
+    _tiedrank!(view(scratch_rksx, 1:n), x, view(scratch_p, 1:n))
+    sortperm!(view(scratch_p, 1:n),y)
+    _tiedrank!(view(scratch_rksy, 1:n), y, view(scratch_p, 1:n))
 
-    #throw("giveup")
-
-    StatsBase._tiedrank!(view(scratch_rksx,1:n), x, view(scratch_p,1:n))
-    throw("giveup2")
-    StatsBase._tiedrank!(view(scratch_rksy,1:n), y, view(scratch_p,1:n))
-
-throw("giveup3")
-
-
-    return StatsBase.cor(view(scratch_rksx,1:n), view(scratch_rksy,1:n))
+    return cor(view(scratch_rksx, 1:n), view(scratch_rksy, 1:n))
 end
 
 """
@@ -268,7 +250,7 @@ function tiedrank_nan(X::AbstractMatrix)
             fill!(Zj, missing)
         else
             sortperm!(idxs, Xj)
-            StatsBase._tiedrank!(Zj, Xj, idxs)
+            _tiedrank!(Zj, Xj, idxs)
         end
     end
     return Z
