@@ -157,6 +157,3 @@ function signdiff(a, b)
         throw("Cannot compare inputs")
     end
 end
-
-
-

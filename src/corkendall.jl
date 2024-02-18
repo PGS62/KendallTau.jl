@@ -344,6 +344,8 @@ function insertion_sort!(v::AbstractVector, lo::Integer, hi::Integer)
     return nswaps
 end
 
+# Auxiliary functions for both Kendall's and Spearman's rank correlations
+
 """
     handle_pairwise(x::AbstractVector, y::AbstractVector;
     scratch_fx::AbstractVector=similar(x),
@@ -413,7 +415,7 @@ end
 Divide the integers 1:n into a number of subsets such that a) each subset has (approximately)
 the same number of elements; and b) the sum of the elements in each subset is nearly equal.
 If `n` is a multiple of `2 * num_subsets` both conditions hold exactly.
-    
+
 ## Example
 ```julia-repl
 julia> KendallTau.equal_sum_subsets(30,5)

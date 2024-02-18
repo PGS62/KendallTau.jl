@@ -65,7 +65,6 @@ end
 
 isapproxequal(a, b, abstol::Float64=0.0) = isequal(a, b)
 
-
 @testset "corkendall_fromfile" begin
 
     x_noheaders = joinpath(@__DIR__, "../data/x_noheaders.csv")

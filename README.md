@@ -75,6 +75,5 @@ Platform Info:
 ### Performance against size of `x`
 <img width="800" alt="image" src="plots/KendallTau vs StatsBase corkendall speed on 12 core 20 thread 15 Feb 2024.svg">
 
-
 Philip Swannell
 15 February 2024

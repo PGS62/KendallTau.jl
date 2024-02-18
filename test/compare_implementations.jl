@@ -26,17 +26,11 @@ Example usage:
 using Random, StatsBase, KendallTau
 compare_implementations(KendallTau.corspearman,StatsBase.corspearman;maxcols = 100,maxrows=1000,numtests=100,fns_handle_missing=false)
 
-
 using Random, StatsBase, KendallTau
 include("corkendall_naive.jl")
 compare_implementations(KendallTau.corkendall,corkendall_naive;maxcols = 100,maxrows=100,numtests=100,fns_handle_missing=true)
 
-
-
-
 """
-
-@__DIR__
 function compare_implementations(fn1::Function=corkendall, fn2::Function=corkendall_naive;
     abstol::Float64=1e-14, maxcols::Integer, maxrows::Integer, numtests::Integer, fns_handle_missing::Bool)
 

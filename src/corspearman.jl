@@ -59,72 +59,6 @@ function corspearman(x::AbstractMatrix, y::AbstractMatrix=x;
     end
 end
 
-"""
-    cor_wrap(x, y)
-Work-around various unhelpful features of cor:
-a) Ensures that on-diagonal elements of the return are always 1.0 in the symmetric case
-irrespective of missing, NaN, Inf etc.
-b) Ensure that cor_wrap(a,b) is NaN when a and b are vectors of equal length less than 2
-c) Works around some edge-case bugs in cor's handling of `missing` where the function throws if
-`x` and `y` are matrices but nevertheless looping around the columns of `x` and `y` works.
-https://github.com/JuliaStats/Statistics.jl/issues/63
-
-# Example
-```julia-repl
-julia> x = y = [missing missing; missing missing]
-2×2 Matrix{Missing}:
- missing  missing
- missing  missing
-
-julia> Statistics.cor(x,y)
-ERROR: MethodError: no method matching copy(::Missing)
-
-julia> KendallTau.cor_wrap(x,y)
-2×2 Matrix{Union{Missing, Float64}}:
- 1.0        missing
-  missing  1.0
-
-julia>
-
-```
-"""
-function cor_wrap(x, y)
-    symmetric = y === x
-
-    if size(x, 1) < 2
-        nr, nc = size(x, 2), size(y, 2)
-        if symmetric
-            return (ifelse.(1:nr .== (1:nc)', 1.0, NaN))
-        else
-            return (fill(NaN, nr, nc))
-        end
-    end
-    try
-        C = cor(x, y)
-        if symmetric
-            for i in axes(C, 1)
-                C[i, i] = 1.0
-            end
-        end
-        return (C)
-    catch
-        nr, nc = size(x, 2), size(y, 2)
-        if missing isa eltype(x) || missing isa eltype(y)
-            C = ones(Union{Missing,Float64}, nr, nc)
-        else
-            C = ones(Float64, nr, nc)
-        end
-
-        for j = (symmetric ? 2 : 1):nr
-            for i = 1:(symmetric ? j - 1 : nc)
-                C[j, i] = cor(view(x, :, j), view(y, :, i))
-                symmetric && (C[i, j] = C[j, i])
-            end
-        end
-        return (C)
-    end
-end
-
 function _corspearman(x::AbstractMatrix{T}, y::AbstractMatrix{U},
     C::AbstractMatrix, skipmissing::Symbol) where {T,U}
 
@@ -186,10 +120,12 @@ end
     scratch_fx=similar(x), scratch_fy=similar(y),scratch_rksx=similar(x,Float64),
     scratch_rksy=similar(y,Float64),scratch_p=similar(x,Int))
 
-TBW
+Compute Spearman's rank correlation coefficient between vectors 'x' and 'y'
 Subsequent arguments:
 - `scratch_fx, scratch_fy`: Vectors used to filter `missing`s from `x` and `y` without
    allocation.
+-  `scratch_rksx=similar, scratch_rksy, scratch_p=similar` vectors used to calculate the
+    tied ranks of `x` and `y` without allocation.
 """
 function corspearman_kernel!(x::AbstractVector, y::AbstractVector, skipmissing::Symbol,
     scratch_fx=similar(x), scratch_fy=similar(y), scratch_rksx=similar(x, Float64),
@@ -222,6 +158,74 @@ function corspearman_kernel!(x::AbstractVector, y::AbstractVector, skipmissing::
     _tiedrank!(view(scratch_rksy, 1:n), y, view(scratch_p, 1:n))
 
     return cor(view(scratch_rksx, 1:n), view(scratch_rksy, 1:n))
+end
+
+# Auxiliary functions for Spearman's rank correlations
+
+"""
+    cor_wrap(x, y)
+Work-around various "unhelpful" features of cor:
+a) Ensures that on-diagonal elements of the return are always 1.0 in the symmetric case
+irrespective of missing, NaN, Inf etc.
+b) Ensure that cor_wrap(a,b) is NaN when a and b are vectors of equal length less than 2
+c) Works around some edge-case bugs in cor's handling of `missing` where the function throws if
+`x` and `y` are matrices but nevertheless looping around the columns of `x` and `y` works.
+https://github.com/JuliaStats/Statistics.jl/issues/63
+
+# Example
+```julia-repl
+julia> x = y = [missing missing; missing missing]
+2×2 Matrix{Missing}:
+ missing  missing
+ missing  missing
+
+julia> Statistics.cor(x,y)
+ERROR: MethodError: no method matching copy(::Missing)
+
+julia> KendallTau.cor_wrap(x,y)
+2×2 Matrix{Union{Missing, Float64}}:
+ 1.0        missing
+  missing  1.0
+
+julia>
+
+```
+"""
+function cor_wrap(x, y)
+    symmetric = y === x
+
+    if size(x, 1) < 2
+        nr, nc = size(x, 2), size(y, 2)
+        if symmetric
+            return (ifelse.(1:nr .== (1:nc)', 1.0, NaN))
+        else
+            return (fill(NaN, nr, nc))
+        end
+    end
+    try
+        C = cor(x, y)
+        if symmetric
+            for i in axes(C, 1)
+                C[i, i] = 1.0
+            end
+        end
+        return (C)
+    catch
+        nr, nc = size(x, 2), size(y, 2)
+        if missing isa eltype(x) || missing isa eltype(y)
+            C = ones(Union{Missing,Float64}, nr, nc)
+        else
+            C = ones(Float64, nr, nc)
+        end
+
+        for j = (symmetric ? 2 : 1):nr
+            for i = 1:(symmetric ? j - 1 : nc)
+                C[j, i] = cor(view(x, :, j), view(y, :, i))
+                symmetric && (C[i, j] = C[j, i])
+            end
+        end
+        return (C)
+    end
 end
 
 """

@@ -108,6 +108,4 @@ KendallTau.corkendall(xm; skipmissing = :pairwise)  1.764173 seconds (1.29 k all
 KendallTau.corkendall(xm; skipmissing = :listwise)  0.004124 seconds (291 allocations: 16.243 MiB)
 StatsBase.corkendall(x)                            17.695131 seconds (3.00 M allocations: 17.090 GiB, 3.93% gc time)
 ====================================================================================================
-
-
 =#
