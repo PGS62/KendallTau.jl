@@ -4,7 +4,7 @@
 #
 #######################################
 
-import StatsBase
+import StatsBase: _tiedrank!, cor
 
 """
     corspearman(x, y=x; skipmissing::Symbol=:none)
@@ -100,7 +100,7 @@ function cor_wrap(x, y)
         end
     end
     try
-        C = StatsBase.cor(x, y)
+        C = cor(x, y)
         if symmetric
             for i in axes(C, 1)
                 C[i, i] = 1.0
@@ -117,7 +117,7 @@ function cor_wrap(x, y)
 
         for j = (symmetric ? 2 : 1):nr
             for i = 1:(symmetric ? j - 1 : nc)
-                C[j, i] = StatsBase.cor(view(x, :, j), view(y, :, i))
+                C[j, i] = cor(view(x, :, j), view(y, :, i))
                 symmetric && (C[i, j] = C[j, i])
             end
         end
@@ -132,7 +132,7 @@ function _corspearman(x::AbstractMatrix{T}, y::AbstractMatrix{U},
 
     # Swap x and y for more efficient threaded loop.
     if size(x, 2) < size(y, 2)
-        return collect(transpose(_corspearman(y, x,C', skipmissing)))
+        return collect(transpose(_corspearman(y, x, C', skipmissing)))
     end
 
     (m, nr), nc = size(x), size(y, 2)
@@ -147,17 +147,19 @@ function _corspearman(x::AbstractMatrix{T}, y::AbstractMatrix{U},
         for k in thischunk
             j = alljs[k]
 
-            # Ensuring missing is not an element type of scratch_sy, scratch_fx, scratch_fy
-            # gives improved performance.
             scratch_fx = task_local_vector(:scratch_fx, nmtx, m)
             scratch_fy = task_local_vector(:scratch_fy, nmty, m)
             ycoli = task_local_vector(:ycoli, y, m)
             xcolj = task_local_vector(:xcolj, x, m)
+            scratch_rksx = task_local_vector(:scratch_rksx, Float64[], m)
+            scratch_rksy = task_local_vector(:scratch_rksy, Float64[], m)
+            scratch_p = task_local_vector(:scratch_p, Int[], m)
 
             for i = 1:(symmetric ? j - 1 : nc)
                 ycoli .= view(y, :, i)
                 xcolj .= view(x, :, j)
-                C[j, i] = corspearman_kernel!(xcolj, ycoli, skipmissing, scratch_fx, scratch_fy)
+                C[j, i] = corspearman_kernel!(xcolj, ycoli, skipmissing, scratch_fx,
+                    scratch_fy, scratch_rksx, scratch_rksy, scratch_p)
                 symmetric && (C[i, j] = C[j, i])
             end
         end
@@ -180,8 +182,9 @@ function corspearman(x::AbstractVector, y::AbstractMatrix; skipmissing::Symbol=:
 end
 
 """
-    corspearman_kernel!(x::AbstractVector, y::AbstractVector,skipmissing::Symbol,
-    scratch_fx=similar(x), scratch_fy=similar(y))
+    corspearman_kernel!(x::AbstractVector, y::AbstractVector, skipmissing::Symbol,
+    scratch_fx=similar(x), scratch_fy=similar(y),scratch_rksx=similar(x,Float64),
+    scratch_rksy=similar(y,Float64),scratch_p=similar(x,Int))
 
 TBW
 Subsequent arguments:
@@ -189,7 +192,8 @@ Subsequent arguments:
    allocation.
 """
 function corspearman_kernel!(x::AbstractVector, y::AbstractVector, skipmissing::Symbol,
-    scratch_fx=similar(x), scratch_fy=similar(y))
+    scratch_fx=similar(x), scratch_fy=similar(y), scratch_rksx=similar(x, Float64),
+    scratch_rksy=similar(y, Float64), scratch_p=similar(x, Int))
 
     length(x) >= 2 || return NaN
     x === y && return (1.0)
@@ -210,11 +214,14 @@ function corspearman_kernel!(x::AbstractVector, y::AbstractVector, skipmissing::
     if any(isnan_safe, x) || any(isnan_safe, y)
         return NaN
     end
+    n = length(x)
 
-    ranksx = StatsBase.tiedrank(x)
-    ranksy = StatsBase.tiedrank(y)
+    sortperm!(view(scratch_p, 1:n),x)
+    _tiedrank!(view(scratch_rksx, 1:n), x, view(scratch_p, 1:n))
+    sortperm!(view(scratch_p, 1:n),y)
+    _tiedrank!(view(scratch_rksy, 1:n), y, view(scratch_p, 1:n))
 
-    return StatsBase.cor(ranksx, ranksy)
+    return cor(view(scratch_rksx, 1:n), view(scratch_rksy, 1:n))
 end
 
 """
@@ -243,7 +250,7 @@ function tiedrank_nan(X::AbstractMatrix)
             fill!(Zj, missing)
         else
             sortperm!(idxs, Xj)
-            StatsBase._tiedrank!(Zj, Xj, idxs)
+            _tiedrank!(Zj, Xj, idxs)
         end
     end
     return Z
