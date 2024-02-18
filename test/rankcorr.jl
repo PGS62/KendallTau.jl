@@ -92,12 +92,12 @@ end
             @test f(repeat(X, big_n), repeat(y1, big_n)) ≈ [-1 / sqrt(90), -1 / sqrt(72)]
             @test f(repeat(y1, big_n), repeat(X, big_n)) ≈ [-1 / sqrt(90) -1 / sqrt(72)]
         elseif f == corspearman
-            @test corspearman(x1, y1) ≈ -0.102597835208515
-            @test corspearman(repeat(x1, 1000), repeat(y1, 1000)) ≈ -0.102597835208515
-            @test corspearman(vcat(missing, x1, missing), vcat(missing, y1, missing), skipmissing=:pairwise) ≈ -0.102597835208515
-            @test corspearman(x2, y1) ≈ -0.081110710565381
-            @test corspearman(X, y1) ≈ [-0.102597835208515, -0.081110710565381]
-            @test corspearman(y1, X) ≈ [-0.102597835208515 -0.081110710565381]
+            @test corspearman(x1, y1) ≈ -1 / sqrt(95)
+            @test corspearman(repeat(x1, 1000), repeat(y1, 1000)) ≈ -1 / sqrt(95)
+            @test corspearman(vcat(missing, x1, missing), vcat(missing, y1, missing), skipmissing=:pairwise) ≈ -1 / sqrt(95)
+            @test corspearman(x2, y1) ≈ -3 / sqrt(1368)
+            @test corspearman(X, y1) ≈ [-1 / sqrt(95), -3 / sqrt(1368)]
+            @test corspearman(y1, X) ≈ [-1 / sqrt(95) -3 / sqrt(1368)]
         end
 
         # Matrix, Matrix

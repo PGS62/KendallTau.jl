@@ -189,11 +189,13 @@ function compare_implementations(fn1::Function=corkendall, fn2::Function=corkend
                     @error("Detected that function $fn2name mutated one of its argument, $casedesc")
             end
 
+            #=
             if @isdefined arg2
                 @show j, typeof(arg1), size(arg1), typeof(arg2), size(arg2)
             else
                 @show j, typeof(arg1), size(arg1)
             end
+            =#
             # test the test!
             #    if j ==4
             #        res1[1] += 1

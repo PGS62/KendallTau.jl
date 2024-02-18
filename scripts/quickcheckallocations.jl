@@ -10,6 +10,12 @@ res = KendallTau.corkendall(xm; skipmissing=:pairwise)
 res = KendallTau.corkendall(xm; skipmissing=:listwise)
 res = KendallTau.corkendall(xm; skipmissing=:none)
 res = StatsBase.corkendall(x)
+res = KendallTau.corspearman(x)
+res = KendallTau.corspearman(xm; skipmissing=:pairwise)
+res = KendallTau.corspearman(xm; skipmissing=:listwise)
+res = KendallTau.corspearman(xm; skipmissing=:none)
+res = StatsBase.corspearman(x)
+
 
 x = rand(MersenneTwister(0), 1000, 1000);
 xm = ifelse.(x .< 0.05, missing, x);
@@ -32,6 +38,14 @@ print("KendallTau.corkendall(xm; skipmissing = :listwise)")
 @time res_3 = KendallTau.corkendall(xm; skipmissing=:listwise)
 print("StatsBase.corkendall(x)                           ")
 @time res_4 = StatsBase.corkendall(x)
+print("KendallTau.corspearman(x)                          ")
+@time res_5 = KendallTau.corspearman(x)
+print("KendallTau.corspearman(xm; skipmissing = :pairwise)")
+@time res_6 = KendallTau.corspearman(xm; skipmissing=:pairwise)
+print("KendallTau.corspearman(xm; skipmissing = :listwise)")
+@time res_7 = KendallTau.corspearman(xm; skipmissing=:listwise)
+print("StatsBase.corspearman(x)                           ")
+@time res_8 = StatsBase.corspearman(x)
 
 println("="^100)
 
@@ -108,4 +122,28 @@ KendallTau.corkendall(xm; skipmissing = :pairwise)  1.764173 seconds (1.29 k all
 KendallTau.corkendall(xm; skipmissing = :listwise)  0.004124 seconds (291 allocations: 16.243 MiB)
 StatsBase.corkendall(x)                            17.695131 seconds (3.00 M allocations: 17.090 GiB, 3.93% gc time)
 ====================================================================================================
+
+# After writing new version of corspearman.
+# Need to work on allocations for the :pairwise case.
+====================================================================================================
+Dates.now() = DateTime("2024-02-18T18:41:46.883")
+ENV["COMPUTERNAME"] = "PHILIP-LAPTOP"
+Julia Version 1.10.0
+Threads.nthreads() = 8
+size(x) = (1000, 1000)
+typeof(x) = Matrix{Float64}
+size(xm) = (1000, 1000)
+typeof(xm) = Matrix{Union{Missing, Float64}}
+KendallTau.corkendall(x)                            5.417000 seconds (1.15 k allocations: 15.831 MiB, 0.97% gc time)
+KendallTau.corkendall(xm; skipmissing = :pairwise)  5.293706 seconds (1.15 k allocations: 15.501 MiB)
+KendallTau.corkendall(xm; skipmissing = :listwise)  0.007899 seconds (155 allocations: 16.240 MiB)
+StatsBase.corkendall(x)                            26.125309 seconds (3.00 M allocations: 17.090 GiB, 3.65% gc time)
+KendallTau.corspearman(x)                            0.091707 seconds (1.02 k allocations: 38.309 MiB)
+KendallTau.corspearman(xm; skipmissing = :pairwise) 11.928476 seconds (1.00 M allocations: 6.873 GiB, 9.09% gc time)
+KendallTau.corspearman(xm; skipmissing = :listwise)  0.003261 seconds (8 allocations: 16.213 MiB)
+StatsBase.corspearman(x)                            22.482819 seconds (3.50 M allocations: 11.441 GiB, 2.31% gc time)
+====================================================================================================
+
+
+
 =#
