@@ -72,7 +72,7 @@ function _corspearman(x::AbstractMatrix{T}, y::AbstractMatrix{U},
 
     # Swap x and y for more efficient threaded loop.
     if size(x, 2) < size(y, 2)
-        return collect(transpose(_corspearman(y, x, C', skipmissing)))
+        return collect(transpose(_corspearman(y, x, collect(transpose(C)), skipmissing)))
     end
 
     (m, nr), nc = size(x), size(y, 2)
@@ -123,8 +123,8 @@ end
 
 """
     corspearman_kernel!(x::AbstractVector, y::AbstractVector, skipmissing::Symbol,
-    scratch_fx=similar(x), scratch_fy=similar(y),scratch_rksx=similar(x,Float64),
-    scratch_rksy=similar(y,Float64),scratch_p=similar(x,Int))
+    scratch_fx=similar(x), scratch_fy=similar(y), scratch_rksx=similar(x, Float64),
+    scratch_rksy=similar(y, Float64), scratch_p=similar(x, Int))
 
 Compute Spearman's rank correlation coefficient between vectors 'x' and 'y'
 Subsequent arguments:
@@ -158,9 +158,9 @@ function corspearman_kernel!(x::AbstractVector, y::AbstractVector, skipmissing::
     end
     n = length(x)
 
-    sortperm!(view(scratch_p, 1:n),x)
+    sortperm!(view(scratch_p, 1:n), x)
     _tiedrank!(view(scratch_rksx, 1:n), x, view(scratch_p, 1:n))
-    sortperm!(view(scratch_p, 1:n),y)
+    sortperm!(view(scratch_p, 1:n), y)
     _tiedrank!(view(scratch_rksy, 1:n), y, view(scratch_p, 1:n))
 
     return cor(view(scratch_rksx, 1:n), view(scratch_rksy, 1:n))
@@ -319,7 +319,7 @@ function _corkendall(x::AbstractMatrix{T}, y::AbstractMatrix{U},
 
     # Swap x and y for more efficient threaded loop.
     if size(x, 2) < size(y, 2)
-        return collect(transpose(_corkendall(y, x, C', skipmissing)))
+        return collect(transpose(_corkendall(y, x, collect(transpose(C)), skipmissing)))
     end
 
     (m, nr), nc = size(x), size(y, 2)
