@@ -623,8 +623,8 @@ Return a pair `(a,b)`, filtered copies of `(x,y)`, in which elements `x[i]` and
 `y[i]` are excluded if  `ismissing(x[i])||ismissing(y[i])`.
 """
 function handle_pairwise(x::AbstractVector, y::AbstractVector;
-    scratch_fx::AbstractVector=similar(x),
-    scratch_fy::AbstractVector=similar(y))
+    scratch_fx::AbstractVector=similar(x,nonmissingtype(eltype(x))),
+    scratch_fy::AbstractVector=similar(y,nonmissingtype(eltype(y))))
 
     axes(x, 1) == axes(y, 1) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
     lb = first(axes(x, 1))
