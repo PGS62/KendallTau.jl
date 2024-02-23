@@ -1,15 +1,15 @@
 
 
-function pairwise(f::Function, x::AbstractMatrix, y::AbstractMatrix=x;
-    skipmissing::Symbol=:none)
+function pairwise(f::Function, x, y=x; skipmissing::Symbol=:none)
 
-   # check_rankcor_args(x, y, skipmissing, true)
-   #TODO check arguments in a similar way to StatsBase.check_vectors, but makesure all element types are the same
+    #TODO check arguments in a similar way to StatsBase.check_vectors, but make sure all
+    #element types are the same
 
-    missing_allowed = missing isa eltype(x) || missing isa eltype(y)
-    nr, nc = size(x, 2), size(y, 2)
+    missing_allowed = missing isa eltype(first(x)) || missing isa eltype(first(y))
+    nr, nc = length(x), length(y)
 
     if missing_allowed && skipmissing == :listwise
+        #TODO this won't work - handle_listwise written for matrix input...
         x, y = handle_listwise(x, y)
     end
 
@@ -24,33 +24,33 @@ function pairwise(f::Function, x::AbstractMatrix, y::AbstractMatrix=x;
 
 end
 
-function _pairwise(f::Function, x::AbstractMatrix{T}, y::AbstractMatrix{U},
-    C::AbstractMatrix, skipmissing::Symbol) where {T,U}
+function _pairwise(f::Function, x, y, C::AbstractMatrix, skipmissing::Symbol)
 
     symmetric = x === y
 
     # Swap x and y for more efficient threaded loop.
-    if size(x, 2) < size(y, 2)
-        return collect(transpose(_pairwise(f,y, x, collect(transpose(C)), skipmissing)))
+    if length(x) < length(y)
+        return collect(transpose(_pairwise(f, y, x, collect(transpose(C)), skipmissing)))
     end
 
-    (m, nr), nc = size(x), size(y, 2)
+    m, nr, nc = length(first(x)), length(x), length(y)
 
-    nmtx = nonmissingtype(eltype(x))[]
-    nmty = nonmissingtype(eltype(y))[]
+    nmtx = nonmissingtype(eltype(first(x)))[]
+    nmty = nonmissingtype(eltype(first(y)))[]
     alljs = (symmetric ? 2 : 1):nr
 
     #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
     Threads.@threads for thischunk in equal_sum_subsets(length(alljs), Threads.nthreads())
 
         for k in thischunk
+
             j = alljs[k]
 
             scratch_fx = task_local_vector(:scratch_fx, nmtx, m)
             scratch_fy = task_local_vector(:scratch_fy, nmty, m)
 
             for i = 1:(symmetric ? j - 1 : nc)
-                C[j, i] = pairwise_kernel!(f, view(x, :, j), view(y, :, i), skipmissing;
+                C[j, i] = pairwise_kernel!(f, x[j], y[i], skipmissing;
                     scratch_fx, scratch_fy)
                 symmetric && (C[i, j] = C[j, i])
             end
@@ -58,32 +58,7 @@ function _pairwise(f::Function, x::AbstractMatrix{T}, y::AbstractMatrix{U},
     end
     return C
 end
-#=
-function pairwise(f::Function, x::AbstractVector, y::AbstractVector; skipmissing::Symbol=:none)
 
-    check_rankcor_args(x, y, skipmissing, false)
-
-    length(x) >= 2 || return NaN
-    x === y && return (1.0)
-
-    x = copy(x)
-
-    if skipmissing == :pairwise && (missing isa eltype(x) || missing isa eltype(y))
-        x, y = handle_pairwise(x, y)
-        length(x) >= 2 || return NaN
-    end
-
-    return pairwise_kernel!(f, x, y, skipmissing)
-end
-
-function pairwise(f::Function,x::AbstractMatrix, y::AbstractVector; skipmissing::Symbol=:none)
-    return pairwise(f,x, reshape(y, (length(y), 1)); skipmissing)
-end
-
-function pairwise(f::Function, x::AbstractVector, y::AbstractMatrix; skipmissing::Symbol=:none)
-    return pairwise(f, reshape(x, (length(x), 1)), y; skipmissing)
-end
-=#
 function pairwise_kernel!(f::Function, x::AbstractVector, y::AbstractVector,
     skipmissing::Symbol;
     scratch_fx::AbstractVector=similar(x, nonmissingtype(eltype(x))),
@@ -105,9 +80,11 @@ function pairwise_kernel!(f::Function, x::AbstractVector, y::AbstractVector,
         end
     end
 
-    if any(isnan_safe, x) || any(isnan_safe, y) #TODO delegate to f
+    if any(isnan_safe, x) || any(isnan_safe, y) #TODO delegate to f?
         return NaN
     end
     return (f(x, y))
 
 end
+
+
