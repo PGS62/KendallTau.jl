@@ -81,8 +81,8 @@ function _corspearman(x::AbstractMatrix{T}, y::AbstractMatrix{U},
     nmty = nonmissingtype(eltype(y))[]
     alljs = (symmetric ? 2 : 1):nr
 
-    #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
-    Threads.@threads for thischunk in equal_sum_subsets(length(alljs), Threads.nthreads())
+    #equal_sum_chunks for good load balancing in both symmetric and non-symmetric cases.
+    Threads.@threads for thischunk in equal_sum_chunks(length(alljs), Threads.nthreads())
 
         for k in thischunk
             j = alljs[k]
@@ -329,8 +329,8 @@ function _corkendall(x::AbstractMatrix{T}, y::AbstractMatrix{U},
     nmty = nonmissingtype(eltype(y))[]
     alljs = (symmetric ? 2 : 1):nr
 
-    #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
-    Threads.@threads for thischunk in equal_sum_subsets(length(alljs), Threads.nthreads())
+    #equal_sum_chunks for good load balancing in both symmetric and non-symmetric cases.
+    Threads.@threads for thischunk in equal_sum_chunks(length(alljs), Threads.nthreads())
 
         for k in thischunk
             j = alljs[k]
@@ -623,8 +623,8 @@ Return a pair `(a,b)`, filtered copies of `(x,y)`, in which elements `x[i]` and
 `y[i]` are excluded if  `ismissing(x[i])||ismissing(y[i])`.
 """
 function handle_pairwise(x::AbstractVector, y::AbstractVector;
-    scratch_fx::AbstractVector=similar(x,nonmissingtype(eltype(x))),
-    scratch_fy::AbstractVector=similar(y,nonmissingtype(eltype(y))))
+    scratch_fx::AbstractVector=similar(x, nonmissingtype(eltype(x))),
+    scratch_fy::AbstractVector=similar(y, nonmissingtype(eltype(y))))
 
     axes(x, 1) == axes(y, 1) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
     lb = first(axes(x, 1))
@@ -678,15 +678,15 @@ function handle_listwise(x::AbstractMatrix, y::AbstractMatrix)
 end
 
 """
-    equal_sum_subsets(n::Int, num_subsets::Int)::Vector{Vector{Int}}
+    equal_sum_chunks(n::Int, num_subsets::Int)::Vector{Vector{Int}}
 
-Divide the integers 1:n into a number of subsets such that a) each subset has (approximately)
-the same number of elements; and b) the sum of the elements in each subset is nearly equal.
+Divide the integers 1:n into a number of chunks such that a) each chunk has (approximately)
+the same number of elements; and b) the sum of the elements in each chunk is nearly equal.
 If `n` is a multiple of `2 * num_subsets` both conditions hold exactly.
 
 ## Example
 ```julia-repl
-julia> KendallTau.equal_sum_subsets(30,5)
+julia> KendallTau.equal_sum_chunks(30,5)
 5-element Vector{Vector{Int64}}:
  [30, 21, 20, 11, 10, 1]
  [29, 22, 19, 12, 9, 2]
@@ -695,7 +695,7 @@ julia> KendallTau.equal_sum_subsets(30,5)
  [26, 25, 16, 15, 6, 5]
 ```
 """
-function equal_sum_subsets(n::Int, num_subsets::Int)::Vector{Vector{Int}}
+function equal_sum_chunks(n::Int, num_subsets::Int)::Vector{Vector{Int}}
     subsets = [Int[] for _ in 1:min(n, num_subsets)]
     writeto, scanup = 1, true
     for i = n:-1:1
