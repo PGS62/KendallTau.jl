@@ -1,10 +1,105 @@
+"""
+    pairwise(f, x[, y];
+             symmetric::Bool=false, skipmissing::Symbol=:none)
+
+Return a matrix holding the result of applying `f` to all possible pairs
+of entries in iterators `x` and `y`. Rows correspond to
+entries in `x` and columns to entries in `y`. If `y` is omitted then a
+square matrix crossing `x` with itself is returned.
+
+As a special case, if `f` is `cor`, diagonal cells for which entries
+from `x` and `y` are identical (according to `===`) are set to one even
+in the presence `missing`, `NaN` or `Inf` entries.
+
+# Keyword arguments
+- `symmetric::Bool=false`: If `true`, `f` is only called to compute
+  for the lower triangle of the matrix, and these values are copied
+  to fill the upper triangle. Only allowed when `y` is omitted.
+  Defaults to `true` when `f` is `cor` or `cov`.
+- `skipmissing::Symbol=:none`: If `:none` (the default), missing values
+  in inputs are passed to `f` without any modification.
+  Use `:pairwise` to skip entries with a `missing` value in either
+  of the two vectors passed to `f` for a given pair of vectors in `x` and `y`.
+  Use `:listwise` to skip entries with a `missing` value in any of the
+  vectors in `x` or `y`; note that this might drop a large part of entries.
+  Only allowed when entries in `x` and `y` are vectors.
+
+# Examples
+```jldoctest
+julia> using StatsBase, Statistics
+
+julia> x = [1 3 7
+            2 5 6
+            3 8 4
+            4 6 2];
+
+julia> pairwise(cor, eachcol(x))
+3×3 Matrix{Float64}:
+  1.0        0.744208  -0.989778
+  0.744208   1.0       -0.68605
+ -0.989778  -0.68605    1.0
+
+julia> y = [1 3 missing
+            2 5 6
+            3 missing 2
+            4 6 2];
+
+julia> pairwise(cor, eachcol(y), skipmissing=:pairwise)
+3×3 Matrix{Float64}:
+  1.0        0.928571  -0.866025
+  0.928571   1.0       -1.0
+ -0.866025  -1.0        1.0
+```
+"""
+function pairwise(f, x, y=x; symmetric::Bool=false, skipmissing::Symbol=:none)
+    if symmetric && x !== y
+        throw(ArgumentError("symmetric=true only makes sense passing " *
+                            "a single set of variables (x === y)"))
+    end
+
+    return _pairwise(Val(skipmissing), f, x, y, symmetric)
+end
+
+function _pairwise(::Val{skipmissing}, f, x, y, symmetric::Bool) where {skipmissing}
+    x′ = x isa Union{AbstractArray,Tuple,NamedTuple} ? x : collect(x)
+    y′ = y isa Union{AbstractArray,Tuple,NamedTuple} ? y : collect(y)
+    m = length(x′)
+    n = length(y′)
+
+    T = Core.Compiler.return_type(f, Tuple{eltype(x′),eltype(y′)})
+    Tsm = Core.Compiler.return_type((x, y) -> f(disallowmissing(x), disallowmissing(y)),
+        Tuple{eltype(x′),eltype(y′)})
+
+    if skipmissing === :none
+        dest = Matrix{T}(undef, m, n)
+    elseif skipmissing in (:pairwise, :listwise)
+        dest = Matrix{Tsm}(undef, m, n)
+    else
+        throw(ArgumentError("skipmissing must be one of :none, :pairwise or :listwise"))
+    end
+
+    # Preserve inferred element type
+    isempty(dest) && return dest
+
+    _pairwise!(f, dest, x′, y′, symmetric=symmetric, skipmissing=skipmissing)
+
+    if isconcretetype(eltype(dest))
+        return dest
+    else
+        # Final eltype depends on actual contents (consistent with `map` and `broadcast`
+        # but using `promote_type` rather than `promote_typejoin`)
+        U = mapreduce(typeof, promote_type, dest)
+        # V is inferred (contrary to U), but it only gives an upper bound for U
+        V = promote_type_union(Union{T,Tsm})
+        return convert(Matrix{U}, dest)::Matrix{<:V}
+    end
+end
+
 function _pairwise!(::Val{:none}, f, dest::AbstractMatrix, x, y, symmetric::Bool)
     check_vectors(x, y, :none)
     return (_pairwise_threaded_loop!(false, f, dest, x, y, symmetric))
 end
 
-#TODO check_vectors should also test that the nonmissingtype of the element type of each
-#element of x is the same. Likewise for y. Problem: This would be a breaking change if we port to StatsBase?
 function check_vectors(x, y, skipmissing::Symbol)
     m = length(x)
     n = length(y)
@@ -35,7 +130,7 @@ end
 function diag_is_one(f::Function, x, y)::Bool
     res = false
     if x === y
-        if f in [corkendall, corspearman]#TODO add cor
+        if f in [corkendall, corspearman, cor, cov]
             res = true
         end
     end
@@ -47,29 +142,35 @@ function _pairwise!(::Val{:pairwise}, f, dest::AbstractMatrix, x, y, symmetric::
     return (_pairwise_threaded_loop!(true, f, dest, x, y, symmetric))
 end
 
-
 #TODO use enumerate?
 function _pairwise_threaded_loop!(ispairwise::Bool, f, dest::AbstractMatrix, x, y, symmetric::Bool)
 
-    m, (nr, nc) = length(first(x)), size(dest)
+    nr, nc = size(dest)
+    m = length(x) == 0 ? 0 : length(first(x))
 
     # Swap x and y for more efficient threaded loop.
     if nr < nc
-        return collect(transpose(_pairwise!(Val(:pairwise), f, collect(transpose(dest)), y, x, symmetric)))
+        dest′ = collect(transpose(dest))
+        _pairwise_threaded_loop!(ispairwise, f, dest′, y, x, symmetric)
+        dest .= transpose(dest′)
+        return dest
     end
 
     if ispairwise
-        nmtx = nonmissingtype(eltype(first(x)))[]
-        nmty = nonmissingtype(eltype(first(y)))[]
+        nmtx = promoted_nonmissingtype(x)[]
+        nmty = promoted_nonmissingtype(y)[]
     end
 
     di1 = diag_is_one(f, x, y)
+    if di1
+        symmetric = true
+    end
     alljs = (di1 ? 2 : 1):nr
 
-    #equal_sum_chunks for good load balancing in both symmetric and non-symmetric cases.
-    Threads.@threads for thischunk in equal_sum_chunks(length(alljs), Threads.nthreads())
+    #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
+    Threads.@threads for subset in equal_sum_subsets(length(alljs), Threads.nthreads())
 
-        for k in thischunk
+        for k in subset
 
             j = alljs[k]
             if ispairwise
@@ -96,6 +197,16 @@ function _pairwise_threaded_loop!(ispairwise::Bool, f, dest::AbstractMatrix, x, 
 
     return dest
 
+end
+
+function promoted_nonmissingtype(x)
+    U = nonmissingtype(eltype(first(x)))
+    if length(x) > 1
+        for i in Iterators.drop(axes(x, 1), 1)
+            U = promote_type(U, nonmissingtype(eltype(x[i])))
+        end
+    end
+    return (U)
 end
 
 function _pairwise!(::Val{:listwise}, f, dest::AbstractMatrix, x, y, symmetric::Bool)
@@ -167,41 +278,7 @@ function promote_type_union(::Type{T}) where {T}
     end
 end
 
-function _pairwise(::Val{skipmissing}, f, x, y, symmetric::Bool) where {skipmissing}
-    x′ = x isa Union{AbstractArray,Tuple,NamedTuple} ? x : collect(x)
-    y′ = y isa Union{AbstractArray,Tuple,NamedTuple} ? y : collect(y)
-    m = length(x′)
-    n = length(y′)
 
-    T = Core.Compiler.return_type(f, Tuple{eltype(x′),eltype(y′)})
-    Tsm = Core.Compiler.return_type((x, y) -> f(disallowmissing(x), disallowmissing(y)),
-        Tuple{eltype(x′),eltype(y′)})
-
-    if skipmissing === :none
-        dest = Matrix{T}(undef, m, n)
-    elseif skipmissing in (:pairwise, :listwise)
-        dest = Matrix{Tsm}(undef, m, n)
-    else
-        throw(ArgumentError("skipmissing must be one of :none, :pairwise or :listwise"))
-    end
-
-    # Preserve inferred element type
-    isempty(dest) && return dest
-
-    _pairwise!(f, dest, x′, y′, symmetric=symmetric, skipmissing=skipmissing)
-
-    if isconcretetype(eltype(dest))
-        return dest
-    else
-        #return (dest)
-        # Final eltype depends on actual contents (consistent with `map` and `broadcast`
-        # but using `promote_type` rather than `promote_typejoin`)
-        U = mapreduce(typeof, promote_type, dest)
-        # V is inferred (contrary to U), but it only gives an upper bound for U
-        V = promote_type_union(Union{T,Tsm})
-        return convert(Matrix{U}, dest)::Matrix{<:V}
-    end
-end
 
 """
     pairwise!(f, dest::AbstractMatrix, x[, y];
@@ -273,67 +350,12 @@ function pairwise!(f, dest::AbstractMatrix, x, y=x;
     return _pairwise!(f, dest, x, y, symmetric=symmetric, skipmissing=skipmissing)
 end
 
-"""
-    pairwise(f, x[, y];
-             symmetric::Bool=false, skipmissing::Symbol=:none)
 
-Return a matrix holding the result of applying `f` to all possible pairs
-of entries in iterators `x` and `y`. Rows correspond to
-entries in `x` and columns to entries in `y`. If `y` is omitted then a
-square matrix crossing `x` with itself is returned.
 
-As a special case, if `f` is `cor`, diagonal cells for which entries
-from `x` and `y` are identical (according to `===`) are set to one even
-in the presence `missing`, `NaN` or `Inf` entries.
 
-# Keyword arguments
-- `symmetric::Bool=false`: If `true`, `f` is only called to compute
-  for the lower triangle of the matrix, and these values are copied
-  to fill the upper triangle. Only allowed when `y` is omitted.
-  Defaults to `true` when `f` is `cor` or `cov`.
-- `skipmissing::Symbol=:none`: If `:none` (the default), missing values
-  in inputs are passed to `f` without any modification.
-  Use `:pairwise` to skip entries with a `missing` value in either
-  of the two vectors passed to `f` for a given pair of vectors in `x` and `y`.
-  Use `:listwise` to skip entries with a `missing` value in any of the
-  vectors in `x` or `y`; note that this might drop a large part of entries.
-  Only allowed when entries in `x` and `y` are vectors.
 
-# Examples
-```jldoctest
-julia> using StatsBase, Statistics
 
-julia> x = [1 3 7
-            2 5 6
-            3 8 4
-            4 6 2];
 
-julia> pairwise(cor, eachcol(x))
-3×3 Matrix{Float64}:
-  1.0        0.744208  -0.989778
-  0.744208   1.0       -0.68605
- -0.989778  -0.68605    1.0
-
-julia> y = [1 3 missing
-            2 5 6
-            3 missing 2
-            4 6 2];
-
-julia> pairwise(cor, eachcol(y), skipmissing=:pairwise)
-3×3 Matrix{Float64}:
-  1.0        0.928571  -0.866025
-  0.928571   1.0       -1.0
- -0.866025  -1.0        1.0
-```
-"""
-function pairwise(f, x, y=x; symmetric::Bool=false, skipmissing::Symbol=:none)
-    if symmetric && x !== y
-        throw(ArgumentError("symmetric=true only makes sense passing " *
-                            "a single set of variables (x === y)"))
-    end
-
-    return _pairwise(Val(skipmissing), f, x, y, symmetric)
-end
 #=
  cov(x) is faster than cov(x, x)
 _cov(x, y) = x === y ? cov(x) : cov(x, y)

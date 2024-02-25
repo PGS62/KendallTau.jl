@@ -39,9 +39,9 @@ using Test
     @test KendallTau.midpoint(1, 10) == 5
     @test KendallTau.midpoint(1, widen(10)) == 5
 
-    @test KendallTau.equal_sum_chunks(0, 1) == Vector{Int64}[]
-    @test sum.(KendallTau.equal_sum_chunks(100, 5)) == repeat([1010], 5)
-    @test sort(vcat(KendallTau.equal_sum_chunks(500, 7)...)) == collect(1:500)
+    @test KendallTau.equal_sum_subsets(0, 1) == Vector{Int64}[]
+    @test sum.(KendallTau.equal_sum_subsets(100, 5)) == repeat([1010], 5)
+    @test sort(vcat(KendallTau.equal_sum_subsets(500, 7)...)) == collect(1:500)
 
     @test isequal(KendallTau.tiedrank_nan([1; 2; 2; 3;;]), [1.0; 2.5; 2.5; 4.0;;])
     @test isequal(KendallTau.tiedrank_nan([1; missing; 2; 3;;]), fill(missing, 4, 1))
