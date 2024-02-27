@@ -96,10 +96,10 @@ function _pairwise(::Val{skipmissing}, f, x, y, symmetric::Bool) where {skipmiss
 end
 
 function _pairwise!(::Val{:none}, f, dest::AbstractMatrix, x, y, symmetric::Bool)
-    check_vectors(x, y, :none)
     return (_pairwise_threaded_loop!(false, f, dest, x, y, symmetric))
 end
 
+#This method is only called for :pairwise and :listwise
 function check_vectors(x, y, skipmissing::Symbol)
     m = length(x)
     n = length(y)
@@ -129,12 +129,20 @@ end
 
 function diag_is_one(f::Function, x, y)::Bool
     res = false
-    if x === y
-        if f in [corkendall, corspearman, cor, cov]
+    if f in [corkendall, corspearman, cor]
+        if x === y
+            return (true)
+        elseif length(x) == length(y)
             res = true
+            for (elx, ely) in zip(x, y)
+                if !(elx === ely)
+                    res = false
+                    break
+                end
+            end
         end
     end
-    return res
+    return(res)
 end
 
 function _pairwise!(::Val{:pairwise}, f, dest::AbstractMatrix, x, y, symmetric::Bool)
@@ -190,8 +198,10 @@ function _pairwise_threaded_loop!(ispairwise::Bool, f, dest::AbstractMatrix, x, 
     end
 
     if di1
-        for i in 1:nr
-            dest[i, i] = 1.0
+        if !(dest isa Matrix{Missing})
+            for i in 1:nr
+                dest[i, i] = 1.0
+            end
         end
     end
 

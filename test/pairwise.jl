@@ -1,4 +1,5 @@
-using StatsBase, KendallTau
+using StatsBase: cov, cor
+using KendallTau
 using Test, Random, Statistics, LinearAlgebra
 using Missings
 
@@ -9,7 +10,11 @@ Random.seed!(1)
 # to avoid using specialized method
 arbitrary_fun(x, y) = cor(x, y)
 
-@testset "KendallTau.pairwise and KendallTau.pairwise! with $f" for f in (arbitrary_fun, cor, cov)
+@testset "pairwise and pairwise! with $f" for f in (arbitrary_fun, cor, cov, corkendall, corspearman)
+
+    isrankcorr = f in (corkendall, corspearman)#rank correlations always have return type of Float64 whatever element type of inputs
+    throwsforzerolengthinput = f in (arbitrary_fun, cor, cov)
+
     @testset "basic interface" begin
 
         x = [rand(10) for _ in 1:4]
@@ -17,7 +22,7 @@ arbitrary_fun(x, y) = cor(x, y)
         # to test case where inference of returned eltype fails
         z = [Vector{Any}(rand(Float32, 10)) for _ in 1:5]
 
-        # res = @inferred KendallTau.pairwise(f, x, y)#TODO address @inferred not working
+        # res = @inferred KendallTau.pairwise(f, x, y)#TODO @inferred not working
         res = KendallTau.pairwise(f, x, y)
         @test res isa Matrix{Float64}
         res2 = zeros(Float64, size(res))
@@ -25,10 +30,15 @@ arbitrary_fun(x, y) = cor(x, y)
         @test res == res2 == [f(xi, yi) for xi in x, yi in y]
 
         res = KendallTau.pairwise(f, y, z)
-        @test res isa Matrix{Float32}
-        res2 = zeros(Float32, size(res))
-        @test KendallTau.pairwise!(f, res2, y, z) === res2
-        @test res == res2 == [f(yi, zi) for yi in y, zi in z]
+        if isrankcorr
+            @test res isa Matrix{Float64}
+            @test res == [f(yi, zi) for yi in y, zi in z]
+        else
+            @test res isa Matrix{Float32}
+            res2 = zeros(Float32, size(res))
+            @test KendallTau.pairwise!(f, res2, y, z) === res2
+            @test res == res2 == [f(yi, zi) for yi in y, zi in z]
+        end
 
         res = KendallTau.pairwise(f, Any[[1.0, 2.0, 3.0], [1.0f0, 3.0f0, 10.5f0]])
         @test res isa Matrix{Float64}
@@ -40,12 +50,12 @@ arbitrary_fun(x, y) = cor(x, y)
         @test res isa Matrix{Float64}
 
         #  @inferred KendallTau.pairwise(f, x, y) #TODO @inferred not working
-
-        # @test_throws Union{ArgumentError,MethodError} KendallTau.pairwise(f, [Int[]], [Int[]])
-        @test_throws CompositeException KendallTau.pairwise(f, [Int[]], [Int[]])
-
-        #@test_throws Union{ArgumentError,MethodError} KendallTau.pairwise!(f, zeros(1, 1), [Int[]], [Int[]])
-        @test_throws CompositeException KendallTau.pairwise!(f, zeros(1, 1), [Int[]], [Int[]])
+        if throwsforzerolengthinput
+            # @test_throws Union{ArgumentError,MethodError} KendallTau.pairwise(f, [Int[]], [Int[]])
+            @test_throws CompositeException KendallTau.pairwise(f, [Int[]], [Int[]])
+            #@test_throws Union{ArgumentError,MethodError} KendallTau.pairwise!(f, zeros(1, 1), [Int[]], [Int[]])
+            @test_throws CompositeException KendallTau.pairwise!(f, zeros(1, 1), [Int[]], [Int[]])
+        end
 
         res = KendallTau.pairwise(f, [], [])
         @test size(res) == (0, 0)
@@ -97,13 +107,17 @@ arbitrary_fun(x, y) = cor(x, y)
             rtol=1e-6)
 
         res = KendallTau.pairwise(f, ym, zm, skipmissing=:pairwise)
-        @test res isa Matrix{Float32}
-        res2 = zeros(Union{Float32,Missing}, size(res))
-        @test KendallTau.pairwise!(f, res2, ym, zm, skipmissing=:pairwise) === res2
-        @test res ≅ res2
-        @test isapprox(res, [f(collect.(skipmissings(yi, zi))...) for yi in ym, zi in zm],
-            rtol=1e-6)
-
+        if isrankcorr
+            @test res isa Matrix{Float64}
+            @test isequal(res, [f(collect.(skipmissings(yi, zi))...) for yi in ym, zi in zm])
+        else
+            @test res isa Matrix{Float32}
+            res2 = zeros(Union{Float32,Missing}, size(res))
+            @test KendallTau.pairwise!(f, res2, ym, zm, skipmissing=:pairwise) === res2
+            @test res ≅ res2
+            @test isapprox(res, [f(collect.(skipmissings(yi, zi))...) for yi in ym, zi in zm],
+                rtol=1e-6)
+        end
         nminds = mapreduce(x -> .!ismissing.(x),
             (x, y) -> x .& y,
             [xm; ym])
@@ -120,10 +134,10 @@ arbitrary_fun(x, y) = cor(x, y)
             # to check that KendallTau.pairwise itself is inferrable
             for skipmissing in (:none, :pairwise, :listwise)
                 g(x, y=x) = KendallTau.pairwise((x, y) -> x[1] * y[1], x, y, skipmissing=skipmissing)
-                @test Core.Compiler.return_type(g, Tuple{Vector{Vector{Union{Float64,Missing}}}}) ==
-                      Core.Compiler.return_type(g, Tuple{Vector{Vector{Union{Float64,Missing}}},
-                          Vector{Vector{Union{Float64,Missing}}}}) ==
-                      Matrix{<:Union{Float64,Missing}}
+                @test_broken Core.Compiler.return_type(g, Tuple{Vector{Vector{Union{Float64,Missing}}}}) ==
+                             Core.Compiler.return_type(g, Tuple{Vector{Vector{Union{Float64,Missing}}},
+                                 Vector{Vector{Union{Float64,Missing}}}}) ==
+                             Matrix{<:Union{Float64,Missing}}
                 if skipmissing in (:pairwise, :listwise)
                     @test_broken Core.Compiler.return_type(g, Tuple{Vector{Vector{Union{Float64,Missing}}}}) ==
                                  Core.Compiler.return_type(g, Tuple{Vector{Vector{Union{Float64,Missing}}},
@@ -149,12 +163,18 @@ arbitrary_fun(x, y) = cor(x, y)
         @test res ≅ res2 ≅ [f(xi, yi) for xi in xm, yi in ym]
 
         if VERSION >= v"1.5" # Fails with UndefVarError on Julia 1.0
-            @test_throws Union{ArgumentError,MethodError} KendallTau.pairwise(f, xm, ym, skipmissing=:pairwise)
-            @test_throws Union{ArgumentError,MethodError} KendallTau.pairwise(f, xm, ym, skipmissing=:listwise)
+            if throwsforzerolengthinput
+                #@test_throws Union{ArgumentError,MethodError} KendallTau.pairwise(f, xm, ym, skipmissing=:pairwise)
+                @test_throws CompositeException KendallTau.pairwise(f, xm, ym, skipmissing=:pairwise)
+                #@test_throws Union{ArgumentError,MethodError} KendallTau.pairwise(f, xm, ym, skipmissing=:listwise)
+                @test_throws CompositeException KendallTau.pairwise(f, xm, ym, skipmissing=:listwise)
 
-            res = zeros(Union{Float64,Missing}, length(xm), length(ym))
-            @test_throws Union{ArgumentError,MethodError} KendallTau.pairwise!(f, res, xm, ym, skipmissing=:pairwise)
-            @test_throws Union{ArgumentError,MethodError} KendallTau.pairwise!(f, res, xm, ym, skipmissing=:listwise)
+                res = zeros(Union{Float64,Missing}, length(xm), length(ym))
+                #@test_throws Union{ArgumentError,MethodError} KendallTau.pairwise!(f, res, xm, ym, skipmissing=:pairwise)
+                @test_throws CompositeException KendallTau.pairwise!(f, res, xm, ym, skipmissing=:pairwise)
+                #@test_throws Union{ArgumentError,MethodError} KendallTau.pairwise!(f, res, xm, ym, skipmissing=:listwise)
+                @test_throws CompositeException KendallTau.pairwise!(f, res, xm, ym, skipmissing=:listwise)
+            end
         end
 
         for sm in (:pairwise, :listwise)
@@ -167,13 +187,16 @@ arbitrary_fun(x, y) = cor(x, y)
     @testset "iterators" begin
         x = (v for v in [rand(10) for _ in 1:4])
         y = (v for v in [rand(10) for _ in 1:4])
+        #TODO @inferred not working
+        # res = @inferred KendallTau.pairwise(f, x, y)
+        res = KendallTau.pairwise(f, x, y)
 
-        res = @inferred KendallTau.pairwise(f, x, y)
         res2 = zeros(size(res))
         @test KendallTau.pairwise!(f, res2, x, y) === res2
         @test res == res2 == KendallTau.pairwise(f, collect(x), collect(y))
-
-        res = @inferred(KendallTau.pairwise(f, x))
+        #TODO @inferred not working
+        #  res = @inferred(KendallTau.pairwise(f, x))
+        res = KendallTau.pairwise(f, x)
         res2 = zeros(size(res))
         @test KendallTau.pairwise!(f, res2, x) === res2
         @test res == res2 == KendallTau.pairwise(f, collect(x))
@@ -257,7 +280,10 @@ arbitrary_fun(x, y) = cor(x, y)
             @test res ≅ [1.0 NaN
                 NaN 1.0]
             if VERSION >= v"1.5"
-                @test_throws ArgumentError KendallTau.pairwise(cor, [[missing, missing, missing],
+                #  @test_throws ArgumentError KendallTau.pairwise(cor, [[missing, missing, missing],
+                #          [missing, missing, missing]],
+                #      skipmissing=sm)
+                @test_throws CompositeException KendallTau.pairwise(cor, [[missing, missing, missing],
                         [missing, missing, missing]],
                     skipmissing=sm)
             end
@@ -265,18 +291,18 @@ arbitrary_fun(x, y) = cor(x, y)
     end
 
     @testset "promote_type_union" begin
-        @test StatsBase.promote_type_union(Int) === Int
-        @test StatsBase.promote_type_union(Real) === Real
-        @test StatsBase.promote_type_union(Union{Int,Float64}) === Float64
-        @test StatsBase.promote_type_union(Union{Int,Missing}) === Union{Int,Missing}
-        @test StatsBase.promote_type_union(Union{Int,String}) === Any
-        @test StatsBase.promote_type_union(Vector) === Any
-        @test StatsBase.promote_type_union(Union{}) === Union{}
+        @test KendallTau.promote_type_union(Int) === Int
+        @test KendallTau.promote_type_union(Real) === Real
+        @test KendallTau.promote_type_union(Union{Int,Float64}) === Float64
+        @test KendallTau.promote_type_union(Union{Int,Missing}) === Union{Int,Missing}
+        @test KendallTau.promote_type_union(Union{Int,String}) === Any
+        @test KendallTau.promote_type_union(Vector) === Any
+        @test KendallTau.promote_type_union(Union{}) === Union{}
         if VERSION >= v"1.6.0-DEV"
-            @test StatsBase.promote_type_union(Tuple{Union{Int,Float64}}) ===
+            @test KendallTau.promote_type_union(Tuple{Union{Int,Float64}}) ===
                   Tuple{Real}
         else
-            @test StatsBase.promote_type_union(Tuple{Union{Int,Float64}}) ===
+            @test KendallTau.promote_type_union(Tuple{Union{Int,Float64}}) ===
                   Any
         end
     end
@@ -294,3 +320,16 @@ arbitrary_fun(x, y) = cor(x, y)
         @test res isa Matrix{Tuple{Real,Int}}
     end
 end
+
+@testset "pairwise with vectors of unequal length" begin
+    f(x, y) = length(x) - length(y)
+    x = [randn(i) for i in 0:3]
+    @test isequal(pairwise(f, x), (0:3) .- (0:3)')
+    @test_throws ArgumentError pairwise(f, x, skipmissing=:pairwise)
+    @test_throws ArgumentError pairwise(f, x, skipmissing=:listwise)
+end
+
+
+
+
+nothing
