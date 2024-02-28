@@ -96,7 +96,7 @@ function _pairwise(::Val{skipmissing}, f, x, y, symmetric::Bool) where {skipmiss
 end
 
 function _pairwise!(::Val{:none}, f, dest::AbstractMatrix, x, y, symmetric::Bool)
-    return (_pairwise_threaded_loop!(false, f, dest, x, y, symmetric))
+    return (_pairwise_threaded_loop!(:none, f, dest, x, y, symmetric))
 end
 
 #This method is only called for :pairwise and :listwise
@@ -142,16 +142,16 @@ function diag_is_one(f::Function, x, y)::Bool
             end
         end
     end
-    return(res)
+    return (res)
 end
 
 function _pairwise!(::Val{:pairwise}, f, dest::AbstractMatrix, x, y, symmetric::Bool)
     check_vectors(x, y, :pairwise)
-    return (_pairwise_threaded_loop!(true, f, dest, x, y, symmetric))
+    return (_pairwise_threaded_loop!(:pairwise, f, dest, x, y, symmetric))
 end
 
 #TODO use enumerate?
-function _pairwise_threaded_loop!(ispairwise::Bool, f, dest::AbstractMatrix, x, y, symmetric::Bool)
+function _pairwise_threaded_loop!(skipmissing::Symbol, f, dest::AbstractMatrix, x, y, symmetric::Bool)
 
     nr, nc = size(dest)
     m = length(x) == 0 ? 0 : length(first(x))
@@ -159,12 +159,12 @@ function _pairwise_threaded_loop!(ispairwise::Bool, f, dest::AbstractMatrix, x, 
     # Swap x and y for more efficient threaded loop.
     if nr < nc
         dest′ = collect(transpose(dest))
-        _pairwise_threaded_loop!(ispairwise, f, dest′, y, x, symmetric)
+        _pairwise_threaded_loop!(skipmissing, f, dest′, y, x, symmetric)
         dest .= transpose(dest′)
         return dest
     end
 
-    if ispairwise
+    if skipmissing == :pairwise
         nmtx = promoted_nonmissingtype(x)[]
         nmty = promoted_nonmissingtype(y)[]
     end
@@ -181,12 +181,12 @@ function _pairwise_threaded_loop!(ispairwise::Bool, f, dest::AbstractMatrix, x, 
         for k in subset
 
             j = alljs[k]
-            if ispairwise
+            if skipmissing == :pairwise
                 scratch_fx = task_local_vector(:scratch_fx, nmtx, m)
                 scratch_fy = task_local_vector(:scratch_fy, nmty, m)
             end
             for i = 1:(di1 ? j - 1 : symmetric ? j : nc)
-                if ispairwise
+                if skipmissing == :pairwise
                     _x, _y = handle_pairwise(x[j], y[i]; scratch_fx, scratch_fy)
                     dest[j, i] = f(_x, _y)
                 else
@@ -209,7 +209,101 @@ function _pairwise_threaded_loop!(ispairwise::Bool, f, dest::AbstractMatrix, x, 
 
 end
 
+function _pairwise_threaded_loop!(skipmissing::Symbol, f::typeof(corkendall),
+    dest::AbstractMatrix, x, y, symmetric::Bool)
+
+    nr, nc = size(dest)
+    m = length(x) == 0 ? 0 : length(first(x))
+
+    # Swap x and y for more efficient threaded loop.
+    if nr < nc
+        dest′ = collect(transpose(dest))
+        _pairwise_threaded_loop!(skipmissing, f, dest′, y, x, symmetric)
+        dest .= transpose(dest′)
+        return dest
+    end
+
+    intvec = Int[]
+    t = promoted_type(x)[]
+    u = promoted_type(y)[]
+    t′ = promoted_nonmissingtype(x)[]
+    u′ = promoted_nonmissingtype(y)[]
+
+    di1 = diag_is_one(f, x, y)
+    if di1
+        symmetric = true
+    end
+    alljs = (di1 ? 2 : 1):nr
+
+    alljs = (symmetric ? 2 : 1):nr
+
+    #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
+    Threads.@threads for thischunk in equal_sum_subsets(length(alljs), Threads.nthreads())
+
+        for k in thischunk
+            j = alljs[k]
+
+            sortedxcolj = task_local_vector(:sortedxcolj, t, m)
+            scratch_py = task_local_vector(:scratch_py, u, m)
+            ycoli = task_local_vector(:ycoli, u, m)
+            permx = task_local_vector(:permx, intvec, m)
+            # Ensuring missing is not an element type of scratch_sy, scratch_fx, scratch_fy
+            # gives improved performance.
+            scratch_sy = task_local_vector(:scratch_sy, u′, m)
+            scratch_fx = task_local_vector(:scratch_fx, t′, m)
+            scratch_fy = task_local_vector(:scratch_fy, t′, m)
+
+            sortperm!(permx, x[j])
+            @inbounds for k in eachindex(sortedxcolj)
+                sortedxcolj[k] = x[j][permx[k]]
+            end
+
+            for i = 1:(symmetric ? j - 1 : nc)
+                ycoli .= y[i]
+                dest[j, i] = corkendall_kernel!(sortedxcolj, ycoli, permx, skipmissing;
+                    scratch_py, scratch_sy, scratch_fx, scratch_fy)
+                symmetric && (dest[i, j] = dest[j, i])
+            end
+        end
+    end
+
+    if di1
+        if !(dest isa Matrix{Missing})
+            for i in 1:nr
+                dest[i, i] = 1.0
+            end
+        end
+    end
+    return dest
+end
+
+
+
+
+
+
+
+
+
+
+
+function promoted_type(x)
+    if length(x) == 0
+        return (Any)
+    end
+    U = eltype(first(x))
+    if length(x) > 1
+        for i in Iterators.drop(axes(x, 1), 1)
+            U = promote_type(U, eltype(x[i]))
+        end
+    end
+    return (U)
+end
+
 function promoted_nonmissingtype(x)
+    if length(x) == 0
+        return (Any)
+    end
     U = nonmissingtype(eltype(first(x)))
     if length(x) > 1
         for i in Iterators.drop(axes(x, 1), 1)
@@ -288,8 +382,6 @@ function promote_type_union(::Type{T}) where {T}
     end
 end
 
-
-
 """
     pairwise!(f, dest::AbstractMatrix, x[, y];
               symmetric::Bool=false, skipmissing::Symbol=:none)
@@ -360,14 +452,8 @@ function pairwise!(f, dest::AbstractMatrix, x, y=x;
     return _pairwise!(f, dest, x, y, symmetric=symmetric, skipmissing=skipmissing)
 end
 
-
-
-
-
-
-
 #=
- cov(x) is faster than cov(x, x)
+ #cov(x) is faster than cov(x, x)
 _cov(x, y) = x === y ? cov(x) : cov(x, y)
 
 pairwise!(::typeof(cov), dest::AbstractMatrix, x, y;
@@ -390,4 +476,5 @@ pairwise!(::typeof(cor), dest::AbstractMatrix, x;
 
 pairwise(::typeof(cor), x; symmetric::Bool=true, skipmissing::Symbol=:none) =
     pairwise(cor, x, x, symmetric=symmetric, skipmissing=skipmissing)
+
 =#
