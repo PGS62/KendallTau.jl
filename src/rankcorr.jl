@@ -722,7 +722,7 @@ end
     task_local_vector(key::Symbol, similarto::AbstractArray{V}, m::Int)::Vector{V} where {V}
 
     Retrieve from task local storage a vector of length `m` and matching the element type of
-`similarto` from task local storage, with initialisation on first call during a task.
+`similarto`, with initialisation on first call during a task.
 """
 function task_local_vector(key::Symbol, similarto::AbstractArray{V}, m::Int)::Vector{V} where {V}
     haskey(task_local_storage(), key) || task_local_storage(key, similar(similarto, m))

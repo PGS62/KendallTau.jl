@@ -199,7 +199,7 @@ function _pairwise_threaded_loop!(skipmissing::Symbol, f, dest::AbstractMatrix, 
 
     if di1
         if !(dest isa Matrix{Missing})
-            for i in 1:nr
+            for i in axes(dest, 1)
                 dest[i, i] = 1.0
             end
         end
@@ -269,12 +269,14 @@ function _pairwise_threaded_loop!(skipmissing::Symbol, f::typeof(corkendall),
 
     if di1
         if !(dest isa Matrix{Missing})
-            for i in 1:nr
+            for i in axes(dest, 1)
                 dest[i, i] = 1.0
             end
         end
     end
+
     return dest
+
 end
 
 
