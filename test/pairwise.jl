@@ -22,8 +22,7 @@ arbitrary_fun(x, y) = cor(x, y)
         # to test case where inference of returned eltype fails
         z = [Vector{Any}(rand(Float32, 10)) for _ in 1:5]
 
-        # res = @inferred KendallTau.pairwise(f, x, y)#TODO @inferred not working
-        res = KendallTau.pairwise(f, x, y)
+        res = @inferred KendallTau.pairwise(f, x, y)
         @test res isa Matrix{Float64}
         res2 = zeros(Float64, size(res))
         @test KendallTau.pairwise!(f, res2, x, y) === res2
@@ -49,7 +48,7 @@ arbitrary_fun(x, y) = cor(x, y)
                yi in ([1.0, 2.0, 3.0], [1.0f0, 3.0f0, 10.5f0])]
         @test res isa Matrix{Float64}
 
-        #  @inferred KendallTau.pairwise(f, x, y) #TODO @inferred not working
+        @inferred KendallTau.pairwise(f, x, y)
         if throwsforzerolengthinput
             # @test_throws Union{ArgumentError,MethodError} KendallTau.pairwise(f, [Int[]], [Int[]])
             @test_throws CompositeException KendallTau.pairwise(f, [Int[]], [Int[]])
@@ -135,9 +134,9 @@ arbitrary_fun(x, y) = cor(x, y)
             for skipmissing in (:none, :pairwise, :listwise)
                 g(x, y=x) = KendallTau.pairwise((x, y) -> x[1] * y[1], x, y, skipmissing=skipmissing)
                 @test Core.Compiler.return_type(g, Tuple{Vector{Vector{Union{Float64,Missing}}}}) ==
-                             Core.Compiler.return_type(g, Tuple{Vector{Vector{Union{Float64,Missing}}},
-                                 Vector{Vector{Union{Float64,Missing}}}}) ==
-                             Matrix{<:Union{Float64,Missing}}
+                      Core.Compiler.return_type(g, Tuple{Vector{Vector{Union{Float64,Missing}}},
+                          Vector{Vector{Union{Float64,Missing}}}}) ==
+                      Matrix{<:Union{Float64,Missing}}
                 if skipmissing in (:pairwise, :listwise)
                     @test_broken Core.Compiler.return_type(g, Tuple{Vector{Vector{Union{Float64,Missing}}}}) ==
                                  Core.Compiler.return_type(g, Tuple{Vector{Vector{Union{Float64,Missing}}},
@@ -187,16 +186,12 @@ arbitrary_fun(x, y) = cor(x, y)
     @testset "iterators" begin
         x = (v for v in [rand(10) for _ in 1:4])
         y = (v for v in [rand(10) for _ in 1:4])
-        #TODO @inferred not working
-        # res = @inferred KendallTau.pairwise(f, x, y)
-        res = KendallTau.pairwise(f, x, y)
+        res = @inferred KendallTau.pairwise(f, x, y)
 
         res2 = zeros(size(res))
         @test KendallTau.pairwise!(f, res2, x, y) === res2
         @test res == res2 == KendallTau.pairwise(f, collect(x), collect(y))
-        #TODO @inferred not working
-        #  res = @inferred(KendallTau.pairwise(f, x))
-        res = KendallTau.pairwise(f, x)
+        res = @inferred(KendallTau.pairwise(f, x))
         res2 = zeros(size(res))
         @test KendallTau.pairwise!(f, res2, x) === res2
         @test res == res2 == KendallTau.pairwise(f, collect(x))
