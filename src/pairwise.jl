@@ -278,21 +278,8 @@ function _pairwise_threaded_loop!(skipmissing::Symbol, f::typeof(corkendall),
 
 end
 
-function promoted_type(x)
-    U = Union{}
-    for i in axes(x, 1)
-        U = promote_type(U, eltype(x[i]))
-    end
-    return (U)
-end
-
-function promoted_nonmissingtype(x)
-    U = Union{}
-    for i in axes(x, 1)
-        U = promote_type(U, nonmissingtype(eltype(x[i])))
-    end
-    return (U)
-end
+promoted_type(x) = mapreduce(eltype, promote_type, x, init=Union{})
+promoted_nonmissingtype(x) = mapreduce(nonmissingtype ∘ eltype, promote_type, x, init=Union{})
 
 function _pairwise!(::Val{:listwise}, f, dest::AbstractMatrix, x, y, symmetric::Bool)
     check_vectors(x, y, :listwise)
