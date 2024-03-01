@@ -67,7 +67,7 @@ function _pairwise(::Val{skipmissing}, f, x, y, symmetric::Bool) where {skipmiss
     n = length(y′)
 
     T = Core.Compiler.return_type(f, Tuple{eltype(x′),eltype(y′)})
-    Tsm = Core.Compiler.return_type((x, y) -> f(disallowmissing(x), disallowmissing(y)),
+    Tsm = Core.Compiler.return_type((x, y) -> f(handle_pairwise(x, y)...),
         Tuple{eltype(x′),eltype(y′)})
 
     if skipmissing === :none

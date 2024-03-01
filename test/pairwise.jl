@@ -134,7 +134,7 @@ arbitrary_fun(x, y) = cor(x, y)
             # to check that KendallTau.pairwise itself is inferrable
             for skipmissing in (:none, :pairwise, :listwise)
                 g(x, y=x) = KendallTau.pairwise((x, y) -> x[1] * y[1], x, y, skipmissing=skipmissing)
-                @test_broken Core.Compiler.return_type(g, Tuple{Vector{Vector{Union{Float64,Missing}}}}) ==
+                @test Core.Compiler.return_type(g, Tuple{Vector{Vector{Union{Float64,Missing}}}}) ==
                              Core.Compiler.return_type(g, Tuple{Vector{Vector{Union{Float64,Missing}}},
                                  Vector{Vector{Union{Float64,Missing}}}}) ==
                              Matrix{<:Union{Float64,Missing}}
