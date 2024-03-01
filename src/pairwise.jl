@@ -173,7 +173,7 @@ function _pairwise_threaded_loop!(skipmissing::Symbol, f, dest::AbstractMatrix, 
     if di1
         symmetric = true
     end
-    alljs = (di1 ? 2 : 1):nr
+    alljs = (di1 ? (2:nr) : (1:nr))
 
     #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
     Threads.@threads for subset in equal_sum_subsets(length(alljs), Threads.nthreads())
@@ -233,9 +233,8 @@ function _pairwise_threaded_loop!(skipmissing::Symbol, f::typeof(corkendall),
     if di1
         symmetric = true
     end
-    alljs = (di1 ? 2 : 1):nr
 
-    alljs = (symmetric ? 2 : 1):nr
+    alljs = (symmetric ? (2:nr) : (1:nr))
 
     #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
     Threads.@threads for thischunk in equal_sum_subsets(length(alljs), Threads.nthreads())
@@ -279,38 +278,18 @@ function _pairwise_threaded_loop!(skipmissing::Symbol, f::typeof(corkendall),
 
 end
 
-
-
-
-
-
-
-
-
-
-
 function promoted_type(x)
-    if length(x) == 0
-        return (Any)
-    end
-    U = eltype(first(x))
-    if length(x) > 1
-        for i in Iterators.drop(axes(x, 1), 1)
-            U = promote_type(U, eltype(x[i]))
-        end
+    U = Union{}
+    for i in axes(x, 1)
+        U = promote_type(U, eltype(x[i]))
     end
     return (U)
 end
 
 function promoted_nonmissingtype(x)
-    if length(x) == 0
-        return (Any)
-    end
-    U = nonmissingtype(eltype(first(x)))
-    if length(x) > 1
-        for i in Iterators.drop(axes(x, 1), 1)
-            U = promote_type(U, nonmissingtype(eltype(x[i])))
-        end
+    U = Union{}
+    for i in axes(x, 1)
+        U = promote_type(U, nonmissingtype(eltype(x[i])))
     end
     return (U)
 end

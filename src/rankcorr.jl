@@ -79,7 +79,7 @@ function _corspearman(x::AbstractMatrix{T}, y::AbstractMatrix{U},
 
     nmtx = nonmissingtype(eltype(x))[]
     nmty = nonmissingtype(eltype(y))[]
-    alljs = (symmetric ? 2 : 1):nr
+    alljs = (symmetric ? (2:nr) : (1:nr))
 
     #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
     Threads.@threads for thischunk in equal_sum_subsets(length(alljs), Threads.nthreads())
@@ -327,7 +327,7 @@ function _corkendall(x::AbstractMatrix{T}, y::AbstractMatrix{U},
     intarray = Int[]
     nmtx = nonmissingtype(eltype(x))[]
     nmty = nonmissingtype(eltype(y))[]
-    alljs = (symmetric ? 2 : 1):nr
+    alljs = (symmetric ? (2:nr) : (1:nr))
 
     #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
     Threads.@threads for thischunk in equal_sum_subsets(length(alljs), Threads.nthreads())
