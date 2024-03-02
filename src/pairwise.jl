@@ -5,8 +5,9 @@ Better variable names in specialised method pairwise_threaded_loop    .
 Review docstrings.
 Write specialised method of pairwise_threaded_loop for corspearman.
 Prepare comparison of code here with code in StatsBase to ease acceptance by StatsBase maintainers.
-If we keep corkendalls ability to accept skipmissing argument, can I reduce code duplication?
+If we keep corkendall's ability to accept skipmissing argument, can I reduce code duplication?
 Consider using enumerate in function pairwise_threaded_loop.
+test for pairwise handling of non-numeric element types for rank correlations    
 =#
 
 using Missings: disallowmissing
@@ -111,7 +112,7 @@ function _pairwise!(::Val{:none}, f, dest::AbstractMatrix, x, y, symmetric::Bool
     return (_pairwise_threaded_loop!(:none, f, dest, x, y, symmetric))
 end
 
-#Only called for :pairwise and :listwise, for :none we don't require elements of `x` an `y`
+#Only called for :pairwise and :listwise, for :none elements of `x` an `y` are not required
 #to all be of the same length.
 function check_vectors(x, y, skipmissing::Symbol)
     m = length(x)
@@ -148,7 +149,7 @@ for the those diagonal elements?
 """
 function diag_is_one(f::Function, x, y)::Bool
     res = false
-    if f in [corkendall, corspearman, cor]
+    if f in (corkendall, corspearman, cor)
         if x === y
             return (true)
         elseif length(x) == length(y)
@@ -317,9 +318,6 @@ function _pairwise!(::Val{:listwise}, f, dest::AbstractMatrix, x, y, symmetric::
 
     # Computing integer indices once for all vectors is faster
     nminds′ = findall(nminds)
-    # TODO: check whether wrapping views in a custom array type which asserts
-    # that entries cannot be `missing` (similar to `skipmissing`)
-    # could offer better performance
     return _pairwise!(Val(:none), f, dest,
         [disallowmissing(view(xi, nminds′)) for xi in x],
         [disallowmissing(view(yi, nminds′)) for yi in y],
