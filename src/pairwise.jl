@@ -1,3 +1,14 @@
+#=
+TODO
+Write note of call stack for pairwise.
+Better variable names in specialised method pairwise_threaded_loop    .
+Review docstrings.
+Write specialised method of pairwise_threaded_loop for corspearman.
+Prepare comparison of code here with code in StatsBase to ease acceptance by StatsBase maintainers.
+If we keep corkendalls ability to accept skipmissing argument, can I reduce code duplication?
+Consider using enumerate in function pairwise_threaded_loop.
+=#
+
 using Missings: disallowmissing
 """
     pairwise(f, x[, y];
@@ -100,7 +111,8 @@ function _pairwise!(::Val{:none}, f, dest::AbstractMatrix, x, y, symmetric::Bool
     return (_pairwise_threaded_loop!(:none, f, dest, x, y, symmetric))
 end
 
-#This method is only called for :pairwise and :listwise
+#Only called for :pairwise and :listwise, for :none we don't require elements of `x` an `y`
+#to all be of the same length.
 function check_vectors(x, y, skipmissing::Symbol)
     m = length(x)
     n = length(y)
@@ -128,6 +140,12 @@ function check_vectors(x, y, skipmissing::Symbol)
     end
 end
 
+"""
+    diag_is_one(f::Function, x, y)::Bool
+
+Should the diagonal of the matrix returned by `pairwise` be set to 1.0, without calling `f`
+for the those diagonal elements?
+"""
 function diag_is_one(f::Function, x, y)::Bool
     res = false
     if f in [corkendall, corspearman, cor]
@@ -140,7 +158,7 @@ function diag_is_one(f::Function, x, y)::Bool
                     res = false
                     break
                 elseif f === cor && length(elx) == length(ely) == 0
-                    #necessary to pass @test_throws pairwise(cor, [Int[]], [Int[]])
+                    # Necessary to pass @test_throws pairwise(cor, [Int[]], [Int[]])
                     res = false
                     break
                 end
@@ -155,7 +173,6 @@ function _pairwise!(::Val{:pairwise}, f, dest::AbstractMatrix, x, y, symmetric::
     return (_pairwise_threaded_loop!(:pairwise, f, dest, x, y, symmetric))
 end
 
-#TODO use enumerate?
 function _pairwise_threaded_loop!(skipmissing::Symbol, f, dest::AbstractMatrix, x, y, symmetric::Bool)
 
     nr, nc = size(dest)
