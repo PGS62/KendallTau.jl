@@ -1,13 +1,40 @@
 #=
+Callstacks in three cases. Could this be simplified?
+Callstack when skipmissing = :none
+pairwise    1 method
+_pairwise   1 method
+_pairwise!  method with f as first argument
+_pairwise! method with ::Val{:none} as first argument, which is a do-nothing wrapper to
+pairwise_threaded_loop
+
+Callstack when skipmissing = :listwise
+pairwise    1 method
+_pairwise   1 method
+_pairwise!  method with f as first argument
+_pairwise!  method with ::Val{:listwise} as first argument, which calls check_vectors, 
+            excludes missing elements as appropriate before calling
+_pairwise! method with ::Val{:none} as first argument, which is a do-nothing wrapper to
+pairwise_threaded_loop
+
+Callstack when skipmissing = :pairwise
+pairwise    1 method
+_pairwise   1 method
+_pairwise!  method with f as first argument
+_pairwise!  method with ::Val{:pairwise} as first argument which calles check_vectors and then
+_pairwise_threaded_loop
+=#
+
+#=
 TODO
-Write note of call stack for pairwise.
-Better variable names in specialised method pairwise_threaded_loop    .
+Write note of call stack for pairwise. [DONE]
+Better variable names in specialised method pairwise_threaded_loop.
 Review docstrings.
 Write specialised method of pairwise_threaded_loop for corspearman.
 Prepare comparison of code here with code in StatsBase to ease acceptance by StatsBase maintainers.
 If we keep corkendall's ability to accept skipmissing argument, can I reduce code duplication?
 Consider using enumerate in function pairwise_threaded_loop.
-test for pairwise handling of non-numeric element types for rank correlations    
+test for pairwise handling of non-numeric element types for rank correlations [DONE]
+Performance of corspearman seems bad. worse than corkendall!    
 =#
 
 using Missings: disallowmissing
@@ -324,8 +351,9 @@ function _pairwise!(::Val{:listwise}, f, dest::AbstractMatrix, x, y, symmetric::
         symmetric)
 end
 
-function _pairwise!(f, dest::AbstractMatrix, x, y;
-    symmetric::Bool=false, skipmissing::Symbol=:none)
+function _pairwise!(f, dest::AbstractMatrix, x, y; symmetric::Bool=false,
+    skipmissing::Symbol=:none)
+
     if !(skipmissing in (:none, :pairwise, :listwise))
         throw(ArgumentError("skipmissing must be one of :none, :pairwise or :listwise"))
     end

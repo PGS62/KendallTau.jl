@@ -316,6 +316,13 @@ arbitrary_fun(x, y) = cor(x, y)
     end
 end
 
+@testset "pairwise against inputs with non-numeric elements" begin
+    for f in (corkendall, corspearman)
+        x = [["a", "b", "c"], ["c", "b", "a"]]
+        @test pairwise(f, x) == [1.0 -1.0; -1.0 1.0]
+    end
+end
+
 @testset "pairwise with vectors of unequal length" begin
     f(x, y) = length(x) - length(y)
     x = [randn(i) for i in 0:3]
