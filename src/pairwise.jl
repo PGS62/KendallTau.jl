@@ -29,7 +29,7 @@ TODO
 Write note of call stack for pairwise. [DONE]
 Better variable names in specialised method pairwise_threaded_loop.
 Review docstrings.
-Write specialised method of pairwise_threaded_loop for corspearman.
+Write specialised method of pairwise_threaded_loop for corspearman. [NOT WORTH IT?]
 Prepare comparison of code here with code in StatsBase to ease acceptance by StatsBase maintainers.
 If we keep corkendall's ability to accept skipmissing argument, can I reduce code duplication?
 Consider using enumerate in function pairwise_threaded_loop.
@@ -47,15 +47,15 @@ of entries in iterators `x` and `y`. Rows correspond to
 entries in `x` and columns to entries in `y`. If `y` is omitted then a
 square matrix crossing `x` with itself is returned.
 
-As a special case, if `f` is `cor`, diagonal cells for which entries
-from `x` and `y` are identical (according to `===`) are set to one even
-in the presence `missing`, `NaN` or `Inf` entries.
+As a special case, if `f` is `cor`, `corspearman` or `corkendall`, diagonal cells for
+which entries from `x` and `y` are identical (according to `===`) are set to one even in the
+presence `missing`, `NaN` or `Inf` entries.
 
 # Keyword arguments
 - `symmetric::Bool=false`: If `true`, `f` is only called to compute
   for the lower triangle of the matrix, and these values are copied
   to fill the upper triangle. Only allowed when `y` is omitted.
-  Defaults to `true` when `f` is `cor` or `cov`.
+  Ignored (treated as `true`) when `f` is `cov`, `cor`, `corkendall` or `corspearman`.
 - `skipmissing::Symbol=:none`: If `:none` (the default), missing values
   in inputs are passed to `f` without any modification.
   Use `:pairwise` to skip entries with a `missing` value in either
@@ -408,15 +408,15 @@ entries in `x` and columns to entries in `y`, and `dest` must therefore
 be of size `length(x) × length(y)`.
 If `y` is omitted then `x` is crossed with itself.
 
-As a special case, if `f` is `cor`, diagonal cells for which entries
-from `x` and `y` are identical (according to `===`) are set to one even
-in the presence `missing`, `NaN` or `Inf` entries.
+As a special case, if `f` is `cor`, `corspearman` or `corkendall`, diagonal cells for
+which entries from `x` and `y` are identical (according to `===`) are set to one even in the
+presence `missing`, `NaN` or `Inf` entries.
 
 # Keyword arguments
 - `symmetric::Bool=false`: If `true`, `f` is only called to compute
   for the lower triangle of the matrix, and these values are copied
   to fill the upper triangle. Only allowed when `y` is omitted.
-  Defaults to `true` when `f` is `cor` or `cov`.
+  Ignored (treated as `true`) when `f` is `cov`, `cor`, `corkendall` or `corspearman`.
 - `skipmissing::Symbol=:none`: If `:none` (the default), missing values
   in inputs are passed to `f` without any modification.
   Use `:pairwise` to skip entries with a `missing` value in either
@@ -485,10 +485,11 @@ pairwise!(::typeof(cov), dest::AbstractMatrix, x;
 
 pairwise(::typeof(cov), x; symmetric::Bool=true, skipmissing::Symbol=:none) =
     pairwise(_cov, x, x, symmetric=symmetric, skipmissing=skipmissing)
-
+#=
 pairwise!(::typeof(cor), dest::AbstractMatrix, x;
     symmetric::Bool=true, skipmissing::Symbol=:none) =
     pairwise!(cor, dest, x, x, symmetric=symmetric, skipmissing=skipmissing)
 
 pairwise(::typeof(cor), x; symmetric::Bool=true, skipmissing::Symbol=:none) =
     pairwise(cor, x, x, symmetric=symmetric, skipmissing=skipmissing)
+=#

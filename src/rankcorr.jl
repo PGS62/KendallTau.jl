@@ -89,16 +89,12 @@ function _corspearman(x::AbstractMatrix{T}, y::AbstractMatrix{U},
 
             scratch_fx = task_local_vector(:scratch_fx, nmtx, m)
             scratch_fy = task_local_vector(:scratch_fy, nmty, m)
-            ycoli = task_local_vector(:ycoli, y, m)
-            xcolj = task_local_vector(:xcolj, x, m)
             scratch_rksx = task_local_vector(:scratch_rksx, Float64[], m)
             scratch_rksy = task_local_vector(:scratch_rksy, Float64[], m)
             scratch_p = task_local_vector(:scratch_p, Int[], m)
 
             for i = 1:(symmetric ? j - 1 : nc)
-                ycoli .= view(y, :, i)
-                xcolj .= view(x, :, j)
-                C[j, i] = corspearman_kernel!(xcolj, ycoli, skipmissing, scratch_fx,
+                C[j, i] = corspearman_kernel!(view(x, :, j), view(y, :, i), skipmissing, scratch_fx,
                     scratch_fy, scratch_rksx, scratch_rksy, scratch_p)
                 symmetric && (C[i, j] = C[j, i])
             end
@@ -134,7 +130,8 @@ Subsequent arguments:
     tied ranks of `x` and `y` without allocation.
 """
 function corspearman_kernel!(x::AbstractVector, y::AbstractVector, skipmissing::Symbol,
-    scratch_fx=similar(x), scratch_fy=similar(y), scratch_rksx=similar(x, Float64),
+    scratch_fx=similar(x, nonmissingtype(eltype(x))),
+    scratch_fy=similar(y, nonmissingtype(eltype(y))), scratch_rksx=similar(x, Float64),
     scratch_rksy=similar(y, Float64), scratch_p=similar(x, Int))
 
     length(x) >= 2 || return NaN
