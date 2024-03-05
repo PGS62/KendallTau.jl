@@ -1,15 +1,10 @@
 {
 	"files": [
 		{
-			"path": "src/corspearman2.jl",
+			"path": "src/corspearman.jl",
 			"bookmarks": [
 				{
-					"line": 1,
-					"column": 4,
-					"label": ""
-				},
-				{
-					"line": 148,
+					"line": 90,
 					"column": 17,
 					"label": ""
 				}

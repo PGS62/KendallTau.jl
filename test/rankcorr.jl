@@ -50,10 +50,7 @@ using Test
 
 end
 
-#@testset "corspearman, corkendall" begin
-
-@testset "$f" for f in (corkendall, corspearman, corspearman2)
-    #   for f in [corkendall, corspearman, corspearman2]
+@testset "$f" for f in (corkendall, corspearman)
 
     n = 100
     big_n = 78_000
@@ -252,7 +249,7 @@ end
         @test isequal(f(Xnan[:, k], Ynan),
             [f(Xnan[:, k], Ynan[:, j]) for i in 1:1, j in axes(Ynan, 2)])
         # TODO: fix corkendall (PR#659)
-        if f === corspearman || f === corspearman2
+        if f === corspearman
             @test isequal(f(Xnan, Ynan[:, k]),
                 [f(Xnan[:, i], Ynan[:, k]) for i in axes(Xnan, 2), j in 1:1])
         else
@@ -277,10 +274,10 @@ end
     Ym = ifelse.(rand(nr, nc) .< cutoff, missing, randn(nr, nc))
     ym = ifelse.(rand(nr) .< cutoff, missing, randn(nr))
 
-    for arg1 in [X, x, Xm, xm]
-        for arg2 in [Y, y, Ym, ym]
-            for skipmissing in [:pairwise, :none, :listwise]
-                for f in [corkendall, corspearman,corspearman2]
+    for arg1 in (X, x, Xm, xm)
+        for arg2 in (Y, y, Ym, ym)
+            for skipmissing in (:pairwise, :none, :listwise)
+                for f in (corkendall, corspearman)
                     if !((arg1 isa Vector) && (arg2 isa Vector) && skipmissing == :listwise)
                         copy1 = copy(arg1)
                         copy2 = copy(arg2)

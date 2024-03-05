@@ -11,7 +11,7 @@ Callstack when skipmissing = :listwise
 pairwise    1 method
 _pairwise   1 method
 _pairwise!  method with f as first argument
-_pairwise!  method with ::Val{:listwise} as first argument, which calls check_vectors, 
+_pairwise!  method with ::Val{:listwise} as first argument, which calls check_vectors,
             excludes missing elements as appropriate before calling
 _pairwise! method with ::Val{:none} as first argument, which is a do-nothing wrapper to
 pairwise_threaded_loop
@@ -29,12 +29,13 @@ TODO
 Write note of call stack for pairwise. [DONE]
 Better variable names in specialised method pairwise_threaded_loop.
 Review docstrings.
-Write specialised method of pairwise_threaded_loop for corspearman. [NOT WORTH IT?]
+Write specialised method of pairwise_threaded_loop for corspearman. [DONE]
 Prepare comparison of code here with code in StatsBase to ease acceptance by StatsBase maintainers.
 If we keep corkendall's ability to accept skipmissing argument, can I reduce code duplication?
 Consider using enumerate in function pairwise_threaded_loop.
 test for pairwise handling of non-numeric element types for rank correlations [DONE]
-Performance of corspearman seems bad. worse than corkendall!    
+Performance of corspearman seems bad. worse than corkendall!    [FIXED]
+Reorder methods in pairwise.jl to match order in StatsBase pairwise.jl
 =#
 
 using Missings: disallowmissing
@@ -328,6 +329,79 @@ function _pairwise_threaded_loop!(skipmissing::Symbol, f::typeof(corkendall),
 
 end
 
+function _pairwise_threaded_loop!(skipmissing::Symbol, f::typeof(corspearman),
+    dest::AbstractMatrix, x, y, symmetric::Bool)
+
+    nr, nc = size(dest)
+    m = length(x) == 0 ? 0 : length(first(x))
+
+    # Swap x and y for more efficient threaded loop.
+    if nr < nc
+        dest′ = collect(transpose(dest))
+        _pairwise_threaded_loop!(skipmissing, f, dest′, y, x, symmetric)
+        dest .= transpose(dest′)
+        return dest
+    end
+
+    sortpermsx = fill(0, (m, nr))
+    Threads.@threads for i in 1:nr
+        sortpermsx[:, i] .= sortperm(x[i])
+    end
+
+    sortpermsy = fill(0, (m, nc))
+    Threads.@threads for i in 1:nc
+        sortpermsy[:, i] .= sortperm(y[i])
+    end
+
+    int64 = Int64[]
+    fl64 = Float64[]
+    nmtx = promoted_nonmissingtype(x)[]
+    nmty = promoted_nonmissingtype(y)[]
+
+    di1 = diag_is_one(f, x, y)
+    if di1
+        symmetric = true
+    end
+
+    alljs = (symmetric ? (2:nr) : (1:nr))
+
+    #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
+    Threads.@threads for thischunk in equal_sum_subsets(length(alljs), Threads.nthreads())
+
+        for k in thischunk
+
+            j = alljs[k]
+
+            inds = task_local_vector(:inds, int64, m)
+            spnmx = task_local_vector(:spnmx, int64, m)
+            spnmy = task_local_vector(:spnmy, int64, m)
+            nmx = task_local_vector(:nmx, nmtx, m)
+            nmy = task_local_vector(:nmy, nmty, m)
+            rksx = task_local_vector(:rksx, fl64, m)
+            rksy = task_local_vector(:rksy, fl64, m)
+
+            for i = 1:(symmetric ? j - 1 : nc)
+
+                dest[j, i] = corspearman_kernel!(x[j], y[i], skipmissing,
+                    view(sortpermsx, :, j), view(sortpermsy, :, i), inds, spnmx, spnmy, nmx,
+                    nmy, rksx, rksy)
+                symmetric && (dest[i, j] = dest[j, i])
+            end
+        end
+    end
+
+    if di1
+        if !(dest isa Matrix{Missing})
+            for i in axes(dest, 1)
+                dest[i, i] = 1.0
+            end
+        end
+    end
+
+    return dest
+
+end
+
 promoted_type(x) = mapreduce(eltype, promote_type, x, init=Union{})
 promoted_nonmissingtype(x) = mapreduce(nonmissingtype ∘ eltype, promote_type, x, init=Union{})
 
@@ -467,7 +541,6 @@ function pairwise!(f, dest::AbstractMatrix, x, y=x;
 
     return _pairwise!(f, dest, x, y, symmetric=symmetric, skipmissing=skipmissing)
 end
-
 
 #cov(x) is faster than cov(x, x)
 _cov(x, y) = x === y ? cov(x) : cov(x, y)
