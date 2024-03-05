@@ -237,7 +237,7 @@ end
 Return a matrix with of same dimensions as `X` whose entries indicate the tied rank
 of the corresponding entry in `X` relative to its column.
 If the column contains `NaN`, set all elements of the column to `NaN`, otherwise if the
-column contains `missing`, set all alements of the column to `missing`.
+column contains `missing`, set all elements of the column to `missing`.
 """
 function tiedrank_nan(X::AbstractMatrix)
 

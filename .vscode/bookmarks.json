@@ -1,11 +1,16 @@
 {
 	"files": [
 		{
-			"path": "src/pairwise.jl",
+			"path": "src/corspearman2.jl",
 			"bookmarks": [
 				{
-					"line": 203,
-					"column": 31,
+					"line": 1,
+					"column": 4,
+					"label": ""
+				},
+				{
+					"line": 148,
+					"column": 17,
 					"label": ""
 				}
 			]
