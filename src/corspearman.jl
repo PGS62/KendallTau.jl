@@ -4,8 +4,6 @@
 #
 #######################################
 
-import StatsBase: _tiedrank!, cor#TODO Remove this line on porting to StatsBase
-
 """
     corspearman(x, y=x; skipmissing::Symbol=:none)
 

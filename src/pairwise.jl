@@ -38,8 +38,6 @@ Performance of corspearman seems bad. Worse than corkendall!    [FIXED]
 Reorder methods in pairwise.jl to match order in StatsBase pairwise.jl [DONE]
 =#
 
-using Missings: disallowmissing
-
 function _pairwise!(::Val{:none}, f, dest::AbstractMatrix, x, y, symmetric::Bool)
     return (_pairwise_loop(:none, f, dest, x, y, symmetric))
 end
