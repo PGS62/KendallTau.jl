@@ -25,79 +25,7 @@ function corkendall(x::AbstractMatrix, y::AbstractMatrix=x;
     skipmissing::Symbol=:none)
     check_rankcor_args(x, y, skipmissing, true)
     return(pairwise(corkendall,eachcol(x),eachcol(y);skipmissing))
-
-    #=
-    missing_allowed = missing isa eltype(x) || missing isa eltype(y)
-    nr, nc = size(x, 2), size(y, 2)
-
-    if missing_allowed && skipmissing == :listwise
-        x, y = handle_listwise(x, y)
-    end
-
-    if skipmissing == :none && missing_allowed
-        C = ones(Union{Missing,Float64}, nr, nc)
-    else
-        C = ones(Float64, nr, nc)
-    end
-    # Use a function barrier because the type of C varies according to the value of
-    # skipmissing.
-   # return (_corkendall(x, y, C, skipmissing))
-
-    return _pairwise_threaded_loop!(skipmissing,corkendall,C,eachcol(x),eachcol(y),x===y)
-=#
 end
-#=
-#TODO this method no longer called
-#TODO move _pairwise_threaded_loop! relevant method to this file
-function _corkendall(x::AbstractMatrix, y::AbstractMatrix,
-    C::AbstractMatrix, skipmissing::Symbol)
-
-    symmetric = x === y
-
-    # Swap x and y for more efficient threaded loop.
-    if size(x, 2) < size(y, 2)
-        return collect(transpose(_corkendall(y, x, collect(transpose(C)), skipmissing)))
-    end
-
-    (m, nr), nc = size(x), size(y, 2)
-
-    intarray = Int[]
-    nmtx = nonmissingtype(eltype(x))[]
-    nmty = nonmissingtype(eltype(y))[]
-    alljs = (symmetric ? (2:nr) : (1:nr))
-
-    #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
-    Threads.@threads for thischunk in equal_sum_subsets(length(alljs), Threads.nthreads())
-
-        for k in thischunk
-            j = alljs[k]
-
-            sortedxcolj = task_local_vector(:sortedxcolj, x, m)
-            scratch_py = task_local_vector(:scratch_py, y, m)
-            ycoli = task_local_vector(:ycoli, y, m)
-            permx = task_local_vector(:permx, intarray, m)
-            # Ensuring missing is not an element type of scratch_sy, scratch_fx, scratch_fy
-            # gives improved performance.
-            scratch_sy = task_local_vector(:scratch_sy, nmty, m)
-            scratch_fx = task_local_vector(:scratch_fx, nmtx, m)
-            scratch_fy = task_local_vector(:scratch_fy, nmty, m)
-
-            sortperm!(permx, view(x, :, j))
-            @inbounds for k in eachindex(sortedxcolj)
-                sortedxcolj[k] = x[permx[k], j]
-            end
-
-            for i = 1:(symmetric ? j - 1 : nc)
-                ycoli .= view(y, :, i)
-                C[j, i] = corkendall_kernel!(sortedxcolj, ycoli, permx, skipmissing;
-                    scratch_py, scratch_sy, scratch_fx, scratch_fy)
-                symmetric && (C[i, j] = C[j, i])
-            end
-        end
-    end
-    return C
-end
-=#
 
 function corkendall(x::AbstractVector, y::AbstractVector; skipmissing::Symbol=:none)
 

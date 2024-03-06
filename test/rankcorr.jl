@@ -260,7 +260,7 @@ end
 
 end
 
-@testset "Check no mutation in corspearman, corkendall" begin
+@testset "Check no mutation in $f" for f in (corkendall, corspearman)
 
     nr = 50
     nc = 5

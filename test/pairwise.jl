@@ -102,20 +102,32 @@ arbitrary_fun(x, y) = cor(x, y)
         res2 = zeros(Union{Float64,Missing}, size(res))
         @test pairwise!(f, res2, xm, ym, skipmissing=:pairwise) === res2
         @test res ≅ res2
-        @test isapprox(res, [f(collect.(skipmissings(xi, yi))...) for xi in xm, yi in ym],
+        # Use myskipmissings rather than skipmissings to avoid deprecation warning
+        function myskipmissings(x, y)
+            which = @. !(ismissing(x) || ismissing(y))
+            return (x[which], y[which])
+        end
+
+        #@test isapprox(res, [f(collect.(skipmissings(xi, yi))...) for xi in xm, yi in ym],
+        #    rtol=1e-6)
+        @test isapprox(res, [f(myskipmissings(xi, yi)...) for xi in xm, yi in ym],
             rtol=1e-6)
 
         res = pairwise(f, ym, zm, skipmissing=:pairwise)
         if isrankcorr
             @test res isa Matrix{Float64}
-            @test isequal(res, [f(collect.(skipmissings(yi, zi))...) for yi in ym, zi in zm])
+            #    @test isequal(res, [f(collect.(skipmissings(yi, zi))...) for yi in ym, zi in zm])
+            @test isequal(res, [f(myskipmissings(yi, zi)...) for yi in ym, zi in zm])
         else
             @test res isa Matrix{Float32}
             res2 = zeros(Union{Float32,Missing}, size(res))
             @test pairwise!(f, res2, ym, zm, skipmissing=:pairwise) === res2
             @test res ≅ res2
-            @test isapprox(res, [f(collect.(skipmissings(yi, zi))...) for yi in ym, zi in zm],
+            #@test isapprox(res, [f(collect.(skipmissings(yi, zi))...) for yi in ym, zi in zm],
+            #    rtol=1e-6)
+            @test isapprox(res, [f(myskipmissings(yi, zi)...) for yi in ym, zi in zm],
                 rtol=1e-6)
+
         end
         nminds = mapreduce(x -> .!ismissing.(x),
             (x, y) -> x .& y,

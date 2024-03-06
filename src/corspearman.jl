@@ -27,96 +27,7 @@ function corspearman(x::AbstractMatrix, y::AbstractMatrix=x;
     skipmissing::Symbol=:none)
 
     check_rankcor_args(x, y, skipmissing, true)
-
-    missing_allowed = missing isa eltype(x) || missing isa eltype(y)
-    nr, nc = size(x, 2), size(y, 2)
-
-    if missing_allowed && skipmissing == :listwise
-        x, y = handle_listwise(x, y)
-    end
-
-    if skipmissing == :pairwise
-        if skipmissing == :none && missing_allowed
-            C = ones(Union{Missing,Float64}, nr, nc)
-        else
-            C = ones(Float64, nr, nc)
-        end
-        # Use a function barrier because the type of C varies according to the value of
-        # skipmissing.
-        return (_corspearman(x, y, C, skipmissing))
-    else
-        # Could use _corspearman in this case, but using tiedrank_nan is faster.
-        if y === x
-            x = tiedrank_nan(x)
-            y = x
-        else
-            x, y = tiedrank_nan(x), tiedrank_nan(y)
-        end
-        C = cor_wrap(x, y)
-        return C
-    end
-end
-
-function _corspearman(x::AbstractMatrix, y::AbstractMatrix, C::AbstractMatrix,
-    skipmissing::Symbol)
-
-    symmetric = x === y
-
-    # Swap x and y for more efficient threaded loop.
-    if size(x, 2) < size(y, 2)
-        return collect(transpose(_corspearman(y, x, collect(transpose(C)), skipmissing)))
-    end
-
-    (m, nr), nc = size(x), size(y, 2)
-
-    sortpermsx = fill(0, (m, nr))
-    Threads.@threads for i in 1:nr
-        sortpermsx[:, i] .= sortperm(view(x, :, i))
-    end
-
-    sortpermsy = fill(0, (m, nc))
-    Threads.@threads for i in 1:nc
-        sortpermsy[:, i] .= sortperm(view(y, :, i))
-    end
-
-    int64 = Int64[]
-    fl64 = Float64[]
-    nmtx = nonmissingtype(eltype(x))[]
-    nmty = nonmissingtype(eltype(y))[]
-    alljs = (symmetric ? (2:nr) : (1:nr))
-
-    #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
-    Threads.@threads for thischunk in equal_sum_subsets(length(alljs), Threads.nthreads())
-
-        for k in thischunk
-
-            j = alljs[k]
-
-            inds = task_local_vector(:inds, int64, m)
-            spnmx = task_local_vector(:spnmx, int64, m)
-            spnmy = task_local_vector(:spnmy, int64, m)
-            nmx = task_local_vector(:nmx, nmtx, m)
-            nmy = task_local_vector(:nmy, nmty, m)
-            rksx = task_local_vector(:rksx, fl64, m)
-            rksy = task_local_vector(:rksy, fl64, m)
-
-            for i = 1:(symmetric ? j - 1 : nc)
-
-                C[j, i] = corspearman_kernel!(view(x, :, j), view(y, :, i), skipmissing,
-                    view(sortpermsx, :, j), view(sortpermsy, :, i), inds, spnmx, spnmy, nmx,
-                    nmy, rksx, rksy)
-                symmetric && (C[i, j] = C[j, i])
-            end
-        end
-    end
-
-    if symmetric
-        for i in axes(C, 1)
-            C[i, i] = 1.0
-        end
-    end
-
-    return C
+    return (pairwise(corspearman, eachcol(x), eachcol(y); skipmissing))
 end
 
 function corspearman(x::AbstractVector, y::AbstractVector; skipmissing::Symbol=:none)
@@ -219,6 +130,12 @@ function corspearman_kernel!(x, y, skipmissing::Symbol, sortpermx=sortperm(x), s
         end
         spnmy = view(spnmy, lb:nnm)
 
+        if nnm <= 1
+            return (NaN)
+        elseif any(isnan_safe, view(rksx, 1:nnm)) || any(isnan_safe, view(rksy, 1:nnm))
+            return NaN
+        end
+
         _tiedrank!(view(rksx, 1:nnm), nmx, spnmx)
         _tiedrank!(view(rksy, 1:nnm), nmy, spnmy)
 
@@ -227,14 +144,11 @@ function corspearman_kernel!(x, y, skipmissing::Symbol, sortpermx=sortperm(x), s
     else
         if length(x) <= 1
             return (NaN)
+        elseif skipmissing == :none && (missing isa eltype(x) || missing isa eltype(y)) &&
+               (any(ismissing, x) || any(ismissing, y))
+            return (missing)
         elseif any(isnan_safe, x) || any(isnan_safe, y)
             return NaN
-        elseif skipmissing == :none
-            if missing isa eltype(x) || missing isa eltype(y)
-                if any(ismissing, x) || any(ismissing, y)
-                    return (missing)
-                end
-            end
         end
 
         _tiedrank!(rksx, x, sortpermx)
