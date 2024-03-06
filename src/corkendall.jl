@@ -23,9 +23,10 @@ Uses multiple threads when either `x` or `y` is a matrix.
 """
 function corkendall(x::AbstractMatrix, y::AbstractMatrix=x;
     skipmissing::Symbol=:none)
-
     check_rankcor_args(x, y, skipmissing, true)
+    return(pairwise(corkendall,eachcol(x),eachcol(y);skipmissing))
 
+    #=
     missing_allowed = missing isa eltype(x) || missing isa eltype(y)
     nr, nc = size(x, 2), size(y, 2)
 
@@ -40,10 +41,14 @@ function corkendall(x::AbstractMatrix, y::AbstractMatrix=x;
     end
     # Use a function barrier because the type of C varies according to the value of
     # skipmissing.
-    return (_corkendall(x, y, C, skipmissing))
+   # return (_corkendall(x, y, C, skipmissing))
 
+    return _pairwise_threaded_loop!(skipmissing,corkendall,C,eachcol(x),eachcol(y),x===y)
+=#
 end
-
+#=
+#TODO this method no longer called
+#TODO move _pairwise_threaded_loop! relevant method to this file
 function _corkendall(x::AbstractMatrix, y::AbstractMatrix,
     C::AbstractMatrix, skipmissing::Symbol)
 
@@ -92,6 +97,7 @@ function _corkendall(x::AbstractMatrix, y::AbstractMatrix,
     end
     return C
 end
+=#
 
 function corkendall(x::AbstractVector, y::AbstractVector; skipmissing::Symbol=:none)
 

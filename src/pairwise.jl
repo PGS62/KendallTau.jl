@@ -55,8 +55,8 @@ presence `missing`, `NaN` or `Inf` entries.
 # Keyword arguments
 - `symmetric::Bool=false`: If `true`, `f` is only called to compute
   for the lower triangle of the matrix, and these values are copied
-  to fill the upper triangle. Only allowed when `y` is omitted.
-  Ignored (treated as `true`) when `f` is `cov`, `cor`, `corkendall` or `corspearman`.
+  to fill the upper triangle. Only allowed when `y` is omitted and ignored (taken as `true`)
+  if `f` is `cov`, `cor`, `corkendall` or `corspearman`.
 - `skipmissing::Symbol=:none`: If `:none` (the default), missing values
   in inputs are passed to `f` without any modification.
   Use `:pairwise` to skip entries with a `missing` value in either
@@ -180,18 +180,18 @@ function diag_is_one(f::Function, x, y)::Bool
     if f in (corkendall, corspearman, cor)
         if x === y
             return (true)
-        elseif length(x) == length(y)
-            res = true
-            for (elx, ely) in zip(x, y)
-                if !(isequal(elx, ely))
-                    res = false
-                    break
-                elseif f === cor && length(elx) == length(ely) == 0
-                    # Necessary to pass @test_throws pairwise(cor, [Int[]], [Int[]])
-                    res = false
-                    break
-                end
-            end
+            #   elseif length(x) == length(y)
+            #       res = true
+            #       for (elx, ely) in zip(x, y)
+            #           if !(isequal(elx, ely))
+            #               res = false
+            #               break
+            #           elseif f === cor && length(elx) == length(ely) == 0
+            #               # Necessary to pass @test_throws pairwise(cor, [Int[]], [Int[]])
+            #               res = false
+            #               break
+            #           end
+            #       end
         end
     end
     return (res)
@@ -406,6 +406,7 @@ promoted_type(x) = mapreduce(eltype, promote_type, x, init=Union{})
 promoted_nonmissingtype(x) = mapreduce(nonmissingtype ∘ eltype, promote_type, x, init=Union{})
 
 function _pairwise!(::Val{:listwise}, f, dest::AbstractMatrix, x, y, symmetric::Bool)
+
     check_vectors(x, y, :listwise)
     nminds = .!ismissing.(first(x))
     @inbounds for xi in Iterators.drop(x, 1)
@@ -419,10 +420,17 @@ function _pairwise!(::Val{:listwise}, f, dest::AbstractMatrix, x, y, symmetric::
 
     # Computing integer indices once for all vectors is faster
     nminds′ = findall(nminds)
-    return _pairwise!(Val(:none), f, dest,
-        [disallowmissing(view(xi, nminds′)) for xi in x],
-        [disallowmissing(view(yi, nminds′)) for yi in y],
-        symmetric)
+
+    if x === y
+        x′ = [disallowmissing(view(xi, nminds′)) for xi in x]
+        return _pairwise!(Val(:none), f, dest, x′, x′, symmetric)
+    else
+        return _pairwise!(Val(:none), f, dest,
+            [disallowmissing(view(xi, nminds′)) for xi in x],
+            [disallowmissing(view(yi, nminds′)) for yi in y],
+            symmetric)
+    end
+
 end
 
 function _pairwise!(f, dest::AbstractMatrix, x, y; symmetric::Bool=false,
@@ -489,8 +497,8 @@ presence `missing`, `NaN` or `Inf` entries.
 # Keyword arguments
 - `symmetric::Bool=false`: If `true`, `f` is only called to compute
   for the lower triangle of the matrix, and these values are copied
-  to fill the upper triangle. Only allowed when `y` is omitted.
-  Ignored (treated as `true`) when `f` is `cov`, `cor`, `corkendall` or `corspearman`.
+  to fill the upper triangle. Only allowed when `y` is omitted and ignored (taken as `true`)
+  if `f` is `cov`, `cor`, `corkendall` or `corspearman`.
 - `skipmissing::Symbol=:none`: If `:none` (the default), missing values
   in inputs are passed to `f` without any modification.
   Use `:pairwise` to skip entries with a `missing` value in either
