@@ -73,11 +73,84 @@ function check_rankcor_args(x, y, skipmissing, allowlistwise::Bool)
     end
 end
 
+function _pairwise_loop(skipmissing::Symbol, f::typeof(corkendall), dest::AbstractMatrix,
+    x, y, symmetric::Bool)
+
+    nr, nc = size(dest)
+    m = length(x) == 0 ? 0 : length(first(x))
+
+    # Swap x and y for more efficient threaded loop.
+    if nr < nc
+        dest′ = collect(transpose(dest))
+        _pairwise_loop(skipmissing, f, dest′, y, x, symmetric)
+        dest .= transpose(dest′)
+        return dest
+    end
+
+    intvec = Int[]
+    t = promoted_type(x)[]
+    u = promoted_type(y)[]
+    t′ = promoted_nonmissingtype(x)[]
+    u′ = promoted_nonmissingtype(y)[]
+
+    di1 = diag_is_one(f, x, y)
+    if di1
+        symmetric = true
+    end
+
+    alljs = (symmetric ? (2:nr) : (1:nr))
+
+    #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
+    Threads.@threads for thischunk in equal_sum_subsets(length(alljs), Threads.nthreads())
+
+        for k in thischunk
+            j = alljs[k]
+
+            sortedxj = task_local_vector(:sortedxj, t, m)
+            scratch_py = task_local_vector(:scratch_py, u, m)
+            yi = task_local_vector(:yi, u, m)
+            permx = task_local_vector(:permx, intvec, m)
+            # Ensuring missing is not an element type of scratch_sy, scratch_fx, scratch_fy
+            # gives improved performance.
+            scratch_sy = task_local_vector(:scratch_sy, u′, m)
+            scratch_fx = task_local_vector(:scratch_fx, t′, m)
+            scratch_fy = task_local_vector(:scratch_fy, t′, m)
+
+            sortperm!(permx, x[j])
+            @inbounds for k in eachindex(sortedxj)
+                sortedxj[k] = x[j][permx[k]]
+            end
+
+            for i = 1:(symmetric ? j - 1 : nc)
+                yi .= y[i]
+                dest[j, i] = corkendall_kernel!(sortedxj, yi, permx, skipmissing;
+                    scratch_py, scratch_sy, scratch_fx, scratch_fy)
+                symmetric && (dest[i, j] = dest[j, i])
+            end
+        end
+    end
+
+    if di1
+        if !(dest isa Matrix{Missing})
+            for i in axes(dest, 1)
+                dest[i, i] = 1.0
+            end
+        end
+    end
+
+    return dest
+
+end
+
 # Auxiliary functions for Kendall's rank correlation
 
 # Knight, William R. “A Computer Method for Calculating Kendall's Tau with Ungrouped Data.”
 # Journal of the American Statistical Association, vol. 61, no. 314, 1966, pp. 436–439.
 # JSTOR, www.jstor.org/stable/2282833.
+
+promoted_type(x) = mapreduce(eltype, promote_type, x, init=Union{})
+promoted_nonmissingtype(x) = mapreduce(nonmissingtype ∘ eltype, promote_type, x, init=Union{})
+
 """
     corkendall_kernel!(sortedx::AbstractVector, y::AbstractVector, skipmissing::Symbol;
     permx::AbstractVector{<:Integer},

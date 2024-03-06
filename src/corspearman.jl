@@ -27,7 +27,22 @@ function corspearman(x::AbstractMatrix, y::AbstractMatrix=x;
     skipmissing::Symbol=:none)
 
     check_rankcor_args(x, y, skipmissing, true)
-    return (pairwise(corspearman, eachcol(x), eachcol(y); skipmissing))
+
+    if skipmissing == :pairwise
+        return (pairwise(corspearman, eachcol(x), eachcol(y); skipmissing))
+    else
+        #Better performance this way
+        if skipmissing == :listwise && (missing isa eltype(x) || missing isa eltype(y))
+            x, y = handle_listwise(x, y)
+        end
+        if y === x
+            x = tiedrank_nan(x)
+            y = x
+        else
+            x, y = tiedrank_nan(x), tiedrank_nan(y)
+        end
+        return (cor_wrap(x, y))
+    end
 end
 
 function corspearman(x::AbstractVector, y::AbstractVector; skipmissing::Symbol=:none)
@@ -42,6 +57,79 @@ end
 
 function corspearman(x::AbstractVector, y::AbstractMatrix; skipmissing::Symbol=:none)
     return corspearman(reshape(x, (length(x), 1)), y; skipmissing)
+end
+
+function _pairwise_loop(skipmissing::Symbol, f::typeof(corspearman),
+    dest::AbstractMatrix, x, y, symmetric::Bool)
+
+    nr, nc = size(dest)
+    m = length(x) == 0 ? 0 : length(first(x))
+
+    # Swap x and y for more efficient threaded loop.
+    if nr < nc
+        dest′ = collect(transpose(dest))
+        _pairwise_loop(skipmissing, f, dest′, y, x, symmetric)
+        dest .= transpose(dest′)
+        return dest
+    end
+
+    sortpermsx = fill(0, (m, nr))
+    Threads.@threads for i in 1:nr
+        sortpermsx[:, i] .= sortperm(x[i])
+    end
+
+    sortpermsy = fill(0, (m, nc))
+    Threads.@threads for i in 1:nc
+        sortpermsy[:, i] .= sortperm(y[i])
+    end
+
+    int64 = Int64[]
+    fl64 = Float64[]
+    nmtx = promoted_nonmissingtype(x)[]
+    nmty = promoted_nonmissingtype(y)[]
+
+    di1 = diag_is_one(f, x, y)
+    if di1
+        symmetric = true
+    end
+
+    alljs = (symmetric ? (2:nr) : (1:nr))
+
+    #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
+    Threads.@threads for thischunk in equal_sum_subsets(length(alljs), Threads.nthreads())
+
+        for k in thischunk
+
+            j = alljs[k]
+
+            inds = task_local_vector(:inds, int64, m)
+            spnmx = task_local_vector(:spnmx, int64, m)
+            spnmy = task_local_vector(:spnmy, int64, m)
+            nmx = task_local_vector(:nmx, nmtx, m)
+            nmy = task_local_vector(:nmy, nmty, m)
+            rksx = task_local_vector(:rksx, fl64, m)
+            rksy = task_local_vector(:rksy, fl64, m)
+
+            for i = 1:(symmetric ? j - 1 : nc)
+
+                dest[j, i] = corspearman_kernel!(x[j], y[i], skipmissing,
+                    view(sortpermsx, :, j), view(sortpermsy, :, i), inds, spnmx, spnmy, nmx,
+                    nmy, rksx, rksy)
+                symmetric && (dest[i, j] = dest[j, i])
+            end
+        end
+    end
+
+    if di1
+        if !(dest isa Matrix{Missing})
+            for i in axes(dest, 1)
+                dest[i, i] = 1.0
+            end
+        end
+    end
+
+    return dest
+
 end
 
 """
