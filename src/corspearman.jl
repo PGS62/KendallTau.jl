@@ -24,7 +24,15 @@ Uses multiple threads when either `x` or `y` is a matrix and `skipmissing` is `:
 function corspearman(x::AbstractMatrix, y::AbstractMatrix=x;
     skipmissing::Symbol=:none)
     check_rankcor_args(x, y, skipmissing, true)
-    return pairwise(corspearman, eachcol(x), eachcol(y); skipmissing)
+    res = pairwise(corspearman, eachcol(x), eachcol(y); skipmissing)
+    #This is unfortunate. Spec (i.e. tests) for corspearman requires that x===y implies
+    # 1.0 on the diagonal, but pairwise can return a matrix of missings
+    if res isa Matrix{Missing}
+        if x === y
+            res = ifelse.(axes(res, 1) .== axes(res, 2)', 1.0, missing)
+        end
+    end
+    return res
 end
 
 function corspearman(x::AbstractVector, y::AbstractVector; skipmissing::Symbol=:none)

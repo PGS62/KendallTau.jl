@@ -4,6 +4,8 @@ using Random;
 x = rand(MersenneTwister(0), 1000, 10);
 xm = ifelse.(x .< 0.05, missing, x);
 
+do_StatsBase_times = false
+
 #compile...
 res_1 = KendallTau.corkendall(x)
 res_2 = KendallTau.corkendall(xm; skipmissing=:pairwise)
@@ -54,6 +56,7 @@ println("Julia Version $VERSION")
 @show typeof(x)
 @show size(xm)
 @show typeof(xm)
+@show do_StatsBase_times
 
 print("KendallTau.corkendall(x)                                                      ")
 @time res_1 = KendallTau.corkendall(x);
@@ -69,14 +72,16 @@ print("KendallTau.corkendall(xm; skipmissing=:none)                             
 @time res_6 = KendallTau.corkendall(xm; skipmissing=:none);
 print("KendallTau.pairwise(KendallTau.corkendall,eachcol(xm),skipmissing=:none)      ")
 @time res_7 = KendallTau.pairwise(KendallTau.corkendall, eachcol(xm), skipmissing=:none);
-print("StatsBase.corkendall(x)                                                       ")
-@time res_8 = StatsBase.corkendall(x);
-print("StatsBase.pairwise(KendallTau.corkendall,eachcol(xm); skipmissing=:pairwise)  ")
-@time res_9 = StatsBase.pairwise(KendallTau.corkendall, eachcol(xm); skipmissing=:pairwise);
-print("StatsBase.pairwise(KendallTau.corkendall,eachcol(xm); skipmissing=:listwise)  ")
-@time res_10 = StatsBase.pairwise(KendallTau.corkendall, eachcol(xm); skipmissing=:listwise);
-print("StatsBase.pairwise(KendallTau.corkendall,eachcol(xm),skipmissing=:none)       ")
-@time res_11 = StatsBase.pairwise(KendallTau.corkendall, eachcol(xm), skipmissing=:none);
+if do_StatsBase_times
+    print("StatsBase.corkendall(x)                                                       ")
+    @time res_8 = StatsBase.corkendall(x)
+    print("StatsBase.pairwise(KendallTau.corkendall,eachcol(xm); skipmissing=:pairwise)  ")
+    @time res_9 = StatsBase.pairwise(KendallTau.corkendall, eachcol(xm); skipmissing=:pairwise)
+    print("StatsBase.pairwise(KendallTau.corkendall,eachcol(xm); skipmissing=:listwise)  ")
+    @time res_10 = StatsBase.pairwise(KendallTau.corkendall, eachcol(xm); skipmissing=:listwise)
+    print("StatsBase.pairwise(KendallTau.corkendall,eachcol(xm),skipmissing=:none)       ")
+    @time res_11 = StatsBase.pairwise(KendallTau.corkendall, eachcol(xm), skipmissing=:none)
+end
 print("KendallTau.corspearman(x)                                                     ")
 @time res_12 = KendallTau.corspearman(x);
 print("KendallTau.corspearman(xm; skipmissing=:pairwise)                             ")
@@ -91,14 +96,16 @@ print("KendallTau.corspearman(xm; skipmissing=:none)                            
 @time res_17 = KendallTau.corspearman(xm; skipmissing=:none);
 print("KendallTau.pairwise(KendallTau.corspearman,eachcol(xm),skipmissing=:none)     ")
 @time res_18 = KendallTau.pairwise(KendallTau.corspearman, eachcol(xm), skipmissing=:none);
-print("StatsBase.corspearman(x)                                                      ")
-@time res_19 = StatsBase.corspearman(x);
-print("StatsBase.pairwise(KendallTau.corspearman,eachcol(xm); skipmissing=:pairwise) ")
-@time res_20 = StatsBase.pairwise(KendallTau.corspearman, eachcol(xm); skipmissing=:pairwise);
-print("StatsBase.pairwise(KendallTau.corspearman,eachcol(xm); skipmissing=:listwise) ")
-@time res_21 = StatsBase.pairwise(KendallTau.corspearman, eachcol(xm); skipmissing=:listwise);
-print("StatsBase.pairwise(KendallTau.corspearman,eachcol(xm),skipmissing=:none)      ")
-@time res_22 = StatsBase.pairwise(KendallTau.corspearman, eachcol(xm), skipmissing=:none);
+if do_StatsBase_times
+    print("StatsBase.corspearman(x)                                                      ")
+    @time res_19 = StatsBase.corspearman(x)
+    print("StatsBase.pairwise(KendallTau.corspearman,eachcol(xm); skipmissing=:pairwise) ")
+    @time res_20 = StatsBase.pairwise(KendallTau.corspearman, eachcol(xm); skipmissing=:pairwise)
+    print("StatsBase.pairwise(KendallTau.corspearman,eachcol(xm); skipmissing=:listwise) ")
+    @time res_21 = StatsBase.pairwise(KendallTau.corspearman, eachcol(xm); skipmissing=:listwise)
+    print("StatsBase.pairwise(KendallTau.corspearman,eachcol(xm),skipmissing=:none)      ")
+    @time res_22 = StatsBase.pairwise(KendallTau.corspearman, eachcol(xm), skipmissing=:none)
+end
 
 println("="^100)
 
@@ -252,7 +259,7 @@ StatsBase.pairwise(KendallTau.corspearman,eachcol(xm),skipmissing=:none)       5
 
 
 #Mmmm allocations back up for some cases.
-KendallTau.corspearman(xm; skipmissing=:none)  is slow
+KendallTau.corspearman(xm; skipmissing=:none) is slow
 ====================================================================================================
 Dates.now() = DateTime("2024-03-07T15:16:40.071")
 ENV["COMPUTERNAME"] = "DESKTOP-HSGAM5S"
@@ -284,6 +291,35 @@ StatsBase.corspearman(x)                                                       1
 StatsBase.pairwise(KendallTau.corspearman,eachcol(xm); skipmissing=:pairwise)  64.612480 seconds (18.00 M allocations: 108.969 GiB, 5.31% gc time)
 StatsBase.pairwise(KendallTau.corspearman,eachcol(xm); skipmissing=:listwise)   0.430488 seconds (11.00 M allocations: 683.182 MiB, 14.16% gc time)
 StatsBase.pairwise(KendallTau.corspearman,eachcol(xm),skipmissing=:none)       53.680572 seconds (13.00 M allocations: 99.632 GiB, 5.70% gc time)
+====================================================================================================
+
+
+#Mmmm allocations back up for some cases.
+KendallTau.corspearman(xm; skipmissing=:none) slowness corrected
+====================================================================================================
+Dates.now() = DateTime("2024-03-07T15:58:28.192")
+ENV["COMPUTERNAME"] = "DESKTOP-HSGAM5S"
+Julia Version 1.10.0
+Threads.nthreads() = 20
+size(x) = (1000, 1000)
+typeof(x) = Matrix{Float64}
+size(xm) = (1000, 1000)
+typeof(xm) = Matrix{Union{Missing, Float64}}
+do_StatsBase_times = false
+KendallTau.corkendall(x)                                                        1.175457 seconds (1.41 k allocations: 16.520 MiB, 0.00% compilation time)
+KendallTau.corkendall(xm; skipmissing=:pairwise)                                1.245588 seconds (1.41 k allocations: 16.225 MiB, 0.00% compilation time)
+KendallTau.pairwise(KendallTau.corkendall,eachcol(xm); skipmissing=:pairwise)   1.234423 seconds (1.41 k allocations: 16.225 MiB, 0.00% compilation time)
+KendallTau.corkendall(xm; skipmissing=:listwise)                                0.006139 seconds (2.41 k allocations: 11.857 MiB, 0.01% compilation time)
+KendallTau.pairwise(KendallTau.corkendall,eachcol(xm); skipmissing=:listwise)   0.005733 seconds (2.41 k allocations: 11.857 MiB, 0.01% compilation time)
+KendallTau.corkendall(xm; skipmissing=:none)                                    0.046176 seconds (1.42 k allocations: 17.179 MiB, 0.00% compilation time)
+KendallTau.pairwise(KendallTau.corkendall,eachcol(xm),skipmissing=:none)        0.046081 seconds (1.42 k allocations: 17.179 MiB, 0.00% compilation time)
+KendallTau.corspearman(x)                                                       0.032049 seconds (3.22 k allocations: 47.109 MiB, 0.00% compilation time)
+KendallTau.corspearman(xm; skipmissing=:pairwise)                               0.360727 seconds (3.36 M allocations: 137.098 MiB, 0.00% compilation time)
+KendallTau.pairwise(KendallTau.corspearman,eachcol(xm); skipmissing=:pairwise)  0.368137 seconds (3.36 M allocations: 137.098 MiB, 0.00% compilation time)
+KendallTau.corspearman(xm; skipmissing=:listwise)                               0.004652 seconds (2.21 k allocations: 19.440 MiB, 0.02% compilation time)
+KendallTau.pairwise(KendallTau.corspearman,eachcol(xm); skipmissing=:listwise)  0.005132 seconds (2.21 k allocations: 19.440 MiB, 0.02% compilation time)
+KendallTau.corspearman(xm; skipmissing=:none)                                   0.024284 seconds (3.22 k allocations: 17.408 MiB, 0.00% compilation time)
+KendallTau.pairwise(KendallTau.corspearman,eachcol(xm),skipmissing=:none)       0.023459 seconds (3.22 k allocations: 17.408 MiB, 0.00% compilation time)
 ====================================================================================================
 
 
