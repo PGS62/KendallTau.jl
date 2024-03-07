@@ -70,7 +70,6 @@ end
 
 function _pairwise_loop(skipmissing::Symbol, f::typeof(corspearman),
     dest::AbstractMatrix, x, y, symmetric::Bool)
-
     nr, nc = size(dest)
     m = length(x) == 0 ? 0 : length(first(x))
     symmetric = x === y
@@ -87,8 +86,8 @@ function _pairwise_loop(skipmissing::Symbol, f::typeof(corspearman),
                  (missing isa promoted_type(x) || missing isa promoted_type(y))
 
     tempx = save_ranks_or_perms(x, save_perms)
-    if symmetric
 
+    if symmetric
         if !save_perms
             dest .= cor_wrap(tempx, tempx)
             return dest
@@ -301,8 +300,10 @@ function cor_wrap(x, y)
     try
         C = cor(x, y)
         if symmetric
-            for i in axes(C, 1)
-                C[i, i] = 1.0
+            if !(C isa Matrix{Missing})
+                for i in axes(C, 1)
+                    C[i, i] = 1.0
+                end
             end
         end
         return C

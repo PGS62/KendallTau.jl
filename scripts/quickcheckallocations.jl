@@ -250,4 +250,45 @@ StatsBase.pairwise(KendallTau.corspearman,eachcol(xm); skipmissing=:listwise)   
 StatsBase.pairwise(KendallTau.corspearman,eachcol(xm),skipmissing=:none)       55.576783 seconds (13.00 M allocations: 99.632 GiB, 5.75% gc time)
 ====================================================================================================
 
+
+#Mmmm allocations back up for some cases.
+KendallTau.corspearman(xm; skipmissing=:none)  is slow
+====================================================================================================
+Dates.now() = DateTime("2024-03-07T15:16:40.071")
+ENV["COMPUTERNAME"] = "DESKTOP-HSGAM5S"
+Julia Version 1.10.0
+Threads.nthreads() = 20
+size(x) = (1000, 1000)
+typeof(x) = Matrix{Float64}
+size(xm) = (1000, 1000)
+typeof(xm) = Matrix{Union{Missing, Float64}}
+KendallTau.corkendall(x)                                                        1.180347 seconds (1.41 k allocations: 16.520 MiB, 0.00% compilation time)
+KendallTau.corkendall(xm; skipmissing=:pairwise)                                1.241702 seconds (1.41 k allocations: 16.225 MiB, 0.00% compilation time)
+KendallTau.pairwise(KendallTau.corkendall,eachcol(xm); skipmissing=:pairwise)   1.244402 seconds (1.41 k allocations: 16.225 MiB, 0.00% compilation time)
+KendallTau.corkendall(xm; skipmissing=:listwise)                                0.011684 seconds (2.41 k allocations: 11.857 MiB, 47.99% gc time, 0.01% compilation time)
+KendallTau.pairwise(KendallTau.corkendall,eachcol(xm); skipmissing=:listwise)   0.005517 seconds (2.41 k allocations: 11.857 MiB, 0.02% compilation time)
+KendallTau.corkendall(xm; skipmissing=:none)                                    0.054398 seconds (2.30 k allocations: 17.238 MiB, 0.51% compilation time)
+KendallTau.pairwise(KendallTau.corkendall,eachcol(xm),skipmissing=:none)        0.044981 seconds (1.42 k allocations: 17.179 MiB, 0.00% compilation time)
+StatsBase.corkendall(x)                                                        19.696329 seconds (3.00 M allocations: 17.090 GiB, 4.60% gc time)
+StatsBase.pairwise(KendallTau.corkendall,eachcol(xm); skipmissing=:pairwise)   80.622690 seconds (13.99 M allocations: 77.959 GiB, 3.36% gc time)
+StatsBase.pairwise(KendallTau.corkendall,eachcol(xm); skipmissing=:listwise)    0.012313 seconds (1.01 k allocations: 11.796 MiB)
+StatsBase.pairwise(KendallTau.corkendall,eachcol(xm),skipmissing=:none)        26.501152 seconds (8.99 M allocations: 65.922 GiB, 7.48% gc time)
+KendallTau.corspearman(x)                                                       0.032294 seconds (3.22 k allocations: 47.109 MiB, 0.00% compilation time)
+KendallTau.corspearman(xm; skipmissing=:pairwise)                               0.383985 seconds (3.36 M allocations: 137.098 MiB, 0.82% gc time, 0.00% compilation time)
+KendallTau.pairwise(KendallTau.corspearman,eachcol(xm); skipmissing=:pairwise)  0.374690 seconds (3.36 M allocations: 137.098 MiB, 0.00% compilation time)
+KendallTau.corspearman(xm; skipmissing=:listwise)                               0.003979 seconds (2.21 k allocations: 19.440 MiB, 0.02% compilation time)
+KendallTau.pairwise(KendallTau.corspearman,eachcol(xm); skipmissing=:listwise)  0.004783 seconds (2.21 k allocations: 19.440 MiB, 0.02% compilation time)
+KendallTau.corspearman(xm; skipmissing=:none)                                   8.483634 seconds (4.00 M allocations: 178.427 MiB, 0.41% gc time, 0.00% compilation time)
+KendallTau.pairwise(KendallTau.corspearman,eachcol(xm),skipmissing=:none)       8.639080 seconds (4.00 M allocations: 178.427 MiB, 0.24% gc time, 0.00% compilation time)
+StatsBase.corspearman(x)                                                       13.868207 seconds (3.50 M allocations: 11.441 GiB, 2.88% gc time)
+StatsBase.pairwise(KendallTau.corspearman,eachcol(xm); skipmissing=:pairwise)  64.612480 seconds (18.00 M allocations: 108.969 GiB, 5.31% gc time)
+StatsBase.pairwise(KendallTau.corspearman,eachcol(xm); skipmissing=:listwise)   0.430488 seconds (11.00 M allocations: 683.182 MiB, 14.16% gc time)
+StatsBase.pairwise(KendallTau.corspearman,eachcol(xm),skipmissing=:none)       53.680572 seconds (13.00 M allocations: 99.632 GiB, 5.70% gc time)
+====================================================================================================
+
+
+
+
+
+
 =#
