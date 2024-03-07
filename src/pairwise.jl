@@ -39,7 +39,7 @@ Reorder methods in pairwise.jl to match order in StatsBase pairwise.jl [DONE]
 =#
 
 function _pairwise!(::Val{:none}, f, dest::AbstractMatrix, x, y, symmetric::Bool)
-    return (_pairwise_loop(:none, f, dest, x, y, symmetric))
+    return _pairwise_loop(:none, f, dest, x, y, symmetric)
 end
 
 #Only called for :pairwise and :listwise, for :none elements of `x` an `y` are not required
@@ -73,7 +73,7 @@ end
 
 function _pairwise!(::Val{:pairwise}, f, dest::AbstractMatrix, x, y, symmetric::Bool)
     check_vectors(x, y, :pairwise)
-    return (_pairwise_loop(:pairwise, f, dest, x, y, symmetric))
+    return _pairwise_loop(:pairwise, f, dest, x, y, symmetric)
 end
 
 function _pairwise!(::Val{:listwise}, f, dest::AbstractMatrix, x, y, symmetric::Bool)

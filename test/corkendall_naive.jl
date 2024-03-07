@@ -43,7 +43,7 @@ function corkendall_naive(x::AbstractMatrix, y::AbstractMatrix=x;
     Function barrier: The type of C varies according to the value of skipmissing, so
     this function is type unstable. By contrast, _corkendall_naive is type stable.
     =#
-    return (_corkendall_naive(x, y; C, skipmissing))
+    return _corkendall_naive(x, y; C, skipmissing)
 
 end
 
@@ -78,7 +78,7 @@ function corkendall_naive(x::AbstractVector, y::AbstractVector; skipmissing::Sym
     check_rankcor_args(x, y, skipmissing, false)
 
     length(x) >= 2 || return NaN
-    x === y && return (1.0)
+    x === y && return 1.0
 
     x = copy(x)
 
@@ -112,7 +112,7 @@ function corkendall_naive_kernel!(x, y, skipmissing::Symbol)
     elseif skipmissing == :none
         if missing isa eltype(x) || missing isa eltype(y)
             if any(ismissing, x) || any(ismissing, y)
-                return (missing)
+                return missing
             end
         end
     end

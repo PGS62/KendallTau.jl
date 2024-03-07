@@ -32,7 +32,7 @@ function corkendall(x::AbstractVector, y::AbstractVector; skipmissing::Symbol=:n
     check_rankcor_args(x, y, skipmissing, false)
 
     length(x) >= 2 || return NaN
-    x === y && return (1.0)
+    x === y && return 1.0
 
     x = copy(x)
 
@@ -180,9 +180,9 @@ function corkendall_kernel!(sortedx::AbstractVector, y::AbstractVector,
 
     if skipmissing == :none
         if missing isa eltype(sortedx) && any(ismissing, sortedx)
-            return (missing)
+            return missing
         elseif missing isa eltype(y) && any(ismissing, y)
-            return (missing)
+            return missing
         end
     end
 
@@ -447,7 +447,7 @@ function equal_sum_subsets(n::Int, num_subsets::Int)::Vector{Vector{Int}}
             writeto += scanup ? 1 : -1
         end
     end
-    return (subsets)
+    return subsets
 end
 
 #isnan_safe required for corkendall and corspearman to accept vectors whose element type
@@ -465,5 +465,5 @@ end
 """
 function task_local_vector(key::Symbol, similarto::AbstractArray{V}, m::Int)::Vector{V} where {V}
     haskey(task_local_storage(), key) || task_local_storage(key, similar(similarto, m))
-    return (task_local_storage(key))
+    return task_local_storage(key)
 end

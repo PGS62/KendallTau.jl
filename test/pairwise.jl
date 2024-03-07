@@ -43,9 +43,12 @@ arbitrary_fun(x, y) = cor(x, y)
         @test res isa Matrix{Float64}
         res2 = zeros(AbstractFloat, size(res))
         @test pairwise!(f, res2, Any[[1.0, 2.0, 3.0], [1.0f0, 3.0f0, 10.5f0]]) === res2
-        @test res == res2 ==
-              [f(xi, yi) for xi in ([1.0, 2.0, 3.0], [1.0f0, 3.0f0, 10.5f0]),
-               yi in ([1.0, 2.0, 3.0], [1.0f0, 3.0f0, 10.5f0])]
+
+        res3 = [f(xi, yi) for xi in ([1.0, 2.0, 3.0], [1.0f0, 3.0f0, 10.5f0]),
+                yi in ([1.0, 2.0, 3.0], [1.0f0, 3.0f0, 10.5f0])]
+        @test res == res2
+        @test all(isapprox.(res2, res3))
+
         @test res isa Matrix{Float64}
 
         @inferred pairwise(f, x, y)
@@ -105,7 +108,7 @@ arbitrary_fun(x, y) = cor(x, y)
         # Use myskipmissings rather than skipmissings to avoid deprecation warning
         function myskipmissings(x, y)
             which = @. !(ismissing(x) || ismissing(y))
-            return (x[which], y[which])
+            return x[which], y[which]
         end
 
         #@test isapprox(res, [f(collect.(skipmissings(xi, yi))...) for xi in xm, yi in ym],
@@ -331,7 +334,7 @@ end
 @testset "pairwise against inputs with non-numeric elements" begin
     for f in (corkendall, corspearman)
         x = [["a", "b", "c"], ["c", "b", "a"]]
-        @test pairwise(f, x) == [1.0 -1.0; -1.0 1.0]
+        @test pairwise(f, x) ≈ [1.0 -1.0; -1.0 1.0]
     end
 end
 

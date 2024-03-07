@@ -1,7 +1,7 @@
 module KendallTau
 using StatsBase: cor, cov
 using Missings: disallowmissing
-import StatsBase: _tiedrank! #TODO Remove this line on porting to StatsBase
+import StatsBase: _tiedrank!, tiedrank #TODO Remove this line on porting to StatsBase
 
 include("corkendall.jl")
 include("corkendall_fromfile.jl")

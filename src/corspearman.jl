@@ -23,24 +23,8 @@ Uses multiple threads when either `x` or `y` is a matrix and `skipmissing` is `:
 """
 function corspearman(x::AbstractMatrix, y::AbstractMatrix=x;
     skipmissing::Symbol=:none)
-
     check_rankcor_args(x, y, skipmissing, true)
-
-    if skipmissing == :pairwise
-        return (pairwise(corspearman, eachcol(x), eachcol(y); skipmissing))
-    else
-        #Better performance this way
-        if skipmissing == :listwise && (missing isa eltype(x) || missing isa eltype(y))
-            x, y = handle_listwise(x, y)
-        end
-        if y === x
-            x = tiedrank_nan(x)
-            y = x
-        else
-            x, y = tiedrank_nan(x), tiedrank_nan(y)
-        end
-        return (cor_wrap(x, y))
-    end
+    return pairwise(corspearman, eachcol(x), eachcol(y); skipmissing)
 end
 
 function corspearman(x::AbstractVector, y::AbstractVector; skipmissing::Symbol=:none)
@@ -57,11 +41,39 @@ function corspearman(x::AbstractVector, y::AbstractMatrix; skipmissing::Symbol=:
     return corspearman(reshape(x, (length(x), 1)), y; skipmissing)
 end
 
+function save_ranks_or_perms(x, save_perms)
+
+    m = length(x) == 0 ? 0 : length(first(x))
+    nc = length(x)
+    int64 = Int64[]
+    temp = Array{Union{Missing,Int,Float64}}(undef, m, nc)
+
+    Threads.@threads for i in 1:nc
+        ints = task_local_vector(:ints, int64, m)
+
+        if save_perms
+            sortperm!(ints, x[i])
+            temp[:, i] .= ints
+        else
+            if any(isnan_safe, x[i])
+                temp[:, i] .= NaN
+            elseif any(ismissing, x[i])
+                temp[:, i] .= missing
+            else
+                sortperm!(ints, x[i])
+                _tiedrank!(view(temp, :, i), x[i], ints)
+            end
+        end
+    end
+    return temp
+end
+
 function _pairwise_loop(skipmissing::Symbol, f::typeof(corspearman),
     dest::AbstractMatrix, x, y, symmetric::Bool)
 
     nr, nc = size(dest)
     m = length(x) == 0 ? 0 : length(first(x))
+    symmetric = x === y
 
     # Swap x and y for more efficient threaded loop.
     if nr < nc
@@ -71,28 +83,31 @@ function _pairwise_loop(skipmissing::Symbol, f::typeof(corspearman),
         return dest
     end
 
-    sortpermsx = fill(0, (m, nr))
-    Threads.@threads for i in 1:nr
-        sortpermsx[:, i] .= sortperm(x[i])
+    save_perms = skipmissing == :pairwise &&
+                 (missing isa promoted_type(x) || missing isa promoted_type(y))
+
+    tempx = save_ranks_or_perms(x, save_perms)
+    if symmetric
+
+        if !save_perms
+            dest .= cor_wrap(tempx, tempx)
+            return dest
+        end
+        tempy = tempx
+    else
+        tempy = save_ranks_or_perms(y, save_perms)
+        if !save_perms
+            dest .= cor_wrap(tempx, tempy)
+            return dest
+        end
     end
 
-    sortpermsy = fill(0, (m, nc))
-    Threads.@threads for i in 1:nc
-        sortpermsy[:, i] .= sortperm(y[i])
-    end
+    alljs = (symmetric ? (2:nr) : (1:nr))
 
     int64 = Int64[]
     fl64 = Float64[]
     nmtx = promoted_nonmissingtype(x)[]
     nmty = promoted_nonmissingtype(y)[]
-
-    di1 = diag_is_one(f, x, y)
-    if di1
-        symmetric = true
-    end
-
-    alljs = (symmetric ? (2:nr) : (1:nr))
-
     #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
     Threads.@threads for thischunk in equal_sum_subsets(length(alljs), Threads.nthreads())
 
@@ -111,14 +126,14 @@ function _pairwise_loop(skipmissing::Symbol, f::typeof(corspearman),
             for i = 1:(symmetric ? j - 1 : nc)
 
                 dest[j, i] = corspearman_kernel!(x[j], y[i], skipmissing,
-                    view(sortpermsx, :, j), view(sortpermsy, :, i), inds, spnmx, spnmy, nmx,
+                    view(tempx, :, j), view(tempy, :, i), inds, spnmx, spnmy, nmx,
                     nmy, rksx, rksy)
                 symmetric && (dest[i, j] = dest[j, i])
             end
         end
     end
 
-    if di1
+    if symmetric
         if !(dest isa Matrix{Missing})
             for i in axes(dest, 1)
                 dest[i, i] = 1.0
@@ -189,7 +204,7 @@ function corspearman_kernel!(x, y, skipmissing::Symbol, sortpermx=sortperm(x), s
 
         nnm = k - 1
         if nnm <= 1
-            return (NaN)
+            return NaN
         end
         nmx = view(nmx, lb:nnm)
         nmy = view(nmy, lb:nnm)
@@ -217,29 +232,27 @@ function corspearman_kernel!(x, y, skipmissing::Symbol, sortpermx=sortperm(x), s
         spnmy = view(spnmy, lb:nnm)
 
         if nnm <= 1
-            return (NaN)
-        elseif any(isnan_safe, view(rksx, 1:nnm)) || any(isnan_safe, view(rksy, 1:nnm))
             return NaN
         end
 
         _tiedrank!(view(rksx, 1:nnm), nmx, spnmx)
         _tiedrank!(view(rksy, 1:nnm), nmy, spnmy)
 
-        return (cor(view(rksx, 1:nnm), view(rksy, 1:nnm)))
+        return cor(view(rksx, 1:nnm), view(rksy, 1:nnm))
 
     else
         if length(x) <= 1
-            return (NaN)
+            return NaN
         elseif skipmissing == :none && (missing isa eltype(x) || missing isa eltype(y)) &&
                (any(ismissing, x) || any(ismissing, y))
-            return (missing)
+            return missing
         elseif any(isnan_safe, x) || any(isnan_safe, y)
             return NaN
         end
 
         _tiedrank!(rksx, x, sortpermx)
         _tiedrank!(rksy, y, sortpermy)
-        return (cor(rksx, rksy))
+        return cor(rksx, rksy)
     end
 end
 
@@ -280,9 +293,9 @@ function cor_wrap(x, y)
     if size(x, 1) < 2
         nr, nc = size(x, 2), size(y, 2)
         if symmetric
-            return (ifelse.(1:nr .== (1:nc)', 1.0, NaN))
+            return ifelse.(1:nr .== (1:nc)', 1.0, NaN)
         else
-            return (fill(NaN, nr, nc))
+            return fill(NaN, nr, nc)
         end
     end
     try
@@ -292,7 +305,7 @@ function cor_wrap(x, y)
                 C[i, i] = 1.0
             end
         end
-        return (C)
+        return C
     catch
         nr, nc = size(x, 2), size(y, 2)
         if missing isa eltype(x) || missing isa eltype(y)
@@ -307,7 +320,7 @@ function cor_wrap(x, y)
                 symmetric && (C[i, j] = C[j, i])
             end
         end
-        return (C)
+        return C
     end
 end
 
