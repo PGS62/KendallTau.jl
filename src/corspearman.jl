@@ -49,7 +49,35 @@ function corspearman(x::AbstractVector, y::AbstractMatrix; skipmissing::Symbol=:
     return corspearman(reshape(x, (length(x), 1)), y; skipmissing)
 end
 
-function save_ranks_or_perms(x, save_perms)
+
+
+"""
+    save_perms(x)
+
+Given `x`, a vector of vectors, return a matrix who's ith column is the sort permutation of
+the ith element of x.
+"""
+function save_perms(x)
+    m = length(x) == 0 ? 0 : length(first(x))
+    nc = length(x)
+    int64 = Int64[]
+    temp = Array{Int}(undef, m, nc)
+
+    Threads.@threads for i in 1:nc
+        ints = task_local_vector(:ints, int64, m)
+        sortperm!(ints, x[i])
+        temp[:, i] .= ints
+    end
+    return temp
+end
+
+"""
+    save_ranks(x)
+
+Given `x`, a vector of vectors, return a matrix such that the (Pearson) correlaton between
+columns of the return is the Spearman rank correlation between the elements of x.
+"""
+function save_ranks(x)
 
     m = length(x) == 0 ? 0 : length(first(x))
     nc = length(x)
@@ -59,22 +87,18 @@ function save_ranks_or_perms(x, save_perms)
     Threads.@threads for i in 1:nc
         ints = task_local_vector(:ints, int64, m)
 
-        if save_perms
-            sortperm!(ints, x[i])
-            temp[:, i] .= ints
+        if any(isnan_safe, x[i])
+            temp[:, i] .= NaN
+        elseif any(ismissing, x[i])
+            temp[:, i] .= missing
         else
-            if any(isnan_safe, x[i])
-                temp[:, i] .= NaN
-            elseif any(ismissing, x[i])
-                temp[:, i] .= missing
-            else
-                sortperm!(ints, x[i])
-                _tiedrank!(view(temp, :, i), x[i], ints)
-            end
+            sortperm!(ints, x[i])
+            _tiedrank!(view(temp, :, i), x[i], ints)
         end
     end
     return temp
 end
+
 
 function _pairwise_loop(skipmissing::Symbol, f::typeof(corspearman),
     dest::AbstractMatrix, x, y, symmetric::Bool)
@@ -90,20 +114,17 @@ function _pairwise_loop(skipmissing::Symbol, f::typeof(corspearman),
         return dest
     end
 
-    save_perms = skipmissing == :pairwise &&
-                 (missing isa promoted_type(x) || missing isa promoted_type(y))
-
-    tempx = save_ranks_or_perms(x, save_perms)
+    tempx = skipmissing==:pairwise ? save_perms(x) : save_ranks(x)
 
     if symmetric
-        if !save_perms
+        if skipmissing!=:pairwise
             dest .= cor_wrap(tempx, tempx)
             return dest
         end
         tempy = tempx
     else
-        tempy = save_ranks_or_perms(y, save_perms)
-        if !save_perms
+        tempy = skipmissing==:pairwise ? save_perms(y) : save_ranks(y)
+        if skipmissing!=:pairwise
             dest .= cor_wrap(tempx, tempy)
             return dest
         end
