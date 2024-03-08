@@ -39,7 +39,7 @@ Reorder methods in pairwise.jl to match order in StatsBase pairwise.jl [DONE]
 =#
 
 function _pairwise!(::Val{:none}, f, dest::AbstractMatrix, x, y, symmetric::Bool)
-    return _pairwise_loop(:none, f, dest, x, y, symmetric)
+    return _pairwise_loop(Val(:none), f, dest, x, y, symmetric)
 end
 
 #Only called for :pairwise and :listwise, for :none elements of `x` an `y` are not required
@@ -73,7 +73,7 @@ end
 
 function _pairwise!(::Val{:pairwise}, f, dest::AbstractMatrix, x, y, symmetric::Bool)
     check_vectors(x, y, :pairwise)
-    return _pairwise_loop(:pairwise, f, dest, x, y, symmetric)
+    return _pairwise_loop(Val(:pairwise), f, dest, x, y, symmetric)
 end
 
 function _pairwise!(::Val{:listwise}, f, dest::AbstractMatrix, x, y, symmetric::Bool)
@@ -328,7 +328,7 @@ function diag_is_one(f::Function, x, y)::Bool
     return (f in (corkendall, corspearman, cor)) && x === y
 end
 
-function _pairwise_loop(skipmissing::Symbol, f, dest::AbstractMatrix, x, y, symmetric::Bool)
+function _pairwise_loop(::Val{skipmissing}, f, dest::AbstractMatrix, x, y, symmetric::Bool) where {skipmissing}
 
     nr, nc = size(dest)
     m = length(x) == 0 ? 0 : length(first(x))
@@ -336,7 +336,7 @@ function _pairwise_loop(skipmissing::Symbol, f, dest::AbstractMatrix, x, y, symm
     # Swap x and y for more efficient threaded loop.
     if nr < nc
         dest′ = collect(transpose(dest))
-        _pairwise_loop(skipmissing, f, dest′, y, x, symmetric)
+        _pairwise_loop(Val(skipmissing), f, dest′, y, x, symmetric)
         dest .= transpose(dest′)
         return dest
     end

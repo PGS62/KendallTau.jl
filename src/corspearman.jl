@@ -49,8 +49,6 @@ function corspearman(x::AbstractVector, y::AbstractMatrix; skipmissing::Symbol=:
     return corspearman(reshape(x, (length(x), 1)), y; skipmissing)
 end
 
-
-
 """
     save_perms(x)
 
@@ -99,9 +97,27 @@ function save_ranks(x)
     return temp
 end
 
-
-function _pairwise_loop(skipmissing::Symbol, f::typeof(corspearman),
+function _pairwise_loop(::Val{:none}, f::typeof(corspearman),
     dest::AbstractMatrix, x, y, symmetric::Bool)
+
+    symmetric = x === y
+
+    tempx = save_ranks(x)
+
+    if symmetric
+        dest .= cor_wrap(tempx, tempx)
+    else
+        tempy = save_ranks(y)
+        dest .= cor_wrap(tempx, tempy)
+    end
+
+    return dest
+
+end
+
+function _pairwise_loop(::Val{:pairwise}, f::typeof(corspearman),
+    dest::AbstractMatrix, x, y, symmetric::Bool)
+
     nr, nc = size(dest)
     m = length(x) == 0 ? 0 : length(first(x))
     symmetric = x === y
@@ -109,26 +125,13 @@ function _pairwise_loop(skipmissing::Symbol, f::typeof(corspearman),
     # Swap x and y for more efficient threaded loop.
     if nr < nc
         dest′ = collect(transpose(dest))
-        _pairwise_loop(skipmissing, f, dest′, y, x, symmetric)
+        _pairwise_loop(Val(:pairwise), f, dest′, y, x, symmetric)
         dest .= transpose(dest′)
         return dest
     end
 
-    tempx = skipmissing==:pairwise ? save_perms(x) : save_ranks(x)
-
-    if symmetric
-        if skipmissing!=:pairwise
-            dest .= cor_wrap(tempx, tempx)
-            return dest
-        end
-        tempy = tempx
-    else
-        tempy = skipmissing==:pairwise ? save_perms(y) : save_ranks(y)
-        if skipmissing!=:pairwise
-            dest .= cor_wrap(tempx, tempy)
-            return dest
-        end
-    end
+    tempx = save_perms(x)
+    tempy = symmetric ? tempx : save_perms(y)
 
     alljs = (symmetric ? (2:nr) : (1:nr))
 
@@ -153,7 +156,7 @@ function _pairwise_loop(skipmissing::Symbol, f::typeof(corspearman),
 
             for i = 1:(symmetric ? j - 1 : nc)
 
-                dest[j, i] = corspearman_kernel!(x[j], y[i], skipmissing,
+                dest[j, i] = corspearman_kernel!(x[j], y[i], :pairwise,
                     view(tempx, :, j), view(tempy, :, i), inds, spnmx, spnmy, nmx,
                     nmy, rksx, rksy)
                 symmetric && (dest[i, j] = dest[j, i])

@@ -73,8 +73,8 @@ function check_rankcor_args(x, y, skipmissing, allowlistwise::Bool)
     end
 end
 
-function _pairwise_loop(skipmissing::Symbol, f::typeof(corkendall), dest::AbstractMatrix,
-    x, y, symmetric::Bool)
+function _pairwise_loop(::Val{skipmissing}, f::typeof(corkendall), dest::AbstractMatrix,
+    x, y, symmetric::Bool) where {skipmissing}
 
     nr, nc = size(dest)
     m = length(x) == 0 ? 0 : length(first(x))
@@ -82,7 +82,7 @@ function _pairwise_loop(skipmissing::Symbol, f::typeof(corkendall), dest::Abstra
     # Swap x and y for more efficient threaded loop.
     if nr < nc
         dest′ = collect(transpose(dest))
-        _pairwise_loop(skipmissing, f, dest′, y, x, symmetric)
+        _pairwise_loop(Val(skipmissing), f, dest′, y, x, symmetric)
         dest .= transpose(dest′)
         return dest
     end
