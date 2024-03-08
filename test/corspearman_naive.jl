@@ -1,6 +1,7 @@
 using KendallTau: check_rankcor_args, handle_listwise, handle_pairwise
+using StatsBase: tiedrank, cor
 
-function corkendall_naive(x::AbstractMatrix, y::AbstractMatrix=x;
+function corspearman_naive(x::AbstractMatrix, y::AbstractMatrix=x;
     skipmissing::Symbol=:none)
 
     check_rankcor_args(x, y, skipmissing, true)
@@ -17,11 +18,11 @@ function corkendall_naive(x::AbstractMatrix, y::AbstractMatrix=x;
     else
         C = ones(Float64, nr, nc)
     end
-    return _corkendall_naive(x, y; C, skipmissing)
+    return _corspearman_naive(x, y; C, skipmissing)
 
 end
 
-function _corkendall_naive(x::AbstractMatrix, y::AbstractMatrix=x; skipmissing::Symbol=:none, C)
+function _corspearman_naive(x::AbstractMatrix, y::AbstractMatrix=x; skipmissing::Symbol=:none, C)
 
     symmetric = x === y
 
@@ -37,7 +38,7 @@ function _corkendall_naive(x::AbstractMatrix, y::AbstractMatrix=x; skipmissing::
 
     for j = (symmetric ? 2 : 1):nr
         for i = 1:(symmetric ? j - 1 : nc)
-            C[j, i] = corkendall_naive_kernel!(view(x, :, j), view(y, :, i), skipmissing)
+            C[j, i] = corspearman_naive_kernel!(view(x, :, j), view(y, :, i), skipmissing)
             symmetric && (C[i, j] = C[j, i])
         end
     end
@@ -45,7 +46,7 @@ function _corkendall_naive(x::AbstractMatrix, y::AbstractMatrix=x; skipmissing::
 
 end
 
-function corkendall_naive(x::AbstractVector, y::AbstractVector; skipmissing::Symbol=:none)
+function corspearman_naive(x::AbstractVector, y::AbstractVector; skipmissing::Symbol=:none)
 
     check_rankcor_args(x, y, skipmissing, false)
 
@@ -59,24 +60,25 @@ function corkendall_naive(x::AbstractVector, y::AbstractVector; skipmissing::Sym
         length(x) >= 2 || return NaN
     end
 
-    return corkendall_naive_kernel!(x, y, skipmissing)
+    return corspearman_naive_kernel!(x, y, skipmissing)
 end
 
-function corkendall_naive(x::AbstractMatrix, y::AbstractVector; skipmissing::Symbol=:none)
-    return vec(corkendall_naive(x, reshape(y, (length(y), 1)); skipmissing))
+function corspearman_naive(x::AbstractMatrix, y::AbstractVector; skipmissing::Symbol=:none)
+    return corspearman_naive(x, reshape(y, (length(y), 1)); skipmissing)
 end
 
-function corkendall_naive(x::AbstractVector, y::AbstractMatrix; skipmissing::Symbol=:none)
-    return corkendall_naive(reshape(x, (length(x), 1)), y; skipmissing)
+function corspearman_naive(x::AbstractVector, y::AbstractMatrix; skipmissing::Symbol=:none)
+    return corspearman_naive(reshape(x, (length(x), 1)), y; skipmissing)
 end
 
-function corkendall_naive_kernel!(x, y, skipmissing::Symbol)
+function corspearman_naive_kernel!(x, y, skipmissing::Symbol)
 
     length(x) >= 2 || return NaN
 
     if skipmissing == :pairwise
         if missing isa eltype(x) || missing isa eltype(y)
             x, y = handle_pairwise(x, y)
+            length(x) >= 2 || return NaN
         end
     elseif skipmissing == :none
         if missing isa eltype(x) || missing isa eltype(y)
@@ -86,42 +88,9 @@ function corkendall_naive_kernel!(x, y, skipmissing::Symbol)
         end
     end
 
-    n = length(x)
-    if n <= 1
-        return NaN
+    if any(KendallTau.isnan_safe, x) || any(KendallTau.isnan_safe, y)
+        return (NaN)
     end
-    npairs = div(n * (n - 1), 2)
 
-    numerator, tiesx, tiesy = 0, 0, 0
-    for i in 2:n, j in 1:(i-1)
-        k = signdiff(x[i], x[j]) * signdiff(y[i], y[j])
-        if k == 0
-            if x[i] == x[j]
-                tiesx += 1
-            end
-            if y[i] == y[j]
-                tiesy += 1
-            end
-        else
-            numerator += k
-        end
-    end
-    denominator = sqrt(float(npairs - tiesx) * float(npairs - tiesy))
-    numerator / denominator
-end
-
-function signdiff(a::T, b::U) where {T<:Real,U<:Real}
-    sign(a - b)
-end
-
-function signdiff(a, b)
-    if a < b
-        return -1
-    elseif a > b
-        return 1
-    elseif a == b
-        return 0
-    else
-        throw("Cannot compare inputs")
-    end
+    return cor(tiedrank(x), tiedrank(y))
 end

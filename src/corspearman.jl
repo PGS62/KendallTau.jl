@@ -99,7 +99,7 @@ end
 
 function _pairwise_loop(::Val{:none}, f::typeof(corspearman),
     dest::AbstractMatrix, x, y, symmetric::Bool)
-@show typeof(dest)
+
     symmetric = x === y
 
     tempx = ranks_matrix(x)
@@ -110,7 +110,7 @@ function _pairwise_loop(::Val{:none}, f::typeof(corspearman),
         tempy = ranks_matrix(y)
         dest .= cor_wrap(tempx, tempy)
     end
-@show typeof(dest)
+
     return dest
 
 end

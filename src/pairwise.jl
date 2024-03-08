@@ -319,16 +319,6 @@ function pairwise(f, x, y=x; symmetric::Bool=false, skipmissing::Symbol=:none)
     return _pairwise(Val(skipmissing), f, x, y, symmetric)
 end
 
-"""
-    diag_is_one(f::Function, x, y)::Bool
-
-Should the diagonal of the matrix returned by `pairwise` be set to 1.0, without calling `f`
-for the those diagonal elements?
-"""
-function diag_is_one(f::Function, x, y)::Bool
-    return (f in (corkendall, corspearman, cor)) && x === y
-end
-
 function _pairwise_loop(::Val{skipmissing}, f, dest::AbstractMatrix, x, y, symmetric::Bool) where {skipmissing}
 
     nr, nc = size(dest)
@@ -347,7 +337,7 @@ function _pairwise_loop(::Val{skipmissing}, f, dest::AbstractMatrix, x, y, symme
         nmty = promoted_nonmissingtype(y)[]
     end
 
-    di1 = diag_is_one(f, x, y)
+    di1 = (f in (corkendall, corspearman, cor)) && x === y
     if di1
         symmetric = true
     end

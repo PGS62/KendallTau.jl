@@ -1,4 +1,4 @@
-using KendallTau
+using KendallTau, Random
 using Test
 
 @testset "rank_correlation_auxiliary_fns" begin

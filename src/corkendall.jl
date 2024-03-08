@@ -24,7 +24,7 @@ Uses multiple threads when either `x` or `y` is a matrix.
 function corkendall(x::AbstractMatrix, y::AbstractMatrix=x;
     skipmissing::Symbol=:none)
     check_rankcor_args(x, y, skipmissing, true)
-    return(pairwise(corkendall,eachcol(x),eachcol(y);skipmissing))
+    return (pairwise(corkendall, eachcol(x), eachcol(y); skipmissing))
 end
 
 function corkendall(x::AbstractVector, y::AbstractVector; skipmissing::Symbol=:none)
@@ -93,10 +93,7 @@ function _pairwise_loop(::Val{skipmissing}, f::typeof(corkendall), dest::Abstrac
     t′ = promoted_nonmissingtype(x)[]
     u′ = promoted_nonmissingtype(y)[]
 
-    di1 = diag_is_one(f, x, y)
-    if di1
-        symmetric = true
-    end
+    symmetric = x === y
 
     alljs = (symmetric ? (2:nr) : (1:nr))
 
@@ -130,7 +127,7 @@ function _pairwise_loop(::Val{skipmissing}, f::typeof(corkendall), dest::Abstrac
         end
     end
 
-    if di1
+    if symmetric
         if !(dest isa Matrix{Missing})
             for i in axes(dest, 1)
                 dest[i, i] = 1.0
