@@ -290,3 +290,28 @@ end
         end
     end
 end
+
+
+@testset "corkendall and corspearman allocations" begin
+
+    Random.seed!(1)
+    x = rand(1000, 10)
+    xm = ifelse.(x .< 0.1, missing, x)
+    #compile
+    corkendall(x)
+    corkendall(xm, skipmissing=:listwise)
+    corkendall(xm, skipmissing=:pairwise)
+    corspearman(x)
+    corspearman(xm, skipmissing=:listwise)
+    corspearman(xm, skipmissing=:pairwise)
+    x = rand(1000, 100)
+    xm = ifelse.(x .< 0.01, missing, x)
+    #Allocations vary with number of threads. The 1.5 factor below is a "safety margin"
+    @test (@allocated corkendall(x)) < (889_696 + Threads.nthreads() * 58_044) * 1.5
+    @test (@allocated corkendall(xm, skipmissing=:listwise)) < (1_116_400 + Threads.nthreads() * 22_172) * 1.5
+    @test (@allocated corkendall(xm, skipmissing=:pairwise)) < (884_064 + Threads.nthreads() * 61_116) * 1.5
+    @test (@allocated corspearman(x)) < (3484288 + Threads.nthreads() * 9128) * 1.5
+    @test (@allocated corspearman(xm, skipmissing=:listwise)) < (2_093_568 + Threads.nthreads() * 3_992) * 1.5
+    @test (@allocated corspearman(xm, skipmissing=:pairwise)) < (1_692_208 + Threads.nthreads() * 67_188) * 1.5
+
+end

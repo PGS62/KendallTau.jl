@@ -4,7 +4,7 @@ using Random;
 x = rand(MersenneTwister(0), 1000, 10);
 xm = ifelse.(x .< 0.05, missing, x);
 
-do_StatsBase_times = true
+do_StatsBase_times = false
 
 #compile...
 res_1 = KendallTau.corkendall(x)

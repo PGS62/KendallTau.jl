@@ -36,6 +36,7 @@ Consider using enumerate in function _pairwise_loop.
 test for pairwise handling of non-numeric element types for rank correlations [DONE]
 Performance of corspearman seems bad. Worse than corkendall!    [FIXED]
 Reorder methods in pairwise.jl to match order in StatsBase pairwise.jl [DONE]
+Add tests for size of allocations. [DONE]
 =#
 
 function _pairwise!(::Val{:none}, f, dest::AbstractMatrix, x, y, symmetric::Bool)

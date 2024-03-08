@@ -50,12 +50,12 @@ function corspearman(x::AbstractVector, y::AbstractMatrix; skipmissing::Symbol=:
 end
 
 """
-    save_perms(x)
+    sortperm_matrix(x)
 
 Given `x`, a vector of vectors, return a matrix who's ith column is the sort permutation of
 the ith element of x.
 """
-function save_perms(x)
+function sortperm_matrix(x)
     m = length(x) == 0 ? 0 : length(first(x))
     nc = length(x)
     int64 = Int64[]
@@ -70,12 +70,12 @@ function save_perms(x)
 end
 
 """
-    save_ranks(x)
+    ranks_matrix(x)
 
 Given `x`, a vector of vectors, return a matrix such that the (Pearson) correlaton between
 columns of the return is the Spearman rank correlation between the elements of x.
 """
-function save_ranks(x)
+function ranks_matrix(x)
 
     m = length(x) == 0 ? 0 : length(first(x))
     nc = length(x)
@@ -99,18 +99,18 @@ end
 
 function _pairwise_loop(::Val{:none}, f::typeof(corspearman),
     dest::AbstractMatrix, x, y, symmetric::Bool)
-
+@show typeof(dest)
     symmetric = x === y
 
-    tempx = save_ranks(x)
+    tempx = ranks_matrix(x)
 
     if symmetric
         dest .= cor_wrap(tempx, tempx)
     else
-        tempy = save_ranks(y)
+        tempy = ranks_matrix(y)
         dest .= cor_wrap(tempx, tempy)
     end
-
+@show typeof(dest)
     return dest
 
 end
@@ -130,8 +130,8 @@ function _pairwise_loop(::Val{:pairwise}, f::typeof(corspearman),
         return dest
     end
 
-    tempx = save_perms(x)
-    tempy = symmetric ? tempx : save_perms(y)
+    tempx = sortperm_matrix(x)
+    tempy = symmetric ? tempx : sortperm_matrix(y)
 
     alljs = (symmetric ? (2:nr) : (1:nr))
 
