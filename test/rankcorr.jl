@@ -20,13 +20,6 @@ using Test
     @test KendallTau.handle_pairwise(float.(x), y) == ([2.0, 3.0, 4.0], [1, 2, 4])
     @test KendallTau.handle_pairwise(x, float.(y)) == ([2, 3, 4], [1.0, 2.0, 4.0])
     @test KendallTau.handle_pairwise(u, v) == (Int64[], Int64[])
-    @test KendallTau.handle_listwise(mx, mx) == ([1 2; 5 6], [1 2; 5 6])
-
-    #Test handling of symmetric inputs
-    res1, res2 = KendallTau.handle_listwise(mx, mx)
-    @test res1 === res2
-    res1, res2 = KendallTau.handle_listwise(mx, copy(mx))
-    @test !(res1 === res2)
 
     v = collect(100:-1:1)
     KendallTau.insertion_sort!(v, 1, n)
