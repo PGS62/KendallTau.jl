@@ -42,12 +42,7 @@ using Test
     @test KendallTau.equal_sum_subsets(0, 1) == Vector{Int64}[]
     @test sum.(KendallTau.equal_sum_subsets(100, 5)) == repeat([1010], 5)
     @test sort(vcat(KendallTau.equal_sum_subsets(500, 7)...)) == collect(1:500)
-
-    @test isequal(KendallTau.tiedrank_nan([1; 2; 2; 3;;]), [1.0; 2.5; 2.5; 4.0;;])
-    @test isequal(KendallTau.tiedrank_nan([1; missing; 2; 3;;]), fill(missing, 4, 1))
-    @test isequal(KendallTau.tiedrank_nan([1; NaN; 2; 3;;]), fill(NaN, 4, 1))
-    @test isequal(KendallTau.tiedrank_nan([1; NaN; missing; 3;;]), fill(NaN, 4, 1))
-
+ 
 end
 
 @testset "$f" for f in (corkendall, corspearman)

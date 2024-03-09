@@ -49,54 +49,6 @@ function corspearman(x::AbstractVector, y::AbstractMatrix; skipmissing::Symbol=:
     return corspearman(reshape(x, (length(x), 1)), y; skipmissing)
 end
 
-"""
-    sortperm_matrix(x)
-
-Given `x`, a vector of vectors, return a matrix who's ith column is the sort permutation of
-the ith element of x.
-"""
-function sortperm_matrix(x)
-    m = length(x) == 0 ? 0 : length(first(x))
-    nc = length(x)
-    int64 = Int64[]
-    temp = Array{Int}(undef, m, nc)
-
-    Threads.@threads for i in 1:nc
-        ints = task_local_vector(:ints, int64, m)
-        sortperm!(ints, x[i])
-        temp[:, i] .= ints
-    end
-    return temp
-end
-
-"""
-    ranks_matrix(x)
-
-Given `x`, a vector of vectors, return a matrix such that the (Pearson) correlaton between
-columns of the return is the Spearman rank correlation between the elements of x.
-"""
-function ranks_matrix(x)
-
-    m = length(x) == 0 ? 0 : length(first(x))
-    nc = length(x)
-    int64 = Int64[]
-    temp = Array{Union{Missing,Int,Float64}}(undef, m, nc)
-
-    Threads.@threads for i in 1:nc
-        ints = task_local_vector(:ints, int64, m)
-
-        if any(isnan_safe, x[i])
-            temp[:, i] .= NaN
-        elseif any(ismissing, x[i])
-            temp[:, i] .= missing
-        else
-            sortperm!(ints, x[i])
-            _tiedrank!(view(temp, :, i), x[i], ints)
-        end
-    end
-    return temp
-end
-
 function _pairwise_loop(::Val{:none}, f::typeof(corspearman),
     dest::AbstractMatrix, x, y, symmetric::Bool)
 
@@ -105,10 +57,10 @@ function _pairwise_loop(::Val{:none}, f::typeof(corspearman),
     tempx = ranks_matrix(x)
 
     if symmetric
-        dest .= cor_wrap(tempx, tempx)
+        dest .= _cor(tempx, tempx)
     else
         tempy = ranks_matrix(y)
-        dest .= cor_wrap(tempx, tempy)
+        dest .= _cor(tempx, tempy)
     end
 
     return dest
@@ -185,6 +137,11 @@ end
 Compute Spearman's rank correlation coefficient between `x` and `y` with no allocations if
 all arguments are provided.
 
+All arguments (other than `skipmissing`) must have the same axes.
+- `sortpermx`: The sort permutation of `x`.
+- `sortpermy`: The sort permutation of `y`.
+- `inds` ... `rksy` are all pre-allocated "scratch" arguments, of the indicated element type.
+
 ## Example
 ```julia-repl
 julia> using KendallTau, BenchmarkTools, Random
@@ -204,14 +161,15 @@ julia> @btime KendallTau.corspearman_kernel!(\$x,\$y,:pairwise,\$sortpermx,\$sor
 -0.016058512110609713
 ```
 """
-function corspearman_kernel!(x, y, skipmissing::Symbol, sortpermx=sortperm(x), sortpermy=sortperm(y),
-    inds=zeros(Int64, length(x)), spnmx=zeros(Int64, length(x)),
+function corspearman_kernel!(x, y, skipmissing::Symbol, sortpermx=sortperm(x),
+    sortpermy=sortperm(y), inds=zeros(Int64, length(x)), spnmx=zeros(Int64, length(x)),
     spnmy=zeros(Int64, length(x)), nmx=similar(x, nonmissingtype(eltype(x))),
-    nmy=similar(y, nonmissingtype(eltype(y))), rksx=similar(x, Float64), rksy=similar(y, Float64))
+    nmy=similar(y, nonmissingtype(eltype(y))), rksx=similar(x, Float64),
+    rksy=similar(y, Float64))
 
-    (axes(x, 1) == axes(sortpermx, 1) == axes(y, 1) == axes(sortpermy, 1) ==
-     axes(inds, 1) == axes(spnmx, 1) == axes(spnmy, 1) == axes(nmx, 1) == axes(nmy, 1)
-     == axes(rksx, 1) == axes(rksy, 1)) || throw(ArgumentError("Axes of inputs must match"))
+    (axes(x) == axes(sortpermx) == axes(y) == axes(sortpermy) == axes(inds) ==
+     axes(spnmx) == axes(spnmy) == axes(nmx) == axes(nmy) == axes(rksx) == axes(rksy)) ||
+        throw(ArgumentError("Axes of inputs must match"))
 
     if skipmissing == :pairwise
 
@@ -290,18 +248,18 @@ end
 # Auxiliary functions for Spearman's rank correlation
 
 """
-    cor_wrap(x, y)
+    _cor(x, y)
 Work-around various "unhelpful" features of cor:
 a) Ensures that on-diagonal elements of the return are always 1.0 in the symmetric case
 irrespective of missing, NaN, Inf etc.
-b) Ensure that cor_wrap(a,b) is NaN when a and b are vectors of equal length less than 2
+b) Ensure that _cor(a,b) is NaN when a and b are vectors of equal length less than 2
 c) Works around some edge-case bugs in cor's handling of `missing` where the function throws if
 `x` and `y` are matrices but nevertheless looping around the columns of `x` and `y` works.
 https://github.com/JuliaStats/Statistics.jl/issues/63
 
 # Example
 ```julia-repl
-julia> x = y = [missing missing; missing missing]
+julia> x = y = fill(missing,2,2)
 2×2 Matrix{Missing}:
  missing  missing
  missing  missing
@@ -309,7 +267,7 @@ julia> x = y = [missing missing; missing missing]
 julia> Statistics.cor(x,y)
 ERROR: MethodError: no method matching copy(::Missing)
 
-julia> KendallTau.cor_wrap(x,y)
+julia> KendallTau._cor(x,y)
 2×2 Matrix{Union{Missing, Float64}}:
  1.0        missing
   missing  1.0
@@ -318,7 +276,7 @@ julia>
 
 ```
 """
-function cor_wrap(x, y)
+function _cor(x, y)
     symmetric = y === x
 
     if size(x, 1) < 2
@@ -358,33 +316,49 @@ function cor_wrap(x, y)
 end
 
 """
-    tiedrank_nan(X::AbstractMatrix)
+    sortperm_matrix(x)
 
-Return a matrix with of same dimensions as `X` whose entries indicate the tied rank
-of the corresponding entry in `X` relative to its column.
-If the column contains `NaN`, set all elements of the column to `NaN`, otherwise if the
-column contains `missing`, set all elements of the column to `missing`.
+Given `x`, a vector of vectors, return a matrix who's ith column is the sort permutation of
+the ith element of x.
 """
-function tiedrank_nan(X::AbstractMatrix)
+function sortperm_matrix(x)
+    m = length(x) == 0 ? 0 : length(first(x))
+    nc = length(x)
+    int64 = Int64[]
+    temp = Array{Int}(undef, m, nc)
 
-    if missing isa eltype(X)
-        Z = similar(X, Union{Missing,Float64})
-    else
-        Z = similar(X, Float64)
+    Threads.@threads for i in 1:nc
+        ints = task_local_vector(:ints, int64, m)
+        sortperm!(ints, x[i])
+        temp[:, i] .= ints
     end
+    return temp
+end
 
-    idxs = Vector{Int}(undef, size(X, 1))
-    for j in axes(X, 2)
-        Xj = view(X, :, j)
-        Zj = view(Z, :, j)
-        if any(isnan_safe, Xj)
-            fill!(Zj, NaN)
-        elseif missing isa eltype(X) && any(ismissing, Xj)
-            fill!(Zj, missing)
+"""
+    ranks_matrix(x)
+
+Given `x`, a vector of vectors, return a matrix such that the (Pearson) correlaton between
+columns of the return is the Spearman rank correlation between the elements of x.
+"""
+function ranks_matrix(x)
+
+    m = length(x) == 0 ? 0 : length(first(x))
+    nc = length(x)
+    int64 = Int64[]
+    temp = Array{Union{Missing,Int,Float64}}(undef, m, nc)
+
+    Threads.@threads for i in 1:nc
+        ints = task_local_vector(:ints, int64, m)
+
+        if any(isnan_safe, x[i])
+            temp[:, i] .= NaN
+        elseif any(ismissing, x[i])
+            temp[:, i] .= missing
         else
-            sortperm!(idxs, Xj)
-            _tiedrank!(Zj, Xj, idxs)
+            sortperm!(ints, x[i])
+            _tiedrank!(view(temp, :, i), x[i], ints)
         end
     end
-    return Z
+    return temp
 end
