@@ -2,11 +2,6 @@ using KendallTau
 using Test
 using Random: randn, rand, MersenneTwister
 
-#=
-Note that corkendall and corkendall_naive share some subroutines, notably handle_pairwise
-and handle_listwise. If those were bugged then this test could give a false positive.
-=#
-
 @testset "corkendall against corkendall_naive" begin
 
     @test compare_implementations(corkendall, corkendall_naive, abstol=0.0, maxcols=10, maxrows=10, numtests=200, fns_handle_missing=true) == true

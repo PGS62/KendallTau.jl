@@ -198,7 +198,7 @@ function corspearman_kernel!(x, y, skipmissing::Symbol, sortpermx=sortperm(x),
         nmx = view(nmx, lb:nnm)
         nmy = view(nmy, lb:nnm)
 
-        if any(isnan_safe, nmx) || any(isnan_safe, nmy)
+        if any(_isnan, nmx) || any(_isnan, nmy)
             return NaN
         end
 
@@ -235,7 +235,7 @@ function corspearman_kernel!(x, y, skipmissing::Symbol, sortpermx=sortperm(x),
         elseif skipmissing == :none && (missing isa eltype(x) || missing isa eltype(y)) &&
                (any(ismissing, x) || any(ismissing, y))
             return missing
-        elseif any(isnan_safe, x) || any(isnan_safe, y)
+        elseif any(_isnan, x) || any(_isnan, y)
             return NaN
         end
 
@@ -351,7 +351,7 @@ function ranks_matrix(x)
     Threads.@threads for i in 1:nc
         ints = task_local_vector(:ints, int64, m)
 
-        if any(isnan_safe, x[i])
+        if any(_isnan, x[i])
             temp[:, i] .= NaN
         elseif any(ismissing, x[i])
             temp[:, i] .= missing

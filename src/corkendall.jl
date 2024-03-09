@@ -193,7 +193,7 @@ function corkendall_kernel!(sortedx::AbstractVector, y::AbstractVector,
         permutedy = scratch_py
     end
 
-    if any(isnan_safe, sortedx) || any(isnan_safe, permutedy)
+    if any(_isnan, sortedx) || any(_isnan, permutedy)
         return NaN
     end
     n = length(sortedx)
@@ -377,43 +377,6 @@ function handle_pairwise(x::AbstractVector, y::AbstractVector;
 end
 
 """
-    handle_listwise(x::AbstractMatrix, y::AbstractMatrix)
-
-Return a pair `(a,b)`, filtered copies of `(x,y)`, in which the rows `x[i,:]` and
-`y[i,:]` are both excluded if `any(ismissing,x[i,:])||any(ismissing,y[i,:])`.
-"""
-function handle_listwise(x::AbstractMatrix, y::AbstractMatrix)
-
-    axes(x, 1) == axes(y, 1) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
-    lb = first(axes(x, 1))
-
-    symmetric = x === y
-
-    a = similar(x)
-
-    k = lb - 1
-    if symmetric
-        @inbounds for i in axes(x, 1)
-            if all(j -> !ismissing(x[i, j]), axes(x, 2))
-                k += 1
-                a[k, :] .= view(x, i, :)
-            end
-        end
-        return view(a, lb:k, :), view(a, lb:k, :)
-    else
-        b = similar(y)
-        @inbounds for i in axes(x, 1)
-            if all(j -> !ismissing(x[i, j]), axes(x, 2)) && all(j -> !ismissing(y[i, j]), axes(y, 2))
-                k += 1
-                a[k, :] .= view(x, i, :)
-                b[k, :] .= view(y, i, :)
-            end
-        end
-        return view(a, lb:k, :), view(b, lb:k, :)
-    end
-end
-
-"""
     equal_sum_subsets(n::Int, num_subsets::Int)::Vector{Vector{Int}}
 
 Divide the integers 1:n into a number of subsets such that a) each subset has (approximately)
@@ -447,12 +410,11 @@ function equal_sum_subsets(n::Int, num_subsets::Int)::Vector{Vector{Int}}
     return subsets
 end
 
-#isnan_safe required for corkendall and corspearman to accept vectors whose element type
-#are not numbers but for which isless is defined and hence can be ranked.
-isnan_safe(x::T) where {T<:Number} = isnan(x)
-function isnan_safe(x)
-    false
-end
+# _isnan required so that corkendall and corspearman have correct handling of NaNs and
+# can also accept arguments with element type for which isnan is not defined but isless is
+# is defined, so that rank correlation makes sense.
+_isnan(x::T) where {T<:Number} = isnan(x)
+_isnan(x) = false
 
 """
     task_local_vector(key::Symbol, similarto::AbstractArray{V}, m::Int)::Vector{V} where {V}
