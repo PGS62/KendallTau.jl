@@ -28,14 +28,6 @@ function _corspearman_naive(x::AbstractMatrix, y::AbstractMatrix=x; skipmissing:
 
     (m, nr), nc = size(x), size(y, 2)
 
-    missing_allowed = missing isa eltype(x) || missing isa eltype(y)
-
-    if missing_allowed && skipmissing == :none
-        C = ones(Union{Missing,Float64}, nr, nc)
-    else
-        C = ones(Float64, nr, nc)
-    end
-
     for j = (symmetric ? 2 : 1):nr
         for i = 1:(symmetric ? j - 1 : nc)
             C[j, i] = corspearman_naive_kernel!(view(x, :, j), view(y, :, i), skipmissing)

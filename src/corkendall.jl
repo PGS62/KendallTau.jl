@@ -149,11 +149,11 @@ promoted_type(x) = mapreduce(eltype, promote_type, x, init=Union{})
 promoted_nonmissingtype(x) = mapreduce(nonmissingtype ∘ eltype, promote_type, x, init=Union{})
 
 """
-    corkendall_kernel!(sortedx::AbstractVector, y::AbstractVector, skipmissing::Symbol;
-    permx::AbstractVector{<:Integer},
+    corkendall_kernel!(sortedx::AbstractVector, y::AbstractVector,
+    permx::AbstractVector{<:Integer}, skipmissing::Symbol;
     scratch_py::AbstractVector=similar(y),
     scratch_sy::AbstractVector=similar(y),
-    scratch_fx::AbstractVector=similar(x),
+    scratch_fx::AbstractVector=similar(sortedx),
     scratch_fy::AbstractVector=similar(y))
 
 Kendall correlation between two vectors but omitting the initial sorting of the first
@@ -352,8 +352,8 @@ end
 
 """
     handle_pairwise(x::AbstractVector, y::AbstractVector;
-    scratch_fx::AbstractVector=similar(x),
-    scratch_fy::AbstractVector=similar(y))
+    scratch_fx::AbstractVector=similar(x, nonmissingtype(eltype(x))),
+    scratch_fy::AbstractVector=similar(y, nonmissingtype(eltype(y))))
 
 Return a pair `(a,b)`, filtered copies of `(x,y)`, in which elements `x[i]` and
 `y[i]` are excluded if  `ismissing(x[i])||ismissing(y[i])`.
