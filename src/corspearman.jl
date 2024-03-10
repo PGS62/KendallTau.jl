@@ -68,7 +68,7 @@ function _pairwise_loop(::Val{:none}, f::typeof(corspearman),
 end
 
 function _pairwise_loop(::Val{:pairwise}, f::typeof(corspearman),
-    dest::AbstractMatrix, x, y, symmetric::Bool)
+    dest::AbstractMatrix{V}, x, y, symmetric::Bool) where {V}
 
     nr, nc = size(dest)
     m = length(x) == 0 ? 0 : length(first(x))
@@ -85,18 +85,14 @@ function _pairwise_loop(::Val{:pairwise}, f::typeof(corspearman),
     tempx = sortperm_matrix(x)
     tempy = symmetric ? tempx : sortperm_matrix(y)
 
-    alljs = (symmetric ? (2:nr) : (1:nr))
-
     int64 = Int64[]
     fl64 = Float64[]
     nmtx = promoted_nonmissingtype(x)[]
     nmty = promoted_nonmissingtype(y)[]
     #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
-    Threads.@threads for thischunk in equal_sum_subsets(length(alljs), Threads.nthreads())
+    Threads.@threads for thischunk in equal_sum_subsets(nr, Threads.nthreads())
 
-        for k in thischunk
-
-            j = alljs[k]
+        for j in thischunk
 
             inds = task_local_vector(:inds, int64, m)
             spnmx = task_local_vector(:spnmx, int64, m)
@@ -106,20 +102,15 @@ function _pairwise_loop(::Val{:pairwise}, f::typeof(corspearman),
             rksx = task_local_vector(:rksx, fl64, m)
             rksy = task_local_vector(:rksy, fl64, m)
 
-            for i = 1:(symmetric ? j - 1 : nc)
-
-                dest[j, i] = corspearman_kernel!(x[j], y[i], :pairwise,
-                    view(tempx, :, j), view(tempy, :, i), inds, spnmx, spnmy, nmx,
-                    nmy, rksx, rksy)
+            for i = 1:(symmetric ? j : nc)
+                if symmetric && (i == j) && V !== Missing
+                    dest[j, i] = 1.0
+                else
+                    dest[j, i] = corspearman_kernel!(x[j], y[i], :pairwise,
+                        view(tempx, :, j), view(tempy, :, i), inds, spnmx, spnmy, nmx,
+                        nmy, rksx, rksy)
+                end
                 symmetric && (dest[i, j] = dest[j, i])
-            end
-        end
-    end
-
-    if symmetric
-        if !(dest isa Matrix{Missing})
-            for i in axes(dest, 1)
-                dest[i, i] = 1.0
             end
         end
     end

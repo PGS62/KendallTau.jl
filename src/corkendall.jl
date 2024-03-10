@@ -73,8 +73,8 @@ function check_rankcor_args(x, y, skipmissing, allowlistwise::Bool)
     end
 end
 
-function _pairwise_loop(::Val{skipmissing}, f::typeof(corkendall), dest::AbstractMatrix,
-    x, y, symmetric::Bool) where {skipmissing}
+function _pairwise_loop(::Val{skipmissing}, f::typeof(corkendall), dest::AbstractMatrix{V},
+    x, y, symmetric::Bool) where {skipmissing,V}
 
     nr, nc = size(dest)
     m = length(x) == 0 ? 0 : length(first(x))
@@ -95,13 +95,10 @@ function _pairwise_loop(::Val{skipmissing}, f::typeof(corkendall), dest::Abstrac
 
     symmetric = x === y
 
-    alljs = (symmetric ? (2:nr) : (1:nr))
-
     #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
-    Threads.@threads for thischunk in equal_sum_subsets(length(alljs), Threads.nthreads())
+    Threads.@threads for thischunk in equal_sum_subsets(nr, Threads.nthreads())
 
-        for k in thischunk
-            j = alljs[k]
+        for j in thischunk
 
             sortedxj = task_local_vector(:sortedxj, t, m)
             scratch_py = task_local_vector(:scratch_py, u, m)
@@ -118,19 +115,15 @@ function _pairwise_loop(::Val{skipmissing}, f::typeof(corkendall), dest::Abstrac
                 sortedxj[k] = x[j][permx[k]]
             end
 
-            for i = 1:(symmetric ? j - 1 : nc)
-                yi .= y[i]
-                dest[j, i] = corkendall_kernel!(sortedxj, yi, permx, skipmissing;
-                    scratch_py, scratch_sy, scratch_fx, scratch_fy)
+            for i = 1:(symmetric ? j : nc)
+                if symmetric && (i == j) && V !== Missing
+                    dest[j, i] = 1.0
+                else
+                    yi .= y[i]
+                    dest[j, i] = corkendall_kernel!(sortedxj, yi, permx, skipmissing;
+                        scratch_py, scratch_sy, scratch_fx, scratch_fy)
+                end
                 symmetric && (dest[i, j] = dest[j, i])
-            end
-        end
-    end
-
-    if symmetric
-        if !(dest isa Matrix{Missing})
-            for i in axes(dest, 1)
-                dest[i, i] = 1.0
             end
         end
     end
