@@ -24,15 +24,7 @@ Uses multiple threads when either `x` or `y` is a matrix and `skipmissing` is `:
 function corspearman(x::AbstractMatrix, y::AbstractMatrix=x;
     skipmissing::Symbol=:none)
     check_rankcor_args(x, y, skipmissing, true)
-    res = pairwise(corspearman, eachcol(x), eachcol(y); skipmissing)
-    #This is unfortunate. Spec (i.e. tests) for corspearman requires that x===y implies
-    # 1.0 on the diagonal, but pairwise can return a matrix of missings
-    if res isa Matrix{Missing}
-        if x === y
-            res = ifelse.(axes(res, 1) .== axes(res, 2)', 1.0, missing)
-        end
-    end
-    return res
+    return pairwise(corspearman, eachcol(x), eachcol(y); skipmissing)
 end
 
 function corspearman(x::AbstractVector, y::AbstractVector; skipmissing::Symbol=:none)
@@ -62,7 +54,6 @@ function _pairwise_loop(::Val{:none}, f::typeof(corspearman),
         tempy = ranks_matrix(y)
         dest .= _cor(tempx, tempy)
     end
-
     return dest
 
 end
@@ -154,7 +145,7 @@ julia> @btime KendallTau.corspearman_kernel!(\$x,\$y,:pairwise,\$sortpermx,\$sor
 -0.016058512110609713
 ```
 """
-function corspearman_kernel!(x::AbstractVector{T}, y::AbstractVector{U}, 
+function corspearman_kernel!(x::AbstractVector{T}, y::AbstractVector{U},
     skipmissing::Symbol, sortpermx=sortperm(x), sortpermy=sortperm(y),
     inds=zeros(Int64, length(x)), spnmx=zeros(Int64, length(x)),
     spnmy=zeros(Int64, length(x)), nmx=similar(x, nonmissingtype(T)),
@@ -274,21 +265,14 @@ function _cor(x::AbstractMatrix{T}, y::AbstractMatrix{U}) where {T,U}
     symmetric = y === x
 
     if size(x, 1) < 2
-        nr, nc = size(x, 2), size(y, 2)
-        if symmetric
-            return ifelse.(1:nr .== (1:nc)', 1.0, NaN)
-        else
-            return fill(NaN, nr, nc)
-        end
+        C = fill(NaN, size(x, 2), size(y, 2))
+        symmetric && (C = insert_ones(C))
+        return C
     end
     try
         C = cor(x, y)
         if symmetric
-            if !(C isa Matrix{Missing})
-                for i in axes(C, 1)
-                    C[i, i] = 1.0
-                end
-            end
+            C = insert_ones(C)
         end
         return C
     catch
@@ -307,6 +291,17 @@ function _cor(x::AbstractMatrix{T}, y::AbstractMatrix{U}) where {T,U}
         end
         return C
     end
+end
+
+function insert_ones(C::AbstractMatrix{T}) where {T}
+    if T === Missing
+        C = ifelse.(axes(C, 1) .== axes(C, 2)', 1.0, missing)
+    else
+        for i in axes(C, 1)
+            C[i, i] = 1.0
+        end
+    end
+    return C
 end
 
 """
