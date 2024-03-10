@@ -90,9 +90,9 @@ function _pairwise_loop(::Val{:pairwise}, f::typeof(corspearman),
     nmtx = promoted_nonmissingtype(x)[]
     nmty = promoted_nonmissingtype(y)[]
     #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
-    Threads.@threads for thischunk in equal_sum_subsets(nr, Threads.nthreads())
+    Threads.@threads for subset in equal_sum_subsets(nr, Threads.nthreads())
 
-        for j in thischunk
+        for j in subset
 
             inds = task_local_vector(:inds, int64, m)
             spnmx = task_local_vector(:spnmx, int64, m)
@@ -152,11 +152,11 @@ julia> @btime KendallTau.corspearman_kernel!(\$x,\$y,:pairwise,\$sortpermx,\$sor
 -0.016058512110609713
 ```
 """
-function corspearman_kernel!(x, y, skipmissing::Symbol, sortpermx=sortperm(x),
+function corspearman_kernel!(x::AbstractVector{T}, y::AbstractVector{U}, skipmissing::Symbol, sortpermx=sortperm(x),
     sortpermy=sortperm(y), inds=zeros(Int64, length(x)), spnmx=zeros(Int64, length(x)),
     spnmy=zeros(Int64, length(x)), nmx=similar(x, nonmissingtype(eltype(x))),
     nmy=similar(y, nonmissingtype(eltype(y))), rksx=similar(x, Float64),
-    rksy=similar(y, Float64))
+    rksy=similar(y, Float64)) where {T,U}
 
     (axes(x) == axes(sortpermx) == axes(y) == axes(sortpermy) == axes(inds) ==
      axes(spnmx) == axes(spnmy) == axes(nmx) == axes(nmy) == axes(rksx) == axes(rksy)) ||
@@ -223,7 +223,7 @@ function corspearman_kernel!(x, y, skipmissing::Symbol, sortpermx=sortperm(x),
     else
         if length(x) <= 1
             return NaN
-        elseif skipmissing == :none && (missing isa eltype(x) || missing isa eltype(y)) &&
+        elseif skipmissing == :none && (missing isa T || missing isa U) &&
                (any(ismissing, x) || any(ismissing, y))
             return missing
         elseif any(_isnan, x) || any(_isnan, y)
@@ -267,7 +267,7 @@ julia>
 
 ```
 """
-function _cor(x, y)
+function _cor(x::AbstractMatrix{T}, y::AbstractMatrix{U}) where {T,U}
     symmetric = y === x
 
     if size(x, 1) < 2
@@ -290,7 +290,7 @@ function _cor(x, y)
         return C
     catch
         nr, nc = size(x, 2), size(y, 2)
-        if missing isa eltype(x) || missing isa eltype(y)
+        if missing isa T || missing isa U
             C = ones(Union{Missing,Float64}, nr, nc)
         else
             C = ones(Float64, nr, nc)

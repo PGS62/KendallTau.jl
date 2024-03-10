@@ -44,7 +44,7 @@ res_22 = StatsBase.pairwise(KendallTau.corspearman, eachcol(xm), skipmissing=:no
 #res_22 does not have 1.0 on the diagonal. I think that's wrong.
 #@assert isapprox(ifelse.(ismissing.(res_18), 2, res_18), ifelse.(ismissing.(res_22), 2, res_22))
 
-x = rand(MersenneTwister(0), 1000, 100);
+x = rand(MersenneTwister(0), 1000, 1000);
 xm = ifelse.(x .< 0.05, missing, x);
 
 println("="^100)
@@ -348,7 +348,31 @@ KendallTau.corspearman(xm; skipmissing=:none)                                   
 KendallTau.pairwise(KendallTau.corspearman,eachcol(xm),skipmissing=:none)       0.005401 seconds (291 allocations: 985.828 KiB, 0.02% compilation time)
 ====================================================================================================
 
-
+====================================================================================================
+Dates.now() = DateTime("2024-03-10T13:53:08.216")
+ENV["COMPUTERNAME"] = "PHILIP-LAPTOP"
+Julia Version 1.10.2
+Threads.nthreads() = 8
+size(x) = (1000, 1000)
+typeof(x) = Matrix{Float64}
+size(xm) = (1000, 1000)
+typeof(xm) = Matrix{Union{Missing, Float64}}
+do_StatsBase_times = false
+KendallTau.corkendall(x)                                                        6.130651 seconds (1.19 k allocations: 15.841 MiB, 0.00% compilation time)
+KendallTau.corkendall(xm; skipmissing=:pairwise)                                5.935772 seconds (1.19 k allocations: 15.511 MiB, 0.00% compilation time)
+KendallTau.pairwise(KendallTau.corkendall,eachcol(xm); skipmissing=:pairwise)   5.935599 seconds (1.19 k allocations: 15.511 MiB, 0.00% compilation time)
+KendallTau.corkendall(xm; skipmissing=:listwise)                                0.024470 seconds (2.19 k allocations: 11.817 MiB, 0.01% compilation time)
+KendallTau.pairwise(KendallTau.corkendall,eachcol(xm); skipmissing=:listwise)   0.030347 seconds (2.19 k allocations: 11.817 MiB, 0.00% compilation time)
+KendallTau.corkendall(xm; skipmissing=:none)                                    0.293400 seconds (1.20 k allocations: 16.465 MiB, 0.00% compilation time)
+KendallTau.pairwise(KendallTau.corkendall,eachcol(xm),skipmissing=:none)        0.332153 seconds (1.20 k allocations: 16.465 MiB, 0.00% compilation time)
+KendallTau.corspearman(x)                                                       0.101014 seconds (3.12 k allocations: 47.004 MiB, 0.00% compilation time)
+KendallTau.corspearman(xm; skipmissing=:pairwise)                               2.157671 seconds (1.26 k allocations: 23.187 MiB, 0.00% compilation time)
+KendallTau.pairwise(KendallTau.corspearman,eachcol(xm); skipmissing=:pairwise)  2.265923 seconds (1.26 k allocations: 23.187 MiB, 0.00% compilation time)
+KendallTau.corspearman(xm; skipmissing=:listwise)                               0.061498 seconds (2.11 k allocations: 19.428 MiB, 83.89% gc time, 0.00% compilation time)
+KendallTau.pairwise(KendallTau.corspearman,eachcol(xm); skipmissing=:listwise)  0.008436 seconds (2.11 k allocations: 19.428 MiB, 0.02% compilation time)
+KendallTau.corspearman(xm; skipmissing=:none)                                   0.075054 seconds (3.13 k allocations: 33.516 MiB, 0.01% compilation time)
+KendallTau.pairwise(KendallTau.corspearman,eachcol(xm),skipmissing=:none)       0.066340 seconds (3.13 k allocations: 17.304 MiB, 0.00% compilation time)
+====================================================================================================
 
 
 =#

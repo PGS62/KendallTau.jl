@@ -27,7 +27,8 @@ function corkendall(x::AbstractMatrix, y::AbstractMatrix=x;
     return (pairwise(corkendall, eachcol(x), eachcol(y); skipmissing))
 end
 
-function corkendall(x::AbstractVector, y::AbstractVector; skipmissing::Symbol=:none)
+function corkendall(x::AbstractVector{T}, y::AbstractVector{U};
+    skipmissing::Symbol=:none) where {T,U}
 
     check_rankcor_args(x, y, skipmissing, false)
 
@@ -36,7 +37,7 @@ function corkendall(x::AbstractVector, y::AbstractVector; skipmissing::Symbol=:n
 
     x = copy(x)
 
-    if skipmissing == :pairwise && (missing isa eltype(x) || missing isa eltype(y))
+    if skipmissing == :pairwise && (missing isa T || missing isa U)
         x, y = handle_pairwise(x, y)
         length(x) >= 2 || return NaN
     end
@@ -96,9 +97,9 @@ function _pairwise_loop(::Val{skipmissing}, f::typeof(corkendall), dest::Abstrac
     symmetric = x === y
 
     #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
-    Threads.@threads for thischunk in equal_sum_subsets(nr, Threads.nthreads())
+    Threads.@threads for subset in equal_sum_subsets(nr, Threads.nthreads())
 
-        for j in thischunk
+        for j in subset
 
             sortedxj = task_local_vector(:sortedxj, t, m)
             scratch_py = task_local_vector(:scratch_py, u, m)
@@ -159,19 +160,19 @@ subsequent arguments:
 - `scratch_fx, scratch_fy`: Vectors used to filter `missing`s from `x` and `y` without
    allocation.
 """
-function corkendall_kernel!(sortedx::AbstractVector, y::AbstractVector,
+function corkendall_kernel!(sortedx::AbstractVector{T}, y::AbstractVector{U},
     permx::AbstractVector{<:Integer}, skipmissing::Symbol;
-    scratch_py::AbstractVector=similar(y),
+    scratch_py::AbstractVector{V}=similar(y),
     scratch_sy::AbstractVector=similar(y),
     scratch_fx::AbstractVector=similar(sortedx),
-    scratch_fy::AbstractVector=similar(y))
+    scratch_fy::AbstractVector=similar(y)) where {T,U,V}
 
     length(sortedx) >= 2 || return NaN
 
     if skipmissing == :none
-        if missing isa eltype(sortedx) && any(ismissing, sortedx)
+        if missing isa T && any(ismissing, sortedx)
             return missing
-        elseif missing isa eltype(y) && any(ismissing, y)
+        elseif missing isa U && any(ismissing, y)
             return missing
         end
     end
@@ -180,7 +181,7 @@ function corkendall_kernel!(sortedx::AbstractVector, y::AbstractVector,
         scratch_py[i] = y[permx[i]]
     end
 
-    if missing isa eltype(sortedx) || missing isa eltype(scratch_py)
+    if missing isa T || missing isa V
         sortedx, permutedy = handle_pairwise(sortedx, scratch_py; scratch_fx, scratch_fy)
     else
         permutedy = scratch_py
