@@ -35,8 +35,41 @@ using Test
     @test KendallTau.equal_sum_subsets(0, 1) == Vector{Int64}[]
     @test sum.(KendallTau.equal_sum_subsets(100, 5)) == repeat([1010], 5)
     @test sort(vcat(KendallTau.equal_sum_subsets(500, 7)...)) == collect(1:500)
- 
+
 end
+
+#=
+If x and y are equal-length vectors we test for:
+f(x,x) == NaN whenever length(x)<2
+otherwise
+f(x,y) == missing whenever x or y contains a missing
+otherwise
+f(x,y) == NaN whenever x or y contains a NaN
+otherwise
+f(x,y) = the required Kendall or Spearman correlation.
+
+If x is a matrix we test for f(x) always having 1.0 on the diagonal irrespective of whether
+x contains NaN, missing, Inf etc.
+
+This behaviour is _not_ identical to Statistics.cor. e.g.:
+
+julia> cor(fill(missing,3,2))
+2×2 Matrix{Missing}:
+ missing  missing
+ missing  missing
+
+julia> corkendall(fill(missing,3,2))
+2×2 Matrix{Union{Missing, Float64}}:
+ 1.0        missing
+  missing  1.0
+
+julia> KendallTau.corkendall([],[])
+NaN
+
+julia> cor([],[])
+ERROR: MethodError: no method matching zero(::Type{Any})
+
+=#
 
 @testset "$f" for f in (corkendall, corspearman)
 
@@ -162,6 +195,8 @@ end
 
     #Inputs have fewer than 2 rows
     @test isnan(f([], []))
+    @test isequal(f(fill(1, 0, 2), fill(1, 0, 2)), [NaN NaN; NaN NaN])
+    @test isequal(f(fill(1, 0, 2)), [1.0 NaN; NaN 1.0])
     @test isnan(f([1], [1]))
     @test isequal(f([1;;], [1;;]), [NaN;;])
     @test isequal(f([1;;]), [1.0;;])
@@ -279,7 +314,6 @@ end
     end
 end
 
-
 @testset "corkendall and corspearman allocations" begin
 
     Random.seed!(1)
@@ -294,12 +328,16 @@ end
     corspearman(xm, skipmissing=:pairwise)
     x = rand(1000, 100)
     xm = ifelse.(x .< 0.01, missing, x)
-    #Allocations vary with number of threads. The 1.5 factor below is a "safety margin"
-    @test (@allocated corkendall(x)) < (889_696 + Threads.nthreads() * 58_044) * 1.5
-    @test (@allocated corkendall(xm, skipmissing=:listwise)) < (1_116_400 + Threads.nthreads() * 22_172) * 1.5
-    @test (@allocated corkendall(xm, skipmissing=:pairwise)) < (884_064 + Threads.nthreads() * 61_116) * 1.5
-    @test (@allocated corspearman(x)) < (3484288 + Threads.nthreads() * 9128) * 1.5
-    @test (@allocated corspearman(xm, skipmissing=:listwise)) < (2_093_568 + Threads.nthreads() * 3_992) * 1.5
-    @test (@allocated corspearman(xm, skipmissing=:pairwise)) < (1_692_208 + Threads.nthreads() * 67_188) * 1.5
+
+    #=When executing code such as corkendall(x) allocations are approximatelty affine in the
+    number of threads, thanks to use of task-local storage. The tests below have a "safety
+    factor" of 1.2 against the expected size of allocations.
+    =#
+    @test (@allocated corkendall(x)) < (897_744 + Threads.nthreads() * 58_028) * 1.2
+    @test (@allocated corkendall(xm, skipmissing=:listwise)) < (1_119_328 + Threads.nthreads() * 22_156) * 1.2
+    @test (@allocated corkendall(xm, skipmissing=:pairwise)) < (892_048 + Threads.nthreads() * 61_100) * 1.2
+    @test (@allocated corspearman(x)) < (3_480_976 + Threads.nthreads() * 9_128) * 1.2
+    @test (@allocated corspearman(xm, skipmissing=:listwise)) < (2_090_256 + Threads.nthreads() * 3_992) * 1.2
+    @test (@allocated corspearman(xm, skipmissing=:pairwise)) < (1_692_144 + Threads.nthreads() * 67_172) * 1.2
 
 end
