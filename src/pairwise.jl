@@ -26,7 +26,7 @@ _pairwise_loop
 
 #=
 TODO
-Reduce use of eltype
+Reduce use of eltype [DONE]
 Write note of call stack for pairwise. [DONE]
 Better variable names in specialised method _pairwise_loop. [DONE]
 Review docstrings.
@@ -335,8 +335,8 @@ function _pairwise_loop(::Val{skipmissing}, f, dest::AbstractMatrix{V}, x, y,
     end
 
     if skipmissing == :pairwise
-        nmtx = promoted_nonmissingtype(x)[]
-        nmty = promoted_nonmissingtype(y)[]
+        nmtx = promoted_nmtype(x)[]
+        nmty = promoted_nmtype(y)[]
     end
 
     di1 = (f in (corkendall, corspearman, cor)) && x === y

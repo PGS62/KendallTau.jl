@@ -87,8 +87,8 @@ function _pairwise_loop(::Val{:pairwise}, f::typeof(corspearman),
 
     int64 = Int64[]
     fl64 = Float64[]
-    nmtx = promoted_nonmissingtype(x)[]
-    nmty = promoted_nonmissingtype(y)[]
+    nmtx = promoted_nmtype(x)[]
+    nmty = promoted_nmtype(y)[]
     #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
     Threads.@threads for subset in equal_sum_subsets(nr, Threads.nthreads())
 
@@ -120,10 +120,12 @@ function _pairwise_loop(::Val{:pairwise}, f::typeof(corspearman),
 end
 
 """
-    corspearman_kernel!(x, y, skipmissing::Symbol, sortpermx=sortperm(x), sortpermy=sortperm(y),
+    corspearman_kernel!(x::AbstractVector{T}, y::AbstractVector{U}, 
+    skipmissing::Symbol, sortpermx=sortperm(x), sortpermy=sortperm(y),
     inds=zeros(Int64, length(x)), spnmx=zeros(Int64, length(x)),
-    spnmy=zeros(Int64, length(x)), nmx=similar(x, nonmissingtype(eltype(x))),
-    nmy=similar(y, nonmissingtype(eltype(y))), rksx=similar(x, Float64), rksy=similar(y, Float64))
+    spnmy=zeros(Int64, length(x)), nmx=similar(x, nonmissingtype(T)),
+    nmy=similar(y, nonmissingtype(U)), rksx=similar(x, Float64),
+    rksy=similar(y, Float64)) where {T,U}
 
 Compute Spearman's rank correlation coefficient between `x` and `y` with no allocations if
 all arguments are provided.
@@ -152,10 +154,11 @@ julia> @btime KendallTau.corspearman_kernel!(\$x,\$y,:pairwise,\$sortpermx,\$sor
 -0.016058512110609713
 ```
 """
-function corspearman_kernel!(x::AbstractVector{T}, y::AbstractVector{U}, skipmissing::Symbol, sortpermx=sortperm(x),
-    sortpermy=sortperm(y), inds=zeros(Int64, length(x)), spnmx=zeros(Int64, length(x)),
-    spnmy=zeros(Int64, length(x)), nmx=similar(x, nonmissingtype(eltype(x))),
-    nmy=similar(y, nonmissingtype(eltype(y))), rksx=similar(x, Float64),
+function corspearman_kernel!(x::AbstractVector{T}, y::AbstractVector{U}, 
+    skipmissing::Symbol, sortpermx=sortperm(x), sortpermy=sortperm(y),
+    inds=zeros(Int64, length(x)), spnmx=zeros(Int64, length(x)),
+    spnmy=zeros(Int64, length(x)), nmx=similar(x, nonmissingtype(T)),
+    nmy=similar(y, nonmissingtype(U)), rksx=similar(x, Float64),
     rksy=similar(y, Float64)) where {T,U}
 
     (axes(x) == axes(sortpermx) == axes(y) == axes(sortpermy) == axes(inds) ==

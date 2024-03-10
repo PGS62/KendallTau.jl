@@ -91,8 +91,8 @@ function _pairwise_loop(::Val{skipmissing}, f::typeof(corkendall), dest::Abstrac
     intvec = Int[]
     t = promoted_type(x)[]
     u = promoted_type(y)[]
-    t′ = promoted_nonmissingtype(x)[]
-    u′ = promoted_nonmissingtype(y)[]
+    t′ = promoted_nmtype(x)[]
+    u′ = promoted_nmtype(y)[]
 
     symmetric = x === y
 
@@ -140,7 +140,7 @@ end
 # JSTOR, www.jstor.org/stable/2282833.
 
 promoted_type(x) = mapreduce(eltype, promote_type, x, init=Union{})
-promoted_nonmissingtype(x) = mapreduce(nonmissingtype ∘ eltype, promote_type, x, init=Union{})
+promoted_nmtype(x) = mapreduce(nonmissingtype ∘ eltype, promote_type, x, init=Union{})
 
 """
     corkendall_kernel!(sortedx::AbstractVector, y::AbstractVector,
@@ -187,9 +187,8 @@ function corkendall_kernel!(sortedx::AbstractVector{T}, y::AbstractVector{U},
         permutedy = scratch_py
     end
 
-    if any(_isnan, sortedx) || any(_isnan, permutedy)
-        return NaN
-    end
+    (any(_isnan, sortedx) || any(_isnan, permutedy)) && return NaN
+    
     n = length(sortedx)
 
     # Use widen to avoid overflows on both 32bit and 64bit
@@ -356,7 +355,7 @@ function handle_pairwise(x::AbstractVector, y::AbstractVector;
     scratch_fx::AbstractVector=similar(x, nonmissingtype(eltype(x))),
     scratch_fy::AbstractVector=similar(y, nonmissingtype(eltype(y))))
 
-    axes(x, 1) == axes(y, 1) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
+    axes(x) == axes(y) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
     lb = first(axes(x, 1))
     j = lb - 1
     @inbounds for i in eachindex(x)
@@ -373,9 +372,9 @@ end
 """
     equal_sum_subsets(n::Int, num_subsets::Int)::Vector{Vector{Int}}
 
-Divide the integers 1:n into a number of subsets such that a) each subset has (approximately)
-the same number of elements; and b) the sum of the elements in each subset is nearly equal.
-If `n` is a multiple of `2 * num_subsets` both conditions hold exactly.
+Divide the integers 1:n into a number of subsets such that a) each subset has
+(approximately) the same number of elements; and b) the sum of the elements in each subset
+is nearly equal. If `n` is a multiple of `2 * num_subsets` both conditions hold exactly.
 
 ## Example
 ```julia-repl
@@ -411,12 +410,14 @@ _isnan(x::T) where {T<:Number} = isnan(x)
 _isnan(x) = false
 
 """
-    task_local_vector(key::Symbol, similarto::AbstractArray{V}, m::Int)::Vector{V} where {V}
+    task_local_vector(key::Symbol, similarto::AbstractArray{V},
+    length::Int)::Vector{V} where {V}
 
-    Retrieve from task local storage a vector of length `m` and matching the element type of
-`similarto`, with initialisation on first call during a task.
+Retrieve from task local storage a vector of length `length` and matching the element
+type of `similarto`, with initialisation on first call during a task.
 """
-function task_local_vector(key::Symbol, similarto::AbstractArray{V}, m::Int)::Vector{V} where {V}
-    haskey(task_local_storage(), key) || task_local_storage(key, similar(similarto, m))
+function task_local_vector(key::Symbol, similarto::AbstractArray{V},
+    length::Int)::Vector{V} where {V}
+    haskey(task_local_storage(), key) || task_local_storage(key, similar(similarto, length))
     return task_local_storage(key)
 end

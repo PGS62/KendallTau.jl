@@ -44,7 +44,7 @@ res_22 = StatsBase.pairwise(KendallTau.corspearman, eachcol(xm), skipmissing=:no
 #res_22 does not have 1.0 on the diagonal. I think that's wrong.
 #@assert isapprox(ifelse.(ismissing.(res_18), 2, res_18), ifelse.(ismissing.(res_22), 2, res_22))
 
-x = rand(MersenneTwister(0), 1000, 1000);
+x = rand(MersenneTwister(0), 1000, 100);
 xm = ifelse.(x .< 0.05, missing, x);
 
 println("="^100)
