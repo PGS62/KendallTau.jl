@@ -26,6 +26,7 @@ _pairwise_loop
 
 #=
 TODO
+Reduce use of eltype
 Write note of call stack for pairwise. [DONE]
 Better variable names in specialised method _pairwise_loop. [DONE]
 Review docstrings.
@@ -319,7 +320,8 @@ function pairwise(f, x, y=x; symmetric::Bool=false, skipmissing::Symbol=:none)
     return _pairwise(Val(skipmissing), f, x, y, symmetric)
 end
 
-function _pairwise_loop(::Val{skipmissing}, f, dest::AbstractMatrix, x, y, symmetric::Bool) where {skipmissing}
+function _pairwise_loop(::Val{skipmissing}, f, dest::AbstractMatrix{V}, x, y,
+    symmetric::Bool) where {skipmissing,V}
 
     nr, nc = size(dest)
     m = length(x) == 0 ? 0 : length(first(x))
@@ -338,37 +340,29 @@ function _pairwise_loop(::Val{skipmissing}, f, dest::AbstractMatrix, x, y, symme
     end
 
     di1 = (f in (corkendall, corspearman, cor)) && x === y
-    if di1
-        symmetric = true
-    end
-    alljs = (di1 ? (2:nr) : (1:nr))
+    di1 && (symmetric = true)
 
     #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
-    Threads.@threads for subset in equal_sum_subsets(length(alljs), Threads.nthreads())
+    Threads.@threads for subset in equal_sum_subsets(nr, Threads.nthreads())
 
-        for k in subset
+        for j in subset
 
-            j = alljs[k]
             if skipmissing == :pairwise
                 scratch_fx = task_local_vector(:scratch_fx, nmtx, m)
                 scratch_fy = task_local_vector(:scratch_fy, nmty, m)
             end
-            for i = 1:(di1 ? j - 1 : symmetric ? j : nc)
-                if skipmissing == :pairwise
-                    _x, _y = handle_pairwise(x[j], y[i]; scratch_fx, scratch_fy)
-                    dest[j, i] = f(_x, _y)
+            for i = 1:(symmetric ? j : nc)
+                if di1 && (i == j) && V !== Missing
+                    dest[j, i] = 1.0
                 else
-                    dest[j, i] = f(x[j], y[i])
+                    if skipmissing == :pairwise
+                        _x, _y = handle_pairwise(x[j], y[i]; scratch_fx, scratch_fy)
+                        dest[j, i] = f(_x, _y)
+                    else
+                        dest[j, i] = f(x[j], y[i])
+                    end
                 end
                 symmetric && (dest[i, j] = dest[j, i])
-            end
-        end
-    end
-
-    if di1
-        if !(dest isa Matrix{Missing})
-            for i in axes(dest, 1)
-                dest[i, i] = 1.0
             end
         end
     end
