@@ -33,7 +33,7 @@ Consider kernel functions taking x and y as arguments so they can do the x===y t
 way could simplify the loop's handling of on-diagonal elements.
 I think the call stack described above is one layer too deep, thanks to new fn _pairwise_loop.
     Would be better to reduce that.
-We should have the same behaviour as cor dor inputs with element type Missing (though cor's
+We should have the same behaviour as cor for inputs with element type Missing (though cor's
     handling of edge cases is perhaps buggy).
 Check test code coverage.
 Consider changing check_pairwise_args to flip :pairwise and :listwise to :none when missing
@@ -100,10 +100,9 @@ function _pairwise!(::Val{:pairwise}, f, dest::AbstractMatrix, x, y, symmetric::
     return _pairwise_loop(Val(:pairwise), f, dest, x, y, symmetric)
 end
 
-function _pairwise!(::Val{:listwise}, f, dest::AbstractMatrix, x, y, symmetric::Bool)
-
+function handle_listwise(x,y)
     if !(missing isa promoted_type(x) || missing isa promoted_type(y))
-        return _pairwise!(Val(:none), f, dest, x, y, symmetric)
+        return (x, y)
     end
 
     nminds = .!ismissing.(first(x))
@@ -119,24 +118,22 @@ function _pairwise!(::Val{:listwise}, f, dest::AbstractMatrix, x, y, symmetric::
     # Computing integer indices once for all vectors is faster
     nminds′ = findall(nminds)
 
+    x′ = [disallowmissing(view(xi, nminds′)) for xi in x]
     if x === y
-        x′ = [disallowmissing(view(xi, nminds′)) for xi in x]
-        return _pairwise!(Val(:none), f, dest, x′, x′, symmetric)
+        return (x′, x′)
     else
-        return _pairwise!(Val(:none), f, dest,
-            [disallowmissing(view(xi, nminds′)) for xi in x],
-            [disallowmissing(view(yi, nminds′)) for yi in y],
-            symmetric)
+        y′ = [disallowmissing(view(yi, nminds′)) for yi in y]
+        return (x′, y′)
     end
+end
 
+function _pairwise!(::Val{:listwise}, f, dest::AbstractMatrix, x, y, symmetric::Bool)
+    x′,y′ = handle_listwise(x,y)
+    return _pairwise!(Val(:none), f, dest, x′, y′, symmetric)
 end
 
 function _pairwise!(f, dest::AbstractMatrix, x, y; symmetric::Bool=false,
     skipmissing::Symbol=:none)
-
-    if !(skipmissing in (:none, :pairwise, :listwise))
-        throw(ArgumentError("skipmissing must be one of :none, :pairwise or :listwise"))
-    end
 
     x′ = x isa Union{AbstractArray,Tuple,NamedTuple} ? x : collect(x)
     y′ = y isa Union{AbstractArray,Tuple,NamedTuple} ? y : collect(y)
