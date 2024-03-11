@@ -222,7 +222,7 @@ function corkendall_kernel!(sortedx::AbstractVector{T}, y::AbstractVector{U},
 
     # Calls to float below prevent possible overflow errors when
     # length(sortedx) exceeds 77_936 (32 bit) or 5_107_605_667 (64 bit)
-    (npairs + ndoubleties - ntiesx - ntiesy - 2 * nswaps) /
+   return (npairs + ndoubleties - ntiesx - ntiesy - 2 * nswaps) /
     sqrt(float(npairs - ntiesx) * float(npairs - ntiesy))
 end
 
