@@ -1,4 +1,5 @@
 #=
+#TODO descriptions of callstacks below now slightly outdated (11 March)
 Callstacks in three cases. Could this be simplified?
 Callstack when skipmissing = :none
 pairwise    1 method
@@ -11,7 +12,7 @@ Callstack when skipmissing = :listwise
 pairwise    1 method
 _pairwise   1 method
 _pairwise!  method with f as first argument
-_pairwise!  method with ::Val{:listwise} as first argument, which calls check_vectors,
+_pairwise!  method with ::Val{:listwise} as first argument, which calls check_pairwise_args,
             excludes missing elements as appropriate before calling
 _pairwise! method with ::Val{:none} as first argument, which is a do-nothing wrapper to
 _pairwise_loop
@@ -20,20 +21,27 @@ Callstack when skipmissing = :pairwise
 pairwise    1 method
 _pairwise   1 method
 _pairwise!  method with f as first argument
-_pairwise!  method with ::Val{:pairwise} as first argument which calles check_vectors and then
+_pairwise!  method with ::Val{:pairwise} as first argument which calles check_pairwise_args and then
 _pairwise_loop
 =#
 
 #=
 TODO
+Prepare comparison of code here with code in StatsBase to ease acceptance by StatsBase maintainers.
+Consider using enumerate in function _pairwise_loop.
+I think the call stack described above is one layer too deep, thanks to new fn _pairwise_loop.
+    Would be better to reduce that.
+We should have the same behaviour as cor dor inputs with element type Missing (though cor's
+    handling of edge cases is quite buggy).
+Check test code coverage.
+
+#DONE 
 Reduce use of eltype [DONE]
 Write note of call stack for pairwise. [DONE]
 Better variable names in specialised method _pairwise_loop. [DONE]
 Review docstrings.
 Write specialised method of _pairwise_loop for corspearman. [DONE]
-Prepare comparison of code here with code in StatsBase to ease acceptance by StatsBase maintainers.
 If we keep corkendall's ability to accept skipmissing argument, can I reduce code duplication? [DONE]
-Consider using enumerate in function _pairwise_loop.
 test for pairwise handling of non-numeric element types for rank correlations [DONE]
 Performance of corspearman seems bad. Worse than corkendall!    [FIXED]
 Reorder methods in pairwise.jl to match order in StatsBase pairwise.jl [DONE]
@@ -44,9 +52,20 @@ function _pairwise!(::Val{:none}, f, dest::AbstractMatrix, x, y, symmetric::Bool
     return _pairwise_loop(Val(:none), f, dest, x, y, symmetric)
 end
 
-#Only called for :pairwise and :listwise, for :none elements of `x` an `y` are not required
-#to all be of the same length.
-function check_vectors(x, y, skipmissing::Symbol)
+function check_pairwise_args(x, y, skipmissing::Symbol, symmetric::Bool)
+
+    if symmetric && x !== y
+        throw(ArgumentError("symmetric=true only makes sense passing " *
+                            "a single set of variables (x === y)"))
+    end
+
+    if !(skipmissing in (:none, :pairwise, :listwise))
+        throw(ArgumentError("skipmissing must be one of :none, :pairwise or :listwise"))
+    end
+
+    #When skipmissing is :none, elements of x/y can have unequal length.
+    skipmissing == :none && return
+
     m = length(x)
     n = length(y)
     if !(all(xi -> xi isa AbstractVector, x) && all(yi -> yi isa AbstractVector, y))
@@ -74,13 +93,15 @@ function check_vectors(x, y, skipmissing::Symbol)
 end
 
 function _pairwise!(::Val{:pairwise}, f, dest::AbstractMatrix, x, y, symmetric::Bool)
-    check_vectors(x, y, :pairwise)
     return _pairwise_loop(Val(:pairwise), f, dest, x, y, symmetric)
 end
 
 function _pairwise!(::Val{:listwise}, f, dest::AbstractMatrix, x, y, symmetric::Bool)
 
-    check_vectors(x, y, :listwise)
+    if !(missing isa promoted_type(x) || missing isa promoted_type(y))
+        return _pairwise!(Val(:none), f, dest, x, y, symmetric)
+    end
+
     nminds = .!ismissing.(first(x))
     @inbounds for xi in Iterators.drop(x, 1)
         nminds .&= .!ismissing.(xi)
@@ -248,13 +269,9 @@ julia> dest
  -0.866025  -1.0        1.0
 ```
 """
-function pairwise!(f, dest::AbstractMatrix, x, y=x;
-    symmetric::Bool=false, skipmissing::Symbol=:none)
-    if symmetric && x !== y
-        throw(ArgumentError("symmetric=true only makes sense passing " *
-                            "a single set of variables (x === y)"))
-    end
-
+function pairwise!(f, dest::AbstractMatrix, x, y=x; symmetric::Bool=false,
+    skipmissing::Symbol=:none)
+    check_pairwise_args(x, y, skipmissing, symmetric)
     return _pairwise!(f, dest, x, y, symmetric=symmetric, skipmissing=skipmissing)
 end
 
@@ -312,11 +329,7 @@ julia> pairwise(cor, eachcol(y), skipmissing=:pairwise)
 ```
 """
 function pairwise(f, x, y=x; symmetric::Bool=false, skipmissing::Symbol=:none)
-    if symmetric && x !== y
-        throw(ArgumentError("symmetric=true only makes sense passing " *
-                            "a single set of variables (x === y)"))
-    end
-
+    check_pairwise_args(x, y, skipmissing, symmetric)
     return _pairwise(Val(skipmissing), f, x, y, symmetric)
 end
 
