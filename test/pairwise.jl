@@ -12,7 +12,7 @@ arbitrary_fun(x, y) = cor(x, y)
 
 @testset "pairwise and pairwise! with $f" for f in (arbitrary_fun, cor, cov, corkendall, corspearman)
 
-    isrankcorr = f in (corkendall, corspearman)#rank correlations always have return type of Float64 whatever element type of inputs
+    isrankcorr = f in (corkendall, corspearman)
     throwsforzerolengthinput = f in (arbitrary_fun, cor, cov)
 
     @testset "basic interface" begin

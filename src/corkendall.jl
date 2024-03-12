@@ -29,23 +29,15 @@ end
 
 function corkendall(x::AbstractVector{T}, y::AbstractVector{U};
     skipmissing::Symbol=:none) where {T,U}
-
     check_rankcor_args(x, y, skipmissing, false)
-
-    length(x) >= 2 || return NaN
-    x === y && return 1.0
-
-    x = copy(x)
-
-    if skipmissing == :pairwise && (missing isa T || missing isa U)
-        x, y = handle_pairwise(x, y)
-        length(x) >= 2 || return NaN
+    if x === y
+        return corkendall(x)
+    else
+        x = copy(x)
+        permx = sortperm(x)
+        permute!(x, permx)
+        return corkendall_kernel!(x, y, permx, skipmissing)
     end
-
-    permx = sortperm(x)
-    permute!(x, permx)
-
-    return corkendall_kernel!(x, y, permx, skipmissing)
 end
 
 #= corkendall returns a vector in this case, inconsistent with with Statistics.cor and
@@ -57,6 +49,10 @@ end
 
 function corkendall(x::AbstractVector, y::AbstractMatrix; skipmissing::Symbol=:none)
     return corkendall(reshape(x, (length(x), 1)), y; skipmissing)
+end
+
+function corkendall(x::AbstractVector{T}) where {T}
+    return T === Missing ? missing : 1.0
 end
 
 function check_rankcor_args(x, y, skipmissing, allowlistwise::Bool)
@@ -117,8 +113,13 @@ function _pairwise_loop(::Val{skipmissing}, f::typeof(corkendall), dest::Abstrac
             end
 
             for i = 1:(symmetric ? j : nc)
-                if symmetric && (i == j) && V !== Missing
-                    dest[j, i] = 1.0
+                # For performance, diagonal is special-cased
+                if i == j && x[j] === y[i] && eltype(dest) !== Union{}
+                    if missing isa eltype(dest)
+                        dest[j, i] = corspearman(x[j])
+                    else
+                        dest[j, i] = 1.0
+                    end
                 else
                     yi .= y[i]
                     dest[j, i] = corkendall_kernel!(sortedxj, yi, permx, skipmissing;
@@ -188,7 +189,7 @@ function corkendall_kernel!(sortedx::AbstractVector{T}, y::AbstractVector{U},
     end
 
     (any(_isnan, sortedx) || any(_isnan, permutedy)) && return NaN
-    
+
     n = length(sortedx)
 
     # Use widen to avoid overflows on both 32bit and 64bit
@@ -222,8 +223,8 @@ function corkendall_kernel!(sortedx::AbstractVector{T}, y::AbstractVector{U},
 
     # Calls to float below prevent possible overflow errors when
     # length(sortedx) exceeds 77_936 (32 bit) or 5_107_605_667 (64 bit)
-   return (npairs + ndoubleties - ntiesx - ntiesy - 2 * nswaps) /
-    sqrt(float(npairs - ntiesx) * float(npairs - ntiesy))
+    return (npairs + ndoubleties - ntiesx - ntiesy - 2 * nswaps) /
+           sqrt(float(npairs - ntiesx) * float(npairs - ntiesy))
 end
 
 """

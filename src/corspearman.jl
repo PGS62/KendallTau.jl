@@ -29,8 +29,11 @@ end
 
 function corspearman(x::AbstractVector, y::AbstractVector; skipmissing::Symbol=:none)
     check_rankcor_args(x, y, skipmissing, false)
-    x, y = copy(x), copy(y)
-    return corspearman_kernel!(x, y, skipmissing)
+    if x === y
+        return corspearman(x)
+    else
+        return corspearman_kernel!(x, y, skipmissing)
+    end
 end
 
 function corspearman(x::AbstractMatrix, y::AbstractVector; skipmissing::Symbol=:none)
@@ -39,6 +42,10 @@ end
 
 function corspearman(x::AbstractVector, y::AbstractMatrix; skipmissing::Symbol=:none)
     return corspearman(reshape(x, (length(x), 1)), y; skipmissing)
+end
+
+function corspearman(x::AbstractVector{T}) where {T}
+    return T === Missing ? missing : 1.0
 end
 
 function _pairwise_loop(::Val{:none}, f::typeof(corspearman),
@@ -94,8 +101,13 @@ function _pairwise_loop(::Val{:pairwise}, f::typeof(corspearman),
             rksy = task_local_vector(:rksy, fl64, m)
 
             for i = 1:(symmetric ? j : nc)
-                if symmetric && (i == j) && V !== Missing
-                    dest[j, i] = 1.0
+                # For performance, diagonal is special-cased
+                if i == j && x[j] === y[i] && eltype(dest) !== Union{}
+if missing isa eltype(dest)
+                    dest[j, i] = corspearman(x[j])
+else
+    dest[j, i] = 1.0
+end
                 else
                     dest[j, i] = corspearman_kernel!(x[j], y[i], :pairwise,
                         view(tempx, :, j), view(tempy, :, i), inds, spnmx, spnmy, nmx,
@@ -262,19 +274,23 @@ julia>
 ```
 """
 function _cor(x::AbstractMatrix{T}, y::AbstractMatrix{U}) where {T,U}
-    symmetric = y === x
+    symmetric = x === y
 
     if size(x, 1) < 2
-        C = fill(NaN, size(x, 2), size(y, 2))
-        symmetric && (C = insert_ones(C))
-        return C
+        if symmetric && T === Missing
+            return ifelse.(axes(x, 2) .== axes(x, 2)', missing, NaN)
+        elseif symmetric
+            return ifelse.(axes(x, 2) .== axes(x, 2)', 1.0, NaN)
+        else
+            return fill(NaN, size(x, 2), size(y, 2))
+        end
     end
     try
-        C = cor(x, y)
         if symmetric
-            C = insert_ones(C)
+            return cor(x)
+        else
+            return cor(x, y)
         end
-        return C
     catch
         nr, nc = size(x, 2), size(y, 2)
         if missing isa T || missing isa U
@@ -294,9 +310,7 @@ function _cor(x::AbstractMatrix{T}, y::AbstractMatrix{U}) where {T,U}
 end
 
 function insert_ones(C::AbstractMatrix{T}) where {T}
-    if T === Missing
-        C = ifelse.(axes(C, 1) .== axes(C, 2)', 1.0, missing)
-    else
+    if T !== Missing
         for i in axes(C, 1)
             C[i, i] = 1.0
         end
@@ -335,6 +349,11 @@ function ranks_matrix(x)
     m = length(x) == 0 ? 0 : length(first(x))
     nc = length(x)
     int64 = Int64[]
+
+    if promoted_type(x) === Missing
+        return (fill(missing, m, nc))
+    end
+
     temp = Array{Union{Missing,Int,Float64}}(undef, m, nc)
 
     Threads.@threads for i in 1:nc

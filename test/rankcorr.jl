@@ -39,36 +39,50 @@ using Test
 end
 
 #=
-If x and y are equal-length vectors we test for:
-f(x,x) == NaN whenever length(x)<2
-otherwise
-f(x,y) == missing whenever x or y contains a missing
-otherwise
-f(x,y) == NaN whenever x or y contains a NaN
+Description of edge cases to be tested for:
+===========================================    
+In the symmetric case (x===y) on diagonal tems should be 1.0 unless the element type of x is
+Missing in which case on-diagonal terms should be missing.
+Otherwise, if x and y are equal-length vectors with length(x)<2
+f(x,y) == NaN
+otherwise if x and y are equal-length vectors and either contains missing
+f(x,y) == missing
+otherwise if x and y are equal-length vectors and either contains NaN
+f(x,y) == NaN
 otherwise
 f(x,y) = the required Kendall or Spearman correlation.
 
-If x is a matrix we test for f(x) always having 1.0 on the diagonal irrespective of whether
-x contains NaN, missing, Inf etc.
-
-This behaviour is _not_ identical to Statistics.cor. e.g.:
+This behaviour is close to but not quite identical to Statistics.cor. e.g.:
 
 julia> cor(fill(missing,3,2))
 2×2 Matrix{Missing}:
  missing  missing
  missing  missing
 
-julia> corkendall(fill(missing,3,2))
-2×2 Matrix{Union{Missing, Float64}}:
- 1.0        missing
-  missing  1.0
+julia> corkendall(fill(missing,3,2)) #SAME behavior as cor
+2×2 Matrix{Missing}:
+ missing  missing
+ missing  missing
 
-julia> KendallTau.corkendall([],[])
-NaN
+julia> x = Matrix{Union{Missing,Float64}}(undef,5,3)
+5×3 Matrix{Union{Missing, Float64}}:
+ missing  missing  missing
+ missing  missing  missing
+ missing  missing  missing
+ missing  missing  missing
+ missing  missing  missing
 
-julia> cor([],[])
-ERROR: MethodError: no method matching zero(::Type{Any})
+julia> cor(x)
+3×3 Matrix{Missing}:
+ missing  missing  missing
+ missing  missing  missing
+ missing  missing  missing
 
+julia> corkendall(x)       #DIFFERENT behaviour from cor
+3×3 Matrix{Union{Missing, Float64}}:
+ 1.0        missing   missing
+  missing  1.0        missing
+  missing   missing  1.0
 =#
 
 @testset "$f" for f in (corkendall, corspearman)
@@ -128,7 +142,7 @@ ERROR: MethodError: no method matching zero(::Type{Any})
     @test c22 == 1.0
     if f == corkendall
         @test c12 == 3 / sqrt(20)
-    else
+    elseif f == corspearman
         @test c12 == 7 / sqrt(90)
     end
     @test f(repeat(X, n), repeat(X, n)) ≈ [c11 c12; c12 c22]
@@ -150,8 +164,8 @@ ERROR: MethodError: no method matching zero(::Type{Any})
     @test isnan(f([1, 2, 3, 4, 5], xm, skipmissing=:pairwise))
     @test isnan(f(xm, [1, 2, 3, 4, 5], skipmissing=:pairwise))
     @test isequal(f(xmm, skipmissing=:pairwise), [1.0 NaN; NaN 1.0])
-    @test isequal(f(xmm, skipmissing=:none), [1.0 missing; missing 1.0])
-    @test isequal(f(xmm, xmm, skipmissing=:none), [1.0 missing; missing 1.0])
+    @test isequal(f(xmm, skipmissing=:none), [missing missing; missing missing])
+    @test isequal(f(xmm, xmm, skipmissing=:none), [missing missing; missing missing])
     @test isequal(f(xmm, copy(xmm), skipmissing=:none),
         [missing missing; missing missing])
     @test isequal(f(xmm, xmm, skipmissing=:listwise), [1.0 NaN; NaN 1.0])
@@ -159,7 +173,7 @@ ERROR: MethodError: no method matching zero(::Type{Any})
     @test isequal(f(xmm, copy(xmm), skipmissing=:pairwise), [NaN NaN; NaN NaN])
     @test ismissing(f([1, 2, 3, 4, 5], xm, skipmissing=:none))
     @test ismissing(f([1, 2, 3, 4, 5], xm, skipmissing=:none))
-    @test isequal(f(xmm, skipmissing=:none), [1.0 missing; missing 1.0])
+    @test isequal(f(xmm, skipmissing=:none), [missing missing; missing missing])
     @test isequal(f(xmm, copy(xmm), skipmissing=:none),
         [missing missing; missing missing])
     @test isequal(f(hcat(Y, xm), skipmissing=:none), vcat(hcat(f(Y, skipmissing=:none),
@@ -202,7 +216,7 @@ ERROR: MethodError: no method matching zero(::Type{Any})
     @test isequal(f([1;;]), [1.0;;])
     @test isnan(f([missing], [missing]))
     @test isequal(f([missing], [missing missing]), [NaN NaN])
-    @test isequal(f([missing missing]), [1.0 NaN; NaN 1.0])
+    @test isequal(f([missing missing]), [missing NaN; NaN missing])
     @test isequal(f([missing missing], [missing missing]), [NaN NaN; NaN NaN])
 
     # Works for not-numbers (!)

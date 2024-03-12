@@ -28,14 +28,17 @@ function corkendall_naive(x::AbstractMatrix, y::AbstractMatrix=x;
 end
 
 function _corkendall_naive(x::AbstractMatrix, y::AbstractMatrix=x; skipmissing::Symbol=:none, dest)
-
     symmetric = x === y
 
     (m, nr), nc = size(x), size(y, 2)
 
-    for j = (symmetric ? 2 : 1):nr
-        for i = 1:(symmetric ? j - 1 : nc)
-            dest[j, i] = corkendall_naive_kernel!(view(x, :, j), view(y, :, i), skipmissing)
+    for j = 1:nr
+        for i = 1:(symmetric ? j : nc)
+            if symmetric && i == j
+                dest[j, i] = eltype(x) === Missing ? missing : 1.0
+            else
+                dest[j, i] = corkendall_naive_kernel!(view(x, :, j), view(y, :, i), skipmissing)
+            end
             symmetric && (dest[i, j] = dest[j, i])
         end
     end
@@ -157,9 +160,13 @@ function _corspearman_naive(x::AbstractMatrix, y::AbstractMatrix=x; skipmissing:
 
     (m, nr), nc = size(x), size(y, 2)
 
-    for j = (symmetric ? 2 : 1):nr
-        for i = 1:(symmetric ? j - 1 : nc)
-            dest[j, i] = corspearman_naive_kernel!(view(x, :, j), view(y, :, i), skipmissing)
+    for j = 1:nr
+        for i = 1:(symmetric ? j : nc)
+            if symmetric && i == j
+                dest[j, i] = eltype(x) === Missing ? missing : 1.0
+            else
+                dest[j, i] = corspearman_naive_kernel!(view(x, :, j), view(y, :, i), skipmissing)
+            end
             symmetric && (dest[i, j] = dest[j, i])
         end
     end
