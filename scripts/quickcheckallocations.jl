@@ -374,5 +374,31 @@ KendallTau.corspearman(xm; skipmissing=:none)                                   
 KendallTau.pairwise(KendallTau.corspearman,eachcol(xm),skipmissing=:none)       0.066340 seconds (3.13 k allocations: 17.304 MiB, 0.00% compilation time)
 ====================================================================================================
 
+#Mystery as to why the slowdown below.
+====================================================================================================
+Dates.now() = DateTime("2024-03-13T20:12:21.072")
+ENV["COMPUTERNAME"] = "PHILIP-LAPTOP"
+Julia Version 1.10.2
+Threads.nthreads() = 8
+size(x) = (1000, 1000)
+typeof(x) = Matrix{Float64}
+size(xm) = (1000, 1000)
+typeof(xm) = Matrix{Union{Missing, Float64}}
+do_StatsBase_times = false
+KendallTau.corkendall(x)                                                        8.091739 seconds (2.05 k allocations: 15.899 MiB, 0.00% compilation time)
+KendallTau.corkendall(xm; skipmissing=:pairwise)                                8.769723 seconds (1.46 k allocations: 15.524 MiB, 0.20% gc time, 0.00% compilation time)
+KendallTau.pairwise(KendallTau.corkendall,eachcol(xm); skipmissing=:pairwise)   7.760810 seconds (1.19 k allocations: 15.511 MiB, 0.00% compilation time)
+KendallTau.corkendall(xm; skipmissing=:listwise)                                0.015878 seconds (2.19 k allocations: 11.817 MiB, 0.01% compilation time)
+KendallTau.pairwise(KendallTau.corkendall,eachcol(xm); skipmissing=:listwise)   0.015381 seconds (2.19 k allocations: 11.817 MiB, 0.01% compilation time)
+KendallTau.corkendall(xm; skipmissing=:none)                                    0.349647 seconds (1.20 k allocations: 16.465 MiB, 0.00% compilation time)
+KendallTau.pairwise(KendallTau.corkendall,eachcol(xm),skipmissing=:none)        0.357957 seconds (1.20 k allocations: 16.465 MiB, 2.42% gc time, 0.00% compilation time)
+KendallTau.corspearman(x)                                                       0.058681 seconds (1.12 k allocations: 39.312 MiB, 0.00% compilation time)
+KendallTau.corspearman(xm; skipmissing=:pairwise)                               2.522940 seconds (1.26 k allocations: 23.187 MiB, 0.00% compilation time)
+KendallTau.pairwise(KendallTau.corspearman,eachcol(xm); skipmissing=:pairwise)  2.560398 seconds (1.26 k allocations: 23.187 MiB, 2.04% gc time, 0.00% compilation time)
+KendallTau.corspearman(xm; skipmissing=:listwise)                               0.008440 seconds (2.11 k allocations: 19.428 MiB, 0.01% compilation time)
+KendallTau.pairwise(KendallTau.corspearman,eachcol(xm); skipmissing=:listwise)  0.007319 seconds (2.11 k allocations: 19.428 MiB, 0.02% compilation time)
+KendallTau.corspearman(xm; skipmissing=:none)                                   0.042035 seconds (1.62 k allocations: 17.271 MiB, 0.00% compilation time)
+KendallTau.pairwise(KendallTau.corspearman,eachcol(xm),skipmissing=:none)       0.140749 seconds (1.62 k allocations: 17.271 MiB, 76.24% gc time, 0.00% compilation time)
+
 
 =#
