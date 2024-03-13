@@ -52,15 +52,32 @@ function _pairwise_loop(::Val{:none}, f::typeof(corspearman),
     dest::AbstractMatrix, x, y, symmetric::Bool)
 
     symmetric = x === y
+    if symmetric && promoted_type(x) === Missing
+        ondiag = missing
+        offdiag = (length(x[1]) < 2 || skipmissing in (:listwise, :pairwise)) ? NaN : missing
+        for i in axes(dest, 1), j in axes(dest, 2)
+            dest[i, j] = i == j ? ondiag : offdiag
+        end
+        return dest
+    end
 
     tempx = ranks_matrix(x)
 
     if symmetric
-        dest .= _cor(tempx, tempx)
+        dest .= _cor(tempx, tempx)#, x, x, :none)
     else
         tempy = ranks_matrix(y)
-        dest .= _cor(tempx, tempy)
+        dest .= _cor(tempx, tempy)#, x, y, :none)
     end
+
+    if symmetric
+        ondiag = (eltype(x) === Missing && skipmissing == :none) ? missing : 1.0
+        for i in axes(dest, 1)
+            #@assert isequal(dest[i, i] , ondiag)
+            dest[i, i] = ondiag
+        end
+    end
+
     return dest
 
 end
@@ -103,11 +120,11 @@ function _pairwise_loop(::Val{:pairwise}, f::typeof(corspearman),
             for i = 1:(symmetric ? j : nc)
                 # For performance, diagonal is special-cased
                 if i == j && x[j] === y[i] && eltype(dest) !== Union{}
-if missing isa eltype(dest)
-                    dest[j, i] = corspearman(x[j])
-else
-    dest[j, i] = 1.0
-end
+                    if missing isa eltype(dest) && eltype(x[j]) == Missing
+                        dest[j, i] = missing
+                    else
+                        dest[j, i] = 1.0
+                    end
                 else
                     dest[j, i] = corspearman_kernel!(x[j], y[i], :pairwise,
                         view(tempx, :, j), view(tempy, :, i), inds, spnmx, spnmy, nmx,
@@ -273,27 +290,33 @@ julia>
 
 ```
 """
-function _cor(x::AbstractMatrix{T}, y::AbstractMatrix{U}) where {T,U}
-    symmetric = x === y
 
-    if size(x, 1) < 2
+function _cor(ranksx::AbstractMatrix{T}, ranksy::AbstractMatrix{U}) where {T,U}
+    symmetric = ranksx === ranksy
+
+    if size(ranksx, 1) < 2
         if symmetric && T === Missing
-            return ifelse.(axes(x, 2) .== axes(x, 2)', missing, NaN)
+            return ifelse.(axes(ranksx, 2) .== axes(ranksx, 2)', missing, NaN)
         elseif symmetric
-            return ifelse.(axes(x, 2) .== axes(x, 2)', 1.0, NaN)
+            return ifelse.(axes(ranksx, 2) .== axes(ranksx, 2)', 1.0, NaN)
         else
-            return fill(NaN, size(x, 2), size(y, 2))
+            return fill(NaN, size(ranksx, 2), size(ranksy, 2))
         end
     end
     try
         if symmetric
-            return cor(x)
+            return cor(ranksx)
         else
-            return cor(x, y)
+            return cor(ranksx, ranksy)
         end
     catch
-        nr, nc = size(x, 2), size(y, 2)
-        if missing isa T || missing isa U
+        #This catch block is hit when ranksx === ranksy = [missing missing;missing missing] thanks to
+        #what appears to be a bug in cor with root cause a bug in matmul2x2! 
+        #MethodError: no method matching copy(::Missing)
+        nr, nc = size(ranksx, 2), size(ranksy, 2)
+        if ranksx === ranksy && T === Missing
+            return fill(missing, nr, nc)
+        elseif missing isa T || missing isa U
             C = ones(Union{Missing,Float64}, nr, nc)
         else
             C = ones(Float64, nr, nc)
@@ -301,7 +324,7 @@ function _cor(x::AbstractMatrix{T}, y::AbstractMatrix{U}) where {T,U}
 
         for j = (symmetric ? 2 : 1):nr
             for i = 1:(symmetric ? j - 1 : nc)
-                C[j, i] = cor(view(x, :, j), view(y, :, i))
+                C[j, i] = cor(view(ranksx, :, j), view(ranksy, :, i))
                 symmetric && (C[i, j] = C[j, i])
             end
         end

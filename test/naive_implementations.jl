@@ -18,6 +18,12 @@ function corkendall_naive(x::AbstractMatrix, y::AbstractMatrix=x;
         x, y = handle_listwise(x, y)
     end
 
+    if x === y && eltype(x) === Missing
+        ondiag = skipmissing == :none ? missing : 1.0
+        offdiag = (size(x, 1) < 2 || skipmissing in (:listwise, :pairwise)) ? NaN : missing
+        return ifelse.((1:nr) .== (1:nr)', ondiag, offdiag)
+    end
+
     if skipmissing == :none && missing_allowed
         dest = ones(Union{Missing,Float64}, nr, nc)
     else
@@ -143,6 +149,12 @@ function corspearman_naive(x::AbstractMatrix, y::AbstractMatrix=x;
 
     if missing_allowed && skipmissing == :listwise
         x, y = handle_listwise(x, y)
+    end
+
+    if x === y && eltype(x) === Missing
+        ondiag = skipmissing == :none ? missing : 1.0
+        offdiag = (size(x, 1) < 2 || skipmissing in (:listwise, :pairwise)) ? NaN : missing
+        return ifelse.((1:nr) .== (1:nr)', ondiag, offdiag)
     end
 
     if skipmissing == :none && missing_allowed

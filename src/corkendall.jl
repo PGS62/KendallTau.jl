@@ -115,8 +115,8 @@ function _pairwise_loop(::Val{skipmissing}, f::typeof(corkendall), dest::Abstrac
             for i = 1:(symmetric ? j : nc)
                 # For performance, diagonal is special-cased
                 if i == j && x[j] === y[i] && eltype(dest) !== Union{}
-                    if missing isa eltype(dest)
-                        dest[j, i] = corspearman(x[j])
+                    if missing isa eltype(dest) && eltype(x[j]) == Missing
+                        dest[j, i] = missing
                     else
                         dest[j, i] = 1.0
                     end

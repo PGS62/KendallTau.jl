@@ -41,8 +41,9 @@ end
 #=
 Description of edge cases to be tested for:
 ===========================================    
-In the symmetric case (x===y) on diagonal tems should be 1.0 unless the element type of x is
-Missing in which case on-diagonal terms should be missing.
+In the symmetric case (x===y) on-diagonal tems should be 1.0 apart from the special case of 
+eltype(x) === Missing && skipmissing == :none, in which case the on-diagonal terms should be
+missing.
 Otherwise, if x and y are equal-length vectors with length(x)<2
 f(x,y) == NaN
 otherwise if x and y are equal-length vectors and either contains missing
@@ -207,7 +208,7 @@ julia> corkendall(x)       #DIFFERENT behaviour from cor
     @test_throws ArgumentError f(X; skipmissing=:foo)
     @test_throws ArgumentError f(Xm; skipmissing=:foo)
 
-    #Inputs have fewer than 2 rows
+    # Inputs have fewer than 2 rows
     @test isnan(f([], []))
     @test isequal(f(fill(1, 0, 2), fill(1, 0, 2)), [NaN NaN; NaN NaN])
     @test isequal(f(fill(1, 0, 2)), [1.0 NaN; NaN 1.0])
@@ -219,10 +220,14 @@ julia> corkendall(x)       #DIFFERENT behaviour from cor
     @test isequal(f([missing missing]), [missing NaN; NaN missing])
     @test isequal(f([missing missing], [missing missing]), [NaN NaN; NaN NaN])
 
+    # Exercise catch block in method _cor (when f === corspearman)
+    @test isequal(fill(missing, 2, 2), fill(missing, 2, 2))
+
     # Works for not-numbers (!)
     @test isequal(f(["a", "b", "c"], ["a", "b", "c"]), 1.0)
     @test isequal(f(["a", "b", "c"], ["c", "b", "a"]), -1.0)
     @test (f(["a" "z"; "b" "y"; "c" "x"]) ≈ [1.0 -1.0; -1.0 1.0])
+    @test (f(["a" 3; "b" 2; "c" 1]) ≈ [1.0 -1.0; -1.0 1.0])
 
     #Works for zero size input
     @test isequal(f([;;]), [;;])

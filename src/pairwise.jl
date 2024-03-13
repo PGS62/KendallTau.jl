@@ -27,6 +27,7 @@ _pairwise_loop
 
 #=
 TODO
+Update naive implementations for new handling of missing.
 Prepare comparison of code here with code in StatsBase to ease acceptance by StatsBase maintainers.
 Consider using enumerate in function _pairwise_loop.
 Consider kernel functions taking x and y as arguments so they can do the x===y test, that
@@ -402,6 +403,9 @@ pairwise!(::typeof(cov), dest::AbstractMatrix, x;
 pairwise(::typeof(cov), x; symmetric::Bool=true, skipmissing::Symbol=:none) =
     pairwise(_cov, x, x, symmetric=symmetric, skipmissing=skipmissing)
 #=
+#the purpose of this method is to make symmetric default to true when first argument is cor
+and y is omitted. But we now ignore the passed-in symetric argument in that case (treat as
+true), so this pair of methods no longer needed.
 pairwise!(::typeof(cor), dest::AbstractMatrix, x;
     symmetric::Bool=true, skipmissing::Symbol=:none) =
     pairwise!(cor, dest, x, x, symmetric=symmetric, skipmissing=skipmissing)
