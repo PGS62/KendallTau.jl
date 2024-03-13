@@ -31,9 +31,9 @@ Prepare comparison of code here with code in StatsBase to ease acceptance by Sta
 Consider using enumerate in function _pairwise_loop.
 I think the call stack described above is one layer too deep, thanks to new fn _pairwise_loop.
     Would be better to reduce that.
-Check test code coverage.
 
 #DONE 
+Check test code coverage. [DONE]
 Reduce use of eltype [DONE]
 Write note of call stack for pairwise. [DONE]
 Better variable names in specialised method _pairwise_loop. [DONE]

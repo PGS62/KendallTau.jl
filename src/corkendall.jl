@@ -33,9 +33,8 @@ function corkendall(x::AbstractVector{T}, y::AbstractVector{U};
     if x === y
         return corkendall(x)
     else
-        x = copy(x)
         permx = sortperm(x)
-        permute!(x, permx)
+        permute!(copy(x), permx)
         return corkendall_kernel!(x, y, permx, skipmissing)
     end
 end
@@ -53,21 +52,6 @@ end
 
 function corkendall(x::AbstractVector{T}) where {T}
     return T === Missing ? missing : 1.0
-end
-
-function check_rankcor_args(x, y, skipmissing, allowlistwise::Bool)
-    Base.require_one_based_indexing(x, y)
-    size(x, 1) == size(y, 1) ||
-        throw(DimensionMismatch("x and y have inconsistent dimensions"))
-    if allowlistwise
-        skipmissing == :none || skipmissing == :pairwise || skipmissing == :listwise ||
-            throw(ArgumentError("skipmissing must be one of :none, :pairwise or :listwise, \
-            but got :$skipmissing"))
-    else
-        skipmissing == :none || skipmissing == :pairwise ||
-            throw(ArgumentError("skipmissing must be either :none or :pairwise, but \
-            got :$skipmissing"))
-    end
 end
 
 function _pairwise_loop(::Val{skipmissing}, f::typeof(corkendall), dest::AbstractMatrix{V},
@@ -139,6 +123,21 @@ end
 # Knight, William R. “A Computer Method for Calculating Kendall's Tau with Ungrouped Data.”
 # Journal of the American Statistical Association, vol. 61, no. 314, 1966, pp. 436–439.
 # JSTOR, www.jstor.org/stable/2282833.
+
+function check_rankcor_args(x, y, skipmissing, allowlistwise::Bool)
+    Base.require_one_based_indexing(x, y)
+    size(x, 1) == size(y, 1) ||
+        throw(DimensionMismatch("x and y have inconsistent dimensions"))
+    if allowlistwise
+        skipmissing == :none || skipmissing == :pairwise || skipmissing == :listwise ||
+            throw(ArgumentError("skipmissing must be one of :none, :pairwise or :listwise, \
+            but got :$skipmissing"))
+    else
+        skipmissing == :none || skipmissing == :pairwise ||
+            throw(ArgumentError("skipmissing must be either :none or :pairwise, but \
+            got :$skipmissing"))
+    end
+end
 
 promoted_type(x) = mapreduce(eltype, promote_type, x, init=Union{})
 promoted_nmtype(x) = mapreduce(nonmissingtype ∘ eltype, promote_type, x, init=Union{})

@@ -209,13 +209,20 @@ julia> corkendall(x)       #DIFFERENT behaviour from cor
     @test_throws ArgumentError f(Xm; skipmissing=:foo)
 
     # Inputs have fewer than 2 rows
-    @test isnan(f([], []))
+    @test isequal(f([], []), NaN)
     @test isequal(f(fill(1, 0, 2), fill(1, 0, 2)), [NaN NaN; NaN NaN])
     @test isequal(f(fill(1, 0, 2)), [1.0 NaN; NaN 1.0])
-    @test isnan(f([1], [1]))
     @test isequal(f([1;;], [1;;]), [NaN;;])
     @test isequal(f([1;;]), [1.0;;])
-    @test isnan(f([missing], [missing]))
+    @test isequal(f([missing], [missing]), NaN)
+    @test isequal(f([1], [1]), NaN)
+    @test isequal(f([NaN], [NaN]), NaN)
+    @test isequal(f([1], [1]), NaN)
+    @test isequal(f([]), 1.0)
+    @test isequal(f([1]), 1.0)
+    @test isequal(f([NaN]), 1.0)
+    @test isequal(f([missing]), missing)
+    @test isequal(f([missing]), missing)
     @test isequal(f([missing], [missing missing]), [NaN NaN])
     @test isequal(f([missing missing]), [missing NaN; NaN missing])
     @test isequal(f([missing missing], [missing missing]), [NaN NaN; NaN NaN])
@@ -302,6 +309,8 @@ julia> corkendall(x)       #DIFFERENT behaviour from cor
 
 end
 
+#Don't want to artificially boost coverage stats when checking for mutation and allocation size
+# COV_EXCL_START
 @testset "Check no mutation in $f" for f in (corkendall, corspearman)
 
     nr = 50
@@ -360,3 +369,4 @@ end
     @test (@allocated corspearman(xm, skipmissing=:pairwise)) < (1_692_144 + Threads.nthreads() * 67_172) * 1.2
 
 end
+# COV_EXCL_STOP

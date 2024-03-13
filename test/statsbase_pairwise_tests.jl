@@ -1,5 +1,6 @@
-#This file is a copy of StatsBase test/pairwise.jl with minimal changes rerquired to work in
-#this package. It helps to demonstrate that the tests in KendallTau are correctly a superset of the tests in StatsBase
+#This file is a copy of StatsBase test/pairwise.jl with the minimal changes required to work
+#in this package. It helps to demonstrate that the tests in KendallTau are correctly a 
+#superset of the tests in StatsBase.
 using KendallTau
 using StatsBase: cor,cov
 using Test, Random, Statistics, LinearAlgebra

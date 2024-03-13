@@ -71,12 +71,12 @@ function _pairwise_loop(::Val{:none}, f::typeof(corspearman),
     end
 
     if symmetric
-        #This block is necessary in the case where _cor encountered an error (bug) in cor.
-        #Therefore the return from _cor was constructed in the catch block, which may not
-        #have the "correct" on-diagonal elements.
         ondiag = (eltype(x) === Missing && skipmissing == :none) ? missing : 1.0
         for i in axes(dest, 1)
-            dest[i, i] = ondiag
+            if !isequal(dest[i, i], ondiag)
+                #Example for which this line is hit: corspearman([missing missing; 1 1; 1 1])
+                dest[i, i] = ondiag
+            end
         end
     end
 
@@ -185,7 +185,7 @@ function corspearman_kernel!(x::AbstractVector{T}, y::AbstractVector{U},
 
     (axes(x) == axes(sortpermx) == axes(y) == axes(sortpermy) == axes(inds) ==
      axes(spnmx) == axes(spnmy) == axes(nmx) == axes(nmy) == axes(ranksx) ==
-      axes(ranksy)) || throw(ArgumentError("Axes of inputs must match"))
+     axes(ranksy)) || throw(ArgumentError("Axes of inputs must match"))
 
     if skipmissing == :pairwise
 
