@@ -229,8 +229,11 @@ julia> corkendall(x)       #DIFFERENT behaviour from cor
 
     # Exercise catch block in method _cor (when f === corspearman)
     @test isequal(fill(missing, 2, 2), fill(missing, 2, 2))
+    # Exercise "correction" of on-diagonal terms in method
+    # _pairwise_loop(::Val{:none}, f::typeof(corspearman),...
+    @test isequal(f([missing missing; 1 1; 1 1]), [1 missing; missing 1])
 
-    # Works for not-numbers (!)
+    # Works for not-numbers
     @test isequal(f(["a", "b", "c"], ["a", "b", "c"]), 1.0)
     @test isequal(f(["a", "b", "c"], ["c", "b", "a"]), -1.0)
     @test (f(["a" "z"; "b" "y"; "c" "x"]) ≈ [1.0 -1.0; -1.0 1.0])
