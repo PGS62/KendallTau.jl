@@ -61,19 +61,21 @@ function _pairwise_loop(::Val{:none}, f::typeof(corspearman),
         return dest
     end
 
-    tempx = ranks_matrix(x)
+    ranksx = ranks_matrix(x)
 
     if symmetric
-        dest .= _cor(tempx, tempx)#, x, x, :none)
+        dest .= _cor(ranksx, ranksx)
     else
-        tempy = ranks_matrix(y)
-        dest .= _cor(tempx, tempy)#, x, y, :none)
+        ranksy = ranks_matrix(y)
+        dest .= _cor(ranksx, ranksy)
     end
 
     if symmetric
+        #This block is necessary in the case where _cor encountered an error (bug) in cor.
+        #Therefore the return from _cor was constructed in the catch block, which may not
+        #have the "correct" on-diagonal elements.
         ondiag = (eltype(x) === Missing && skipmissing == :none) ? missing : 1.0
         for i in axes(dest, 1)
-            #@assert isequal(dest[i, i] , ondiag)
             dest[i, i] = ondiag
         end
     end
@@ -114,8 +116,8 @@ function _pairwise_loop(::Val{:pairwise}, f::typeof(corspearman),
             spnmy = task_local_vector(:spnmy, int64, m)
             nmx = task_local_vector(:nmx, nmtx, m)
             nmy = task_local_vector(:nmy, nmty, m)
-            rksx = task_local_vector(:rksx, fl64, m)
-            rksy = task_local_vector(:rksy, fl64, m)
+            ranksx = task_local_vector(:ranksx, fl64, m)
+            ranksy = task_local_vector(:ranksy, fl64, m)
 
             for i = 1:(symmetric ? j : nc)
                 # For performance, diagonal is special-cased
@@ -128,7 +130,7 @@ function _pairwise_loop(::Val{:pairwise}, f::typeof(corspearman),
                 else
                     dest[j, i] = corspearman_kernel!(x[j], y[i], :pairwise,
                         view(tempx, :, j), view(tempy, :, i), inds, spnmx, spnmy, nmx,
-                        nmy, rksx, rksy)
+                        nmy, ranksx, ranksy)
                 end
                 symmetric && (dest[i, j] = dest[j, i])
             end
@@ -144,8 +146,8 @@ end
     skipmissing::Symbol, sortpermx=sortperm(x), sortpermy=sortperm(y),
     inds=zeros(Int64, length(x)), spnmx=zeros(Int64, length(x)),
     spnmy=zeros(Int64, length(x)), nmx=similar(x, nonmissingtype(T)),
-    nmy=similar(y, nonmissingtype(U)), rksx=similar(x, Float64),
-    rksy=similar(y, Float64)) where {T,U}
+    nmy=similar(y, nonmissingtype(U)), ranksx=similar(x, Float64),
+    ranksy=similar(y, Float64)) where {T,U}
 
 Compute Spearman's rank correlation coefficient between `x` and `y` with no allocations if
 all arguments are provided.
@@ -153,8 +155,8 @@ all arguments are provided.
 All arguments (other than `skipmissing`) must have the same axes.
 - `sortpermx`: The sort permutation of `x`.
 - `sortpermy`: The sort permutation of `y`.
-- `inds` ... `rksy` are all pre-allocated "scratch" arguments, of the indicated element type.
-
+- `inds` ... `ranksy` are all pre-allocated "scratch" arguments.
+   
 ## Example
 ```julia-repl
 julia> using KendallTau, BenchmarkTools, Random
@@ -167,9 +169,9 @@ julia> y = ifelse.(rand(1000) .< 0.05,missing,randn(1000));
 
 julia> sortpermx=sortperm(x);sortpermy=sortperm(y);inds=zeros(Int64,1000);spnmx=zeros(Int64,1000);
 
-julia> spnmy=zeros(Int64,1000);nmx=zeros(1000);nmy=zeros(1000);rksx=similar(x,Float64);rksy=similar(y,Float64);
+julia> spnmy=zeros(Int64,1000);nmx=zeros(1000);nmy=zeros(1000);ranksx=similar(x,Float64);ranksy=similar(y,Float64);
 
-julia> @btime KendallTau.corspearman_kernel!(\$x,\$y,:pairwise,\$sortpermx,\$sortpermy,\$inds,\$spnmx,\$spnmy,\$nmx,\$nmy,\$rksx,\$rksy)
+julia> @btime KendallTau.corspearman_kernel!(\$x,\$y,:pairwise,\$sortpermx,\$sortpermy,\$inds,\$spnmx,\$spnmy,\$nmx,\$nmy,\$ranksx,\$ranksy)
 4.671 μs (0 allocations: 0 bytes)
 -0.016058512110609713
 ```
@@ -178,12 +180,12 @@ function corspearman_kernel!(x::AbstractVector{T}, y::AbstractVector{U},
     skipmissing::Symbol, sortpermx=sortperm(x), sortpermy=sortperm(y),
     inds=zeros(Int64, length(x)), spnmx=zeros(Int64, length(x)),
     spnmy=zeros(Int64, length(x)), nmx=similar(x, nonmissingtype(T)),
-    nmy=similar(y, nonmissingtype(U)), rksx=similar(x, Float64),
-    rksy=similar(y, Float64)) where {T,U}
+    nmy=similar(y, nonmissingtype(U)), ranksx=similar(x, Float64),
+    ranksy=similar(y, Float64)) where {T,U}
 
     (axes(x) == axes(sortpermx) == axes(y) == axes(sortpermy) == axes(inds) ==
-     axes(spnmx) == axes(spnmy) == axes(nmx) == axes(nmy) == axes(rksx) == axes(rksy)) ||
-        throw(ArgumentError("Axes of inputs must match"))
+     axes(spnmx) == axes(spnmy) == axes(nmx) == axes(nmy) == axes(ranksx) ==
+      axes(ranksy)) || throw(ArgumentError("Axes of inputs must match"))
 
     if skipmissing == :pairwise
 
@@ -238,10 +240,10 @@ function corspearman_kernel!(x::AbstractVector{T}, y::AbstractVector{U},
             return NaN
         end
 
-        _tiedrank!(view(rksx, 1:nnm), nmx, spnmx)
-        _tiedrank!(view(rksy, 1:nnm), nmy, spnmy)
+        _tiedrank!(view(ranksx, 1:nnm), nmx, spnmx)
+        _tiedrank!(view(ranksy, 1:nnm), nmy, spnmy)
 
-        return cor(view(rksx, 1:nnm), view(rksy, 1:nnm))
+        return cor(view(ranksx, 1:nnm), view(ranksy, 1:nnm))
 
     else
         if length(x) <= 1
@@ -253,9 +255,9 @@ function corspearman_kernel!(x::AbstractVector{T}, y::AbstractVector{U},
             return NaN
         end
 
-        _tiedrank!(rksx, x, sortpermx)
-        _tiedrank!(rksy, y, sortpermy)
-        return cor(rksx, rksy)
+        _tiedrank!(ranksx, x, sortpermx)
+        _tiedrank!(ranksy, y, sortpermy)
+        return cor(ranksx, ranksy)
     end
 end
 
@@ -264,8 +266,9 @@ end
 """
     _cor(x, y)
 Work-around various "unhelpful" features of cor:
-a) Ensures that on-diagonal elements of the return are always 1.0 in the symmetric case
-irrespective of missing, NaN, Inf etc.
+a) Ensures that on-diagonal elements of the return are as they should be in the symmetric
+case i.e. 1.0 unless eltype(x) is Missing in which case on-diagonal elements should be
+missing.
 b) Ensure that _cor(a,b) is NaN when a and b are vectors of equal length less than 2
 c) Works around some edge-case bugs in cor's handling of `missing` where the function throws if
 `x` and `y` are matrices but nevertheless looping around the columns of `x` and `y` works.
@@ -290,7 +293,6 @@ julia>
 
 ```
 """
-
 function _cor(ranksx::AbstractMatrix{T}, ranksy::AbstractMatrix{U}) where {T,U}
     symmetric = ranksx === ranksy
 

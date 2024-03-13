@@ -27,18 +27,12 @@ _pairwise_loop
 
 #=
 TODO
-Update naive implementations for new handling of missing.
+
 Prepare comparison of code here with code in StatsBase to ease acceptance by StatsBase maintainers.
 Consider using enumerate in function _pairwise_loop.
-Consider kernel functions taking x and y as arguments so they can do the x===y test, that
-    way could simplify the loop's handling of on-diagonal elements.[DECIDED AGAINST]
 I think the call stack described above is one layer too deep, thanks to new fn _pairwise_loop.
     Would be better to reduce that.
-We should have the same behaviour as cor for inputs with element type Missing (though cor's
-    handling of edge cases is perhaps buggy). [DONE]
 Check test code coverage.
-Consider changing check_pairwise_args to flip :pairwise and :listwise to :none when missing
-is not an element type of either x or y. [DECIDED AGAINST]
 
 #DONE 
 Reduce use of eltype [DONE]
@@ -51,6 +45,13 @@ test for pairwise handling of non-numeric element types for rank correlations [D
 Performance of corspearman seems bad. Worse than corkendall!    [FIXED]
 Reorder methods in pairwise.jl to match order in StatsBase pairwise.jl [DONE]
 Add tests for size of allocations. [DONE]
+Update naive implementations for new handling of missing. [DONE]
+We should have the same behaviour as cor for inputs with element type Missing (though cor's
+    handling of edge cases is perhaps buggy). [DONE]
+Consider changing check_pairwise_args to flip :pairwise and :listwise to :none when missing
+    is not an element type of either x or y. [DECIDED AGAINST]
+Consider kernel functions taking x and y as arguments so they can do the x===y test, that
+    way could simplify the loop's handling of on-diagonal elements.[DECIDED AGAINST]
 =#
 
 function _pairwise!(::Val{:none}, f, dest::AbstractMatrix, x, y, symmetric::Bool)
