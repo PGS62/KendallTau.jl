@@ -27,7 +27,6 @@ _pairwise_loop
 
 #=
 TODO
-
 Prepare comparison of code here with code in StatsBase to ease acceptance by StatsBase maintainers.
 Consider using enumerate in function _pairwise_loop.
 I think the call stack described above is one layer too deep, thanks to new fn _pairwise_loop.
@@ -52,6 +51,7 @@ Consider changing check_pairwise_args to flip :pairwise and :listwise to :none w
     is not an element type of either x or y. [DECIDED AGAINST]
 Consider kernel functions taking x and y as arguments so they can do the x===y test, that
     way could simplify the loop's handling of on-diagonal elements.[DECIDED AGAINST]
+Check that the tests here are correctly a superset of the tests currently in StatsBase. [DONE]    
 =#
 
 function _pairwise!(::Val{:none}, f, dest::AbstractMatrix, x, y, symmetric::Bool)
