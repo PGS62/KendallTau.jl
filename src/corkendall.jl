@@ -55,7 +55,12 @@ function corkendall(x::AbstractVector{T}) where {T}
     return T === Missing ? missing : 1.0
 end
 
-function _pairwise_loop(::Val{skipmissing}, f::typeof(corkendall), dest::AbstractMatrix{V},
+function _pairwise!(::Val{:listwise}, f::typeof(corkendall), dest::AbstractMatrix, x, y,
+    symmetric::Bool)
+    return _pairwise!(Val(:none), f, dest, handle_listwise(x, y)..., symmetric)
+end
+
+function _pairwise!(::Val{skipmissing}, f::typeof(corkendall), dest::AbstractMatrix{V},
     x, y, symmetric::Bool) where {skipmissing,V}
 
     nr, nc = size(dest)
@@ -64,7 +69,7 @@ function _pairwise_loop(::Val{skipmissing}, f::typeof(corkendall), dest::Abstrac
     # Swap x and y for more efficient threaded loop.
     if nr < nc
         dest′ = collect(transpose(dest))
-        _pairwise_loop(Val(skipmissing), f, dest′, y, x, symmetric)
+        _pairwise!(Val(skipmissing), f, dest′, y, x, symmetric)
         dest .= transpose(dest′)
         return dest
     end

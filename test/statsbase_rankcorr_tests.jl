@@ -1,5 +1,5 @@
 #This file is a copy of StatsBase test/rankcorr.jl with the minimal changes required to work
-#in this package. It helps to demonstrate that the tests in KendallTau are correctly a 
+#in this package. It helps to demonstrate that the tests in KendallTau are correctly a
 #superset of the tests in StatsBase.
 
 using KendallTau
@@ -39,7 +39,7 @@ c22 = corspearman(x2, x2)
 @test isnan(corkendall([1,1,1], [1,2,3]))
 @test corkendall([-Inf,-0.0,Inf],[1,2,3]) == 1.0
 
-# Test, with exact equality, some known results. 
+# Test, with exact equality, some known results.
 # AbstractVector{<:Real}, AbstractVector{<:Real}
 @test corkendall(x1, y) == -1/sqrt(90)
 @test corkendall(x2, y) == -1/sqrt(72)

@@ -48,7 +48,12 @@ function corspearman(x::AbstractVector{T}) where {T}
     return T === Missing ? missing : 1.0
 end
 
-function _pairwise_loop(::Val{:none}, f::typeof(corspearman),
+function _pairwise!(::Val{:listwise}, f::typeof(corspearman), dest::AbstractMatrix, x, y,
+    symmetric::Bool)
+    return _pairwise!(Val(:none), f, dest, handle_listwise(x, y)..., symmetric)
+end
+
+function _pairwise!(::Val{:none}, f::typeof(corspearman),
     dest::AbstractMatrix, x, y, symmetric::Bool)
 
     symmetric = x === y
@@ -83,7 +88,7 @@ function _pairwise_loop(::Val{:none}, f::typeof(corspearman),
 
 end
 
-function _pairwise_loop(::Val{:pairwise}, f::typeof(corspearman),
+function _pairwise!(::Val{:pairwise}, f::typeof(corspearman),
     dest::AbstractMatrix{V}, x, y, symmetric::Bool) where {V}
 
     nr, nc = size(dest)
@@ -93,7 +98,7 @@ function _pairwise_loop(::Val{:pairwise}, f::typeof(corspearman),
     # Swap x and y for more efficient threaded loop.
     if nr < nc
         dest′ = collect(transpose(dest))
-        _pairwise_loop(Val(:pairwise), f, dest′, y, x, symmetric)
+        _pairwise!(Val(:pairwise), f, dest′, y, x, symmetric)
         dest .= transpose(dest′)
         return dest
     end
@@ -141,7 +146,7 @@ function _pairwise_loop(::Val{:pairwise}, f::typeof(corspearman),
 end
 
 """
-    corspearman_kernel!(x::AbstractVector{T}, y::AbstractVector{U}, 
+    corspearman_kernel!(x::AbstractVector{T}, y::AbstractVector{U},
     skipmissing::Symbol, sortpermx=sortperm(x), sortpermy=sortperm(y),
     inds=zeros(Int64, length(x)), spnmx=zeros(Int64, length(x)),
     spnmy=zeros(Int64, length(x)), nmx=similar(x, nonmissingtype(T)),
@@ -155,7 +160,7 @@ All arguments (other than `skipmissing`) must have the same axes.
 - `sortpermx`: The sort permutation of `x`.
 - `sortpermy`: The sort permutation of `y`.
 - `inds` ... `ranksy` are all pre-allocated "scratch" arguments.
-   
+
 ## Example
 ```julia-repl
 julia> using KendallTau, BenchmarkTools, Random

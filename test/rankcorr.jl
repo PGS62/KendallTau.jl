@@ -39,9 +39,9 @@ using Test
 end
 
 #=
-Description of edge cases to be tested for:
-===========================================    
-In the symmetric case (x===y) on-diagonal tems should be 1.0 apart from the special case of 
+Edge cases (to refer to when writing tests)
+===========================================
+In the symmetric case (x===y) on-diagonal terms should be 1.0 apart from the special case of
 eltype(x) === Missing && skipmissing == :none, in which case the on-diagonal terms should be
 missing.
 Otherwise, if x and y are equal-length vectors with length(x)<2
@@ -65,21 +65,13 @@ julia> corkendall(fill(missing,3,2)) #SAME behavior as cor
  missing  missing
  missing  missing
 
-julia> x = Matrix{Union{Missing,Float64}}(undef,5,3)
-5×3 Matrix{Union{Missing, Float64}}:
- missing  missing  missing
- missing  missing  missing
- missing  missing  missing
- missing  missing  missing
- missing  missing  missing
-
-julia> cor(x)
+julia> cor(Matrix{Union{Missing,Float64}}(undef,5,3))
 3×3 Matrix{Missing}:
  missing  missing  missing
  missing  missing  missing
  missing  missing  missing
 
-julia> corkendall(x)       #DIFFERENT behaviour from cor
+julia> corkendall(Matrix{Union{Missing,Float64}}(undef,5,3)) #DIFFERENT behaviour from cor
 3×3 Matrix{Union{Missing, Float64}}:
  1.0        missing   missing
   missing  1.0        missing
@@ -230,7 +222,7 @@ julia> corkendall(x)       #DIFFERENT behaviour from cor
     # Exercise catch block in method _cor (when f === corspearman)
     @test isequal(fill(missing, 2, 2), fill(missing, 2, 2))
     # Exercise "correction" of on-diagonal terms in method
-    # _pairwise_loop(::Val{:none}, f::typeof(corspearman),...
+    # _pairwise!(::Val{:none}, f::typeof(corspearman),...
     @test isequal(f([missing missing; 1 1; 1 1]), [1 missing; missing 1])
 
     # Works for not-numbers
