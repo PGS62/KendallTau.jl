@@ -74,7 +74,6 @@ function _pairwise_loop(::Val{:none}, f::typeof(corspearman),
         ondiag = (eltype(x) === Missing && skipmissing == :none) ? missing : 1.0
         for i in axes(dest, 1)
             if !isequal(dest[i, i], ondiag)
-                #Example for which this line is hit: corspearman([missing missing; 1 1; 1 1])
                 dest[i, i] = ondiag
             end
         end
@@ -191,10 +190,10 @@ function corspearman_kernel!(x::AbstractVector{T}, y::AbstractVector{U},
 
         lb = first(axes(x, 1))
         k = lb
-        #= We process (x,y) to obtain (nmx,nmy) by filtering out elements at position k if
+        #= Process (x,y) to obtain (nmx,nmy) by filtering out elements at position k if
         either x[k] or y[k] is missing. inds provides the mapping of elements of x (or y) to
         elements of nmx (or nmy) i.e. x[k] maps to nmx[inds[k]]. inds is then used to obtain
-        spnmx and spnmy much more efficiently than calling sortperm(nmx) and sortperm(nmy).
+        spnmx and spnmy more efficiently than calling sortperm(nmx) and sortperm(nmy).
          =#
         @inbounds for i in axes(x, 1)
             if !(ismissing(x[i]) || ismissing(y[i]))
@@ -270,9 +269,9 @@ a) Ensures that on-diagonal elements of the return are as they should be in the 
 case i.e. 1.0 unless eltype(x) is Missing in which case on-diagonal elements should be
 missing.
 b) Ensure that _cor(a,b) is NaN when a and b are vectors of equal length less than 2
-c) Works around some edge-case bugs in cor's handling of `missing` where the function throws if
-`x` and `y` are matrices but nevertheless looping around the columns of `x` and `y` works.
-https://github.com/JuliaStats/Statistics.jl/issues/63
+c) Works around some edge-case bugs in cor's handling of `missing` where the function throws
+if `x` and `y` are matrices but nevertheless looping around the columns of `x` and `y`
+works. https://github.com/JuliaStats/Statistics.jl/issues/63
 
 # Example
 ```julia-repl
@@ -312,9 +311,9 @@ function _cor(ranksx::AbstractMatrix{T}, ranksy::AbstractMatrix{U}) where {T,U}
             return cor(ranksx, ranksy)
         end
     catch
-        #This catch block is hit when ranksx === ranksy = [missing missing;missing missing] thanks to
-        #what appears to be a bug in cor with root cause a bug in matmul2x2! 
-        #MethodError: no method matching copy(::Missing)
+        #=Example of when this catch block is hit:
+        ranksx === ranksy = [missing missing;missing missing]
+        =#
         nr, nc = size(ranksx, 2), size(ranksy, 2)
         if ranksx === ranksy && T === Missing
             return fill(missing, nr, nc)

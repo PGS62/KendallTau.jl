@@ -404,9 +404,9 @@ pairwise!(::typeof(cov), dest::AbstractMatrix, x;
 pairwise(::typeof(cov), x; symmetric::Bool=true, skipmissing::Symbol=:none) =
     pairwise(_cov, x, x, symmetric=symmetric, skipmissing=skipmissing)
 #=
-#the purpose of this method is to make symmetric default to true when first argument is cor
-and y is omitted. But we now ignore the passed-in symetric argument in that case (treat as
-true), so this pair of methods no longer needed.
+#The purpose of this method was to make symmetric default to true when f === cor and y is
+omitted. But we now ignore (treat as true) the passed-in symetric argument in that case,
+so this pair of methods is redundant.
 pairwise!(::typeof(cor), dest::AbstractMatrix, x;
     symmetric::Bool=true, skipmissing::Symbol=:none) =
     pairwise!(cor, dest, x, x, symmetric=symmetric, skipmissing=skipmissing)
