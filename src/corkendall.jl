@@ -33,8 +33,9 @@ function corkendall(x::AbstractVector{T}, y::AbstractVector{U};
     if x === y
         return corkendall(x)
     else
+        x = copy(x)
         permx = sortperm(x)
-        permute!(copy(x), permx)
+        permute!(x, permx)
         return corkendall_kernel!(x, y, permx, skipmissing)
     end
 end
