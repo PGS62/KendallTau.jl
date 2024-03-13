@@ -59,7 +59,7 @@ function _pairwise!(::Val{:none}, f::typeof(corspearman),
     symmetric = x === y
     if symmetric && promoted_type(x) === Missing
         ondiag = missing
-        offdiag = (length(x[1]) < 2 || skipmissing in (:listwise, :pairwise)) ? NaN : missing
+        offdiag = (length(x[1]) < 2)  ? NaN : missing
         for i in axes(dest, 1), j in axes(dest, 2)
             dest[i, j] = i == j ? ondiag : offdiag
         end
@@ -167,15 +167,16 @@ julia> using KendallTau, BenchmarkTools, Random
 
 julia> Random.seed!(1);
 
-julia> x = ifelse.(rand(1000) .< 0.05,missing,randn(1000));
+julia> x = ifelse.(rand(1000) .< 0.05,missing,randn(1000));y = ifelse.(rand(1000) .< 0.05,\
+missing,randn(1000));
 
-julia> y = ifelse.(rand(1000) .< 0.05,missing,randn(1000));
+julia> sortpermx=sortperm(x);sortpermy=sortperm(y);inds=zeros(Int64,1000);\
+spnmx=zeros(Int64,1000);spnmy=zeros(Int64,1000);
 
-julia> sortpermx=sortperm(x);sortpermy=sortperm(y);inds=zeros(Int64,1000);spnmx=zeros(Int64,1000);
+julia> nmx=zeros(1000);nmy=zeros(1000);ranksx=similar(x,Float64);ranksy=similar(y,Float64);
 
-julia> spnmy=zeros(Int64,1000);nmx=zeros(1000);nmy=zeros(1000);ranksx=similar(x,Float64);ranksy=similar(y,Float64);
-
-julia> @btime KendallTau.corspearman_kernel!(\$x,\$y,:pairwise,\$sortpermx,\$sortpermy,\$inds,\$spnmx,\$spnmy,\$nmx,\$nmy,\$ranksx,\$ranksy)
+julia> @btime KendallTau.corspearman_kernel!(\$x,\$y,:pairwise,\$sortpermx,\$sortpermy,\
+\$inds,\$spnmx,\$spnmy,\$nmx,\$nmy,\$ranksx,\$ranksy)
 4.671 μs (0 allocations: 0 bytes)
 -0.016058512110609713
 ```
