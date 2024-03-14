@@ -610,3 +610,68 @@ A ╲ B │            numcols(x)   StatsBase.corkendall  KendallTau.corkendall
 11    │                2048.0                96.6551                5.35353
 12    │                4096.0                407.917                25.9035
 ###################################################################
+
+julia> how_scaleable([StatsBase.corspearman,KendallTau.corspearman],1000,2 .^ (1:10),false,true,true)
+###################################################################
+Executing how_scaleable 2024-03-14T08:48:16.295
+ComputerName = PHILIP-LAPTOP
+fns[1] = StatsBase.corspearman
+fns[2] = KendallTau.corspearman
+ncs = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024]
+with_missings = false
+use_benchmark_tools = true
+Threads.nthreads() = 8
+  110.500 μs (23 allocations: 72.02 KiB)
+nc = 2, nr = 1000, f = StatsBase.corspearman,  time = 0.0001105
+  190.600 μs (106 allocations: 74.80 KiB)
+nc = 2, nr = 1000, f = KendallTau.corspearman,  time = 0.0001906, ratio = 0.5797481636935992
+  412.900 μs (72 allocations: 239.78 KiB)
+nc = 4, nr = 1000, f = StatsBase.corspearman,  time = 0.0004129
+  223.600 μs (115 allocations: 140.53 KiB)
+nc = 4, nr = 1000, f = KendallTau.corspearman,  time = 0.0002236, ratio = 1.8466010733452596
+  1.592 ms (254 allocations: 862.94 KiB)
+nc = 8, nr = 1000, f = StatsBase.corspearman,  time = 0.0015921
+  304.300 μs (131 allocations: 272.53 KiB)
+nc = 8, nr = 1000, f = KendallTau.corspearman,  time = 0.0003043, ratio = 5.232007886953664
+  6.124 ms (954 allocations: 3.18 MiB)
+nc = 16, nr = 1000, f = StatsBase.corspearman,  time = 0.0061241
+  526.600 μs (139 allocations: 472.11 KiB)
+nc = 16, nr = 1000, f = KendallTau.corspearman,  time = 0.0005266, ratio = 11.629510064565135
+  24.403 ms (3698 allocations: 12.36 MiB)
+nc = 32, nr = 1000, f = StatsBase.corspearman,  time = 0.024403
+  1.028 ms (155 allocations: 877.03 KiB)
+nc = 32, nr = 1000, f = KendallTau.corspearman,  time = 0.0010275, ratio = 23.749878345498786
+  98.420 ms (14563 allocations: 48.69 MiB)
+nc = 64, nr = 1000, f = StatsBase.corspearman,  time = 0.0984202
+  1.937 ms (189 allocations: 1.67 MiB)
+nc = 64, nr = 1000, f = KendallTau.corspearman,  time = 0.0019369, ratio = 50.81325829934431
+  424.366 ms (57795 allocations: 193.25 MiB)
+nc = 128, nr = 1000, f = StatsBase.corspearman,  time = 0.4243657
+  3.822 ms (253 allocations: 3.39 MiB)
+nc = 128, nr = 1000, f = KendallTau.corspearman,  time = 0.0038217, ratio = 111.04108119423294
+  1.764 s (230275 allocations: 769.99 MiB)
+nc = 256, nr = 1000, f = StatsBase.corspearman,  time = 1.7640557
+  7.938 ms (381 allocations: 7.21 MiB)
+nc = 256, nr = 1000, f = KendallTau.corspearman,  time = 0.0079375, ratio = 222.24323779527558
+  6.754 s (919299 allocations: 3.00 GiB)
+nc = 512, nr = 1000, f = StatsBase.corspearman,  time = 6.7536514
+  18.617 ms (639 allocations: 16.35 MiB)
+nc = 512, nr = 1000, f = KendallTau.corspearman,  time = 0.0186174, ratio = 362.7601813357397
+  36.174 s (3673603 allocations: 12.00 GiB)
+nc = 1024, nr = 1000, f = StatsBase.corspearman,  time = 36.1744452
+  59.417 ms (1151 allocations: 40.63 MiB)
+nc = 1024, nr = 1000, f = KendallTau.corspearman,  time = 0.0594167, ratio = 608.8262256234358
+10×3 Named Matrix{Float64}
+A ╲ B │             numcols(x)   StatsBase.corspearman  KendallTau.corspearman
+──────┼───────────────────────────────────────────────────────────────────────
+1     │                    2.0               0.0001105               0.0001906
+2     │                    4.0               0.0004129               0.0002236
+3     │                    8.0               0.0015921               0.0003043
+4     │                   16.0               0.0061241               0.0005266
+5     │                   32.0                0.024403               0.0010275
+6     │                   64.0               0.0984202               0.0019369
+7     │                  128.0                0.424366               0.0038217
+8     │                  256.0                 1.76406               0.0079375
+9     │                  512.0                 6.75365               0.0186174
+10    │                 1024.0                 36.1744               0.0594167
+###################################################################
