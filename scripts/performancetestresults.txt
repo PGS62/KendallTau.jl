@@ -675,3 +675,155 @@ A ╲ B │             numcols(x)   StatsBase.corspearman  KendallTau.corspearm
 9     │                  512.0                 6.75365               0.0186174
 10    │                 1024.0                 36.1744               0.0594167
 ###################################################################
+
+#Compare performance for fast kernel function and skipmissing=:pairwise
+julia> f(x,y)=sum(x)+sum(y)
+f (generic function with 1 method)
+
+julia> pwf_sb(x) = StatsBase.pairwise(f,eachcol(x),skipmissing=:pairwise)
+pwf_sb (generic function with 1 method)
+
+julia> pwf_kt(x) = KendallTau.pairwise(f,eachcol(x),skipmissing=:pairwise)
+pwf_kt (generic function with 1 method)
+
+julia> how_scaleable([pwf_sb,pwf_kt],1000,2 .^ (1:10),true,true,true)
+###################################################################
+Executing how_scaleable 2024-03-14T09:46:43.459
+ComputerName = PHILIP-LAPTOP
+fns[1] = Main.pwf_sb
+fns[2] = Main.pwf_kt
+ncs = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024]
+with_missings = true
+use_benchmark_tools = true
+Threads.nthreads() = 8
+  27.800 μs (21 allocations: 58.47 KiB)
+nc = 2, nr = 1000, f = Main.pwf_sb,  time = 2.78e-5
+  15.200 μs (98 allocations: 40.19 KiB)
+nc = 2, nr = 1000, f = Main.pwf_kt,  time = 1.52e-5, ratio = 1.8289473684210527
+  117.400 μs (79 allocations: 254.69 KiB)
+nc = 4, nr = 1000, f = Main.pwf_sb,  time = 0.0001174
+  30.600 μs (210 allocations: 77.36 KiB)
+nc = 4, nr = 1000, f = Main.pwf_kt,  time = 3.06e-5, ratio = 3.8366013071895426
+  500.800 μs (315 allocations: 1.04 MiB)
+nc = 8, nr = 1000, f = Main.pwf_sb,  time = 0.0005008
+  57.700 μs (626 allocations: 160.52 KiB)
+nc = 8, nr = 1000, f = Main.pwf_kt,  time = 5.77e-5, ratio = 8.67937608318891
+  2.065 ms (1267 allocations: 4.27 MiB)
+nc = 16, nr = 1000, f = Main.pwf_sb,  time = 0.0020654
+  200.100 μs (2178 allocations: 231.33 KiB)
+nc = 16, nr = 1000, f = Main.pwf_kt,  time = 0.0002001, ratio = 10.32183908045977
+  8.355 ms (5091 allocations: 17.19 MiB)
+nc = 32, nr = 1000, f = Main.pwf_sb,  time = 0.0083553
+  980.900 μs (8354 allocations: 513.83 KiB)
+nc = 32, nr = 1000, f = Main.pwf_kt,  time = 0.0009809, ratio = 8.517993679274134
+  36.042 ms (20420 allocations: 69.18 MiB)
+nc = 64, nr = 1000, f = Main.pwf_sb,  time = 0.036042
+  4.149 ms (32995 allocations: 1.60 MiB)
+nc = 64, nr = 1000, f = Main.pwf_kt,  time = 0.0041492, ratio = 8.686493781933867
+  164.354 ms (81796 allocations: 277.47 MiB)
+nc = 128, nr = 1000, f = Main.pwf_sb,  time = 0.1643539
+  19.164 ms (131435 allocations: 6.02 MiB)
+nc = 128, nr = 1000, f = Main.pwf_kt,  time = 0.0191641, ratio = 8.576134543234485
+  675.833 ms (327428 allocations: 1.08 GiB)
+nc = 256, nr = 1000, f = Main.pwf_sb,  time = 0.675833
+  85.302 ms (524907 allocations: 23.64 MiB)
+nc = 256, nr = 1000, f = Main.pwf_kt,  time = 0.0853023, ratio = 7.922799268015048
+  4.109 s (1310212 allocations: 4.34 GiB)
+nc = 512, nr = 1000, f = Main.pwf_sb,  time = 4.1087183
+  344.308 ms (2098291 allocations: 94.16 MiB)
+nc = 512, nr = 1000, f = Main.pwf_kt,  time = 0.3443082, ratio = 11.933257180630608
+  12.865 s (5241860 allocations: 17.37 GiB)
+nc = 1024, nr = 1000, f = Main.pwf_sb,  time = 12.8650363
+  1.499 s (8390771 allocations: 376.18 MiB)
+nc = 1024, nr = 1000, f = Main.pwf_kt,  time = 1.4989554, ratio = 8.582667836548039
+10×3 Named Matrix{Float64}
+A ╲ B │  numcols(x)  Main.pwf_sb  Main.pwf_kt
+──────┼──────────────────────────────────────
+1     │         2.0      2.78e-5      1.52e-5
+2     │         4.0    0.0001174      3.06e-5
+3     │         8.0    0.0005008      5.77e-5
+4     │        16.0    0.0020654    0.0002001
+5     │        32.0    0.0083553    0.0009809
+6     │        64.0     0.036042    0.0041492
+7     │       128.0     0.164354    0.0191641
+8     │       256.0     0.675833    0.0853023
+9     │       512.0      4.10872     0.344308
+10    │      1024.0       12.865      1.49896
+###################################################################
+
+#Fast kernel, skipmissing=:none
+julia> f(x,y)=sum(x)+sum(y)
+f (generic function with 1 method)
+
+julia> pwf_sb(x) = StatsBase.pairwise(f,eachcol(x),skipmissing=:pairwise)
+pwf_sb (generic function with 1 method)
+
+julia> pwf_kt(x) = KendallTau.pairwise(f,eachcol(x),skipmissing=:pairwise)
+pwf_kt (generic function with 1 method)
+
+julia> how_scaleable([pwf_sb,pwf_kt],1000,2 .^ (1:10),false,true,true,1e-10)
+###################################################################
+Executing how_scaleable 2024-03-14T10:07:53.858
+ComputerName = PHILIP-LAPTOP
+fns[1] = Main.pwf_sb
+fns[2] = Main.pwf_kt
+ncs = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024]
+with_missings = false
+use_benchmark_tools = true
+Threads.nthreads() = 8
+test_returns_equal = true
+abstol = 1.0e-10
+  18.000 μs (21 allocations: 65.41 KiB)
+nc = 2, nr = 1000, f = Main.pwf_sb,  time = 1.8e-5
+  11.600 μs (98 allocations: 40.19 KiB)
+nc = 2, nr = 1000, f = Main.pwf_kt,  time = 1.16e-5, ratio = 1.5517241379310345
+  88.600 μs (79 allocations: 293.00 KiB)
+nc = 4, nr = 1000, f = Main.pwf_sb,  time = 8.86e-5
+  19.300 μs (210 allocations: 77.36 KiB)
+nc = 4, nr = 1000, f = Main.pwf_kt,  time = 1.93e-5, ratio = 4.590673575129533
+  336.200 μs (315 allocations: 1.21 MiB)
+nc = 8, nr = 1000, f = Main.pwf_sb,  time = 0.0003362
+  36.700 μs (626 allocations: 160.52 KiB)
+nc = 8, nr = 1000, f = Main.pwf_kt,  time = 3.67e-5, ratio = 9.160762942779291
+  1.397 ms (1267 allocations: 4.95 MiB)
+nc = 16, nr = 1000, f = Main.pwf_sb,  time = 0.0013972
+  74.600 μs (2178 allocations: 231.33 KiB)
+nc = 16, nr = 1000, f = Main.pwf_kt,  time = 7.46e-5, ratio = 18.72922252010724
+  5.854 ms (5091 allocations: 20.04 MiB)
+nc = 32, nr = 1000, f = Main.pwf_sb,  time = 0.0058537
+  293.300 μs (8354 allocations: 513.83 KiB)
+nc = 32, nr = 1000, f = Main.pwf_kt,  time = 0.0002933, ratio = 19.958063416297307
+  26.513 ms (20420 allocations: 80.66 MiB)
+nc = 64, nr = 1000, f = Main.pwf_sb,  time = 0.0265126
+  1.353 ms (32995 allocations: 1.60 MiB)
+nc = 64, nr = 1000, f = Main.pwf_kt,  time = 0.0013525, ratio = 19.602661737523107
+  118.587 ms (81796 allocations: 323.63 MiB)
+nc = 128, nr = 1000, f = Main.pwf_sb,  time = 0.1185869
+  6.800 ms (131435 allocations: 6.02 MiB)
+nc = 128, nr = 1000, f = Main.pwf_kt,  time = 0.0068001, ratio = 17.438993544212586
+  504.952 ms (327428 allocations: 1.27 GiB)
+nc = 256, nr = 1000, f = Main.pwf_sb,  time = 0.5049519
+  30.413 ms (524907 allocations: 23.64 MiB)
+nc = 256, nr = 1000, f = Main.pwf_kt,  time = 0.030413, ratio = 16.603159832966167
+  2.127 s (1310212 allocations: 5.07 GiB)
+nc = 512, nr = 1000, f = Main.pwf_sb,  time = 2.1266335
+  141.734 ms (2098291 allocations: 94.16 MiB)
+nc = 512, nr = 1000, f = Main.pwf_kt,  time = 0.141734, ratio = 15.004399085611075
+  8.748 s (5241860 allocations: 20.28 GiB)
+nc = 1024, nr = 1000, f = Main.pwf_sb,  time = 8.7476474
+  581.087 ms (8390771 allocations: 376.18 MiB)
+nc = 1024, nr = 1000, f = Main.pwf_kt,  time = 0.5810873, ratio = 15.053929762361008
+10×3 Named Matrix{Float64}
+A ╲ B │  numcols(x)  Main.pwf_sb  Main.pwf_kt
+──────┼──────────────────────────────────────
+1     │         2.0       1.8e-5      1.16e-5
+2     │         4.0      8.86e-5      1.93e-5
+3     │         8.0    0.0003362      3.67e-5
+4     │        16.0    0.0013972      7.46e-5
+5     │        32.0    0.0058537    0.0002933
+6     │        64.0    0.0265126    0.0013525
+7     │       128.0     0.118587    0.0068001
+8     │       256.0     0.504952     0.030413
+9     │       512.0      2.12663     0.141734
+10    │      1024.0      8.74765     0.581087
+###################################################################
