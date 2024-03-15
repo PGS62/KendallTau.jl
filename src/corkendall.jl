@@ -135,11 +135,11 @@ function check_rankcor_args(x, y, skipmissing, allowlistwise::Bool)
     size(x, 1) == size(y, 1) ||
         throw(DimensionMismatch("x and y have inconsistent dimensions"))
     if allowlistwise
-        skipmissing == :none || skipmissing == :pairwise || skipmissing == :listwise ||
+        skipmissing in (:none, :pairwise, :listwise) ||
             throw(ArgumentError("skipmissing must be one of :none, :pairwise or :listwise, \
             but got :$skipmissing"))
     else
-        skipmissing == :none || skipmissing == :pairwise ||
+        skipmissing in (:none, :pairwise) ||
             throw(ArgumentError("skipmissing must be either :none or :pairwise, but \
             got :$skipmissing"))
     end
