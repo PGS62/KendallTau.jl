@@ -30,24 +30,6 @@ TODO
 Prepare comparison of code here with code in StatsBase to ease acceptance by StatsBase maintainers.
 Consider using enumerate in function _pairwise!.
 
-TODO fix and add tests for the following break of backward-compatibility with StatsBase.pairwise
-
-julia> x = rand(10); y = rand(10); z= rand(10); w = vcat(missing, rand(9));
-
-julia> foo = [x,y,w];bar = [x,z,w];
-
-julia> StatsBase.pairwise(cor,foo,bar)
-3×3 Matrix{Union{Missing, Float64}}:
-  1.0        0.671846    missing
- -0.358457  -0.0613377   missing
-   missing    missing   1.0
-
-julia> KendallTau.pairwise(cor,foo,bar)
-3×3 Matrix{Union{Missing, Float64}}:
-  1.0        0.671846   missing
- -0.358457  -0.0613377  missing
-   missing    missing   missing
-
 #DONE
 Check test code coverage. [DONE]
 Reduce use of eltype [DONE]

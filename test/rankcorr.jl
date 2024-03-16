@@ -65,13 +65,13 @@ julia> corkendall(fill(missing,3,2)) #SAME behavior as cor
  missing  missing
  missing  missing
 
-julia> cor(Matrix{Union{Missing,Float64}}(undef,5,3))
+julia> cor(Matrix{Union{Missing,Float64}}(missing,5,3))
 3×3 Matrix{Missing}:
  missing  missing  missing
  missing  missing  missing
  missing  missing  missing
 
-julia> corkendall(Matrix{Union{Missing,Float64}}(undef,5,3)) #DIFFERENT behaviour from cor
+julia> corkendall(Matrix{Union{Missing,Float64}}(missing,5,3)) #DIFFERENT behaviour from cor
 3×3 Matrix{Union{Missing, Float64}}:
  1.0        missing   missing
   missing  1.0        missing
@@ -308,7 +308,7 @@ julia> corkendall(Matrix{Union{Missing,Float64}}(undef,5,3)) #DIFFERENT behaviou
 
 end
 
-#Don't want to artificially boost coverage stats when checking for mutation and allocation size
+# Don't artificially boost coverage stats when checking for mutation and allocation size
 # COV_EXCL_START
 @testset "Check no mutation in $f" for f in (corkendall, corspearman)
 

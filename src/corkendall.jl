@@ -27,8 +27,8 @@ function corkendall(x::AbstractMatrix, y::AbstractMatrix=x;
     return (pairwise(corkendall, eachcol(x), eachcol(y); skipmissing))
 end
 
-function corkendall(x::AbstractVector{T}, y::AbstractVector{U};
-    skipmissing::Symbol=:none) where {T,U}
+function corkendall(x::AbstractVector, y::AbstractVector;
+    skipmissing::Symbol=:none)
     check_rankcor_args(x, y, skipmissing, false)
     if x === y
         return corkendall(x)
