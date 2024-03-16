@@ -68,7 +68,7 @@ function _pairwise!(::Val{skipmissing}, f::typeof(corkendall), dest::AbstractMat
 
     # Swap x and y for more efficient threaded loop.
     if nr < nc
-        dest′ = collect(transpose(dest))
+        dest′ = reshape(dest, size(dest, 2), size(dest, 1))
         _pairwise!(Val(skipmissing), f, dest′, y, x, symmetric)
         dest .= transpose(dest′)
         return dest
@@ -104,7 +104,7 @@ function _pairwise!(::Val{skipmissing}, f::typeof(corkendall), dest::AbstractMat
 
             for i = 1:(symmetric ? j : nc)
                 # For performance, diagonal is special-cased
-                if i == j && x[j] === y[i] && eltype(dest) !== Union{}
+                if x[j] === y[i] && eltype(dest) !== Union{}
                     if missing isa eltype(dest) && eltype(x[j]) == Missing
                         dest[j, i] = missing
                     else

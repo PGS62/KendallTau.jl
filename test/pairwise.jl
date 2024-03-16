@@ -89,6 +89,17 @@ arbitrary_fun(x, y) = cor(x, y)
             [], [[1, 2], [2, 3]])
     end
 
+    if f in (cor, corkendall, corspearman)
+        @testset "handling === elements" begin
+            xm = [missing, 1, 3, 2]
+            xn = [NaN, 1, 3, 2]
+            xmn = [missing, NaN, 1, 3, 2]
+            @test isequal(pairwise(f, [xm, xm], [xm, copy(xm)]), [1.0 missing; 1.0 missing])
+            @test isequal(pairwise(f, [xn, xn], [xn, copy(xn)]), [1.0 NaN; 1.0 NaN])
+            @test isequal(pairwise(f, [xmn, xmn], [xmn, copy(xmn)]), [1.0 missing; 1.0 missing])
+        end
+    end
+
     @testset "missing values handling interface" begin
         xm = [ifelse.(rand(100) .> 0.9, missing, rand(100)) for _ in 1:4]
         ym = [ifelse.(rand(100) .> 0.9, missing, rand(Float32, 100)) for _ in 1:4]

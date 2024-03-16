@@ -59,7 +59,7 @@ function _pairwise!(::Val{:none}, f::typeof(corspearman),
     symmetric = x === y
     if symmetric && promoted_type(x) === Missing
         ondiag = missing
-        offdiag = (length(x[1]) < 2)  ? NaN : missing
+        offdiag = (length(x[1]) < 2) ? NaN : missing
         for i in axes(dest, 1), j in axes(dest, 2)
             dest[i, j] = i == j ? ondiag : offdiag
         end
@@ -75,13 +75,12 @@ function _pairwise!(::Val{:none}, f::typeof(corspearman),
         dest .= _cor(ranksx, ranksy)
     end
 
-    if symmetric
-        ondiag = (eltype(x) === Missing && skipmissing == :none) ? missing : 1.0
-        for i in axes(dest, 1)
-            if !isequal(dest[i, i], ondiag)
-                dest[i, i] = ondiag
-            end
-        end
+    #=When elements x[i] and y[j] are identical (according to `===`) then dest[i,j] should
+    be 1.0 even in the presence of missing and NaN values. But the return from `_cor` does
+    not respect that requirement. So amend.=#
+    autocor = (eltype(dest) === Missing && skipmissing == :none) ? missing : 1.0
+    for i in axes(dest, 1), j in axes(dest, 2)
+        x[i] === y[j] && (dest[i, j] = autocor)
     end
 
     return dest
@@ -97,7 +96,7 @@ function _pairwise!(::Val{:pairwise}, f::typeof(corspearman),
 
     # Swap x and y for more efficient threaded loop.
     if nr < nc
-        dest′ = collect(transpose(dest))
+        dest′ = reshape(dest, size(dest, 2), size(dest, 1))
         _pairwise!(Val(:pairwise), f, dest′, y, x, symmetric)
         dest .= transpose(dest′)
         return dest
@@ -125,7 +124,7 @@ function _pairwise!(::Val{:pairwise}, f::typeof(corspearman),
 
             for i = 1:(symmetric ? j : nc)
                 # For performance, diagonal is special-cased
-                if i == j && x[j] === y[i] && eltype(dest) !== Union{}
+                if x[j] === y[i] && eltype(dest) !== Union{}
                     if missing isa eltype(dest) && eltype(x[j]) == Missing
                         dest[j, i] = missing
                     else
@@ -389,10 +388,10 @@ function ranks_matrix(x)
     Threads.@threads for i in 1:nc
         ints = task_local_vector(:ints, int64, m)
 
-        if any(_isnan, x[i])
-            temp[:, i] .= NaN
-        elseif any(ismissing, x[i])
+        if any(ismissing, x[i])
             temp[:, i] .= missing
+        elseif any(_isnan, x[i])
+            temp[:, i] .= NaN
         else
             sortperm!(ints, x[i])
             _tiedrank!(view(temp, :, i), x[i], ints)

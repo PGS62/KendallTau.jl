@@ -185,16 +185,20 @@ julia> corkendall(Matrix{Union{Missing,Float64}}(undef,5,3)) #DIFFERENT behaviou
     @test f([-Inf, -0.0, Inf], [1, 2, 3]) == 1.0
 
     #Interaction of NaN and missing with skipmissing argument
-    nan_and_missing = hcat(fill(NaN, 10, 1), fill(missing, 10, 1))
-    @test isequal(f(nan_and_missing, skipmissing=:none), [1.0 missing; missing 1.0])
+    nan_and_missing = hcat(fill(NaN, 10), fill(missing, 10),
+        vcat(fill(NaN, 5), fill(missing, 5)))
+    @test isequal(f(nan_and_missing, skipmissing=:none),
+        [1.0 missing missing; missing 1.0 missing; missing missing 1.0])
     @test isequal(f(nan_and_missing, copy(nan_and_missing), skipmissing=:none),
-        [NaN missing; missing missing])
-    @test isequal(f(nan_and_missing, skipmissing=:pairwise), [1.0 NaN; NaN 1.0])
+        [NaN missing missing; missing missing missing; missing missing missing])
+    @test isequal(f(nan_and_missing, skipmissing=:pairwise),
+        [1.0 NaN NaN; NaN 1.0 NaN; NaN NaN 1.0])
     @test isequal(f(nan_and_missing, copy(nan_and_missing), skipmissing=:pairwise),
-        [NaN NaN; NaN NaN])
-    @test isequal(f(nan_and_missing, skipmissing=:listwise), [1.0 NaN; NaN 1.0])
+        fill(NaN, 3, 3))
+    @test isequal(f(nan_and_missing, skipmissing=:listwise),
+        [1.0 NaN NaN; NaN 1.0 NaN; NaN NaN 1.0])
     @test isequal(f(nan_and_missing, copy(nan_and_missing), skipmissing=:listwise),
-        [NaN NaN; NaN NaN])
+        fill(NaN, 3, 3))
 
     #Reject nonsense skipmissing argument
     @test_throws ArgumentError f(X; skipmissing=:foo)

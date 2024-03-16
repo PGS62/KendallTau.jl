@@ -353,7 +353,7 @@ function _pairwise!(::Val{skipmissing}, f, dest::AbstractMatrix{V}, x, y,
 
     # Swap x and y for more efficient threaded loop.
     if nr < nc
-        dest′ = collect(transpose(dest))
+        dest′ = reshape(dest,size(dest,2),size(dest,1))
         _pairwise!(Val(skipmissing), f, dest′, y, x, symmetric)
         dest .= transpose(dest′)
         return dest
@@ -364,8 +364,9 @@ function _pairwise!(::Val{skipmissing}, f, dest::AbstractMatrix{V}, x, y,
         nmty = promoted_nmtype(y)[]
     end
 
-    di1 = (f in (corkendall, corspearman, cor)) && x === y
-    di1 && (symmetric = true)
+    iscor = (f in (corkendall, corspearman, cor))
+    #Overwrite input value of symmetric for cor and friends.
+    iscor && (symmetric = x === y)
 
     #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
     Threads.@threads for subset in equal_sum_subsets(nr, Threads.nthreads())
@@ -377,7 +378,7 @@ function _pairwise!(::Val{skipmissing}, f, dest::AbstractMatrix{V}, x, y,
                 scratch_fy = task_local_vector(:scratch_fy, nmty, m)
             end
             for i = 1:(symmetric ? j : nc)
-                if di1 && (i == j) && V !== Missing
+                if iscor && (y[i] === x[j]) && V !== Missing
                     dest[j, i] = 1.0
                 else
                     if skipmissing == :pairwise
