@@ -80,12 +80,12 @@ function _pairwise!(::Val{:none}, f::typeof(corspearman),
         dest .= _cor(ranksx, ranksy)
     end
 
-    #=When elements x[i] and y[j] are identical (according to `===`) then dest[i,j] should
+    #=When elements x[i] and y[i] are identical (according to `===`) then dest[i,i] should
     be 1.0 even in the presence of missing and NaN values. But the return from `_cor` does
     not respect that requirement. So amend.=#
     autocor = (eltype(dest) === Missing && skipmissing == :none) ? missing : 1.0
-    @inbounds for i in axes(dest, 1), j in axes(dest, 2)
-        x[i] === y[j] && (dest[i, j] = autocor)
+    @inbounds for i in 1:min(size(dest, 1), size(dest, 2))
+        x[i] === y[i] && (dest[i, i] = autocor)
     end
     return dest
 end
@@ -127,8 +127,8 @@ function _pairwise!(::Val{:pairwise}, f::typeof(corspearman),
 
             for i = 1:(symmetric ? j : nc)
                 # For performance, diagonal is special-cased
-                if x[j] === y[i] && eltype(dest) !== Union{}
-                    if missing isa eltype(dest) && eltype(x[j]) == Missing
+                if x[j] === y[i] && i == j && V !== Union{}
+                    if missing isa V && eltype(x[j]) == Missing
                         dest[j, i] = missing
                     else
                         dest[j, i] = 1.0
@@ -449,13 +449,23 @@ function corkendall(x::AbstractVector{T}) where {T}
     return T === Missing ? missing : 1.0
 end
 
-function _pairwise!(::Val{:listwise}, f::typeof(corkendall), dest::AbstractMatrix, x, y,
+function _pairwise!(::Val{:none}, f::typeof(corkendall), dest::AbstractMatrix, x, y,
     symmetric::Bool)
-    return _pairwise!(Val(:none), f, dest, handle_listwise(x, y)..., symmetric)
+    return corkendall_loop(:none, f, dest, x, y, symmetric)
 end
 
-function _pairwise!(::Val{skipmissing}, f::typeof(corkendall), dest::AbstractMatrix{V},
-    x, y, symmetric::Bool) where {skipmissing,V}
+function _pairwise!(::Val{:pairwise}, f::typeof(corkendall), dest::AbstractMatrix, x, y,
+    symmetric::Bool)
+    return corkendall_loop(:pairwise, f, dest, x, y, symmetric)
+end
+
+function _pairwise!(::Val{:listwise}, f::typeof(corkendall), dest::AbstractMatrix, x, y,
+    symmetric::Bool)
+    return corkendall_loop(:none, f, dest, handle_listwise(x, y)..., symmetric)
+end
+
+function corkendall_loop(skipmissing::Symbol, f::typeof(corkendall), dest::AbstractMatrix{V},
+    x, y, symmetric::Bool) where {V}
 
     nr, nc = size(dest)
     m = length(x) == 0 ? 0 : length(first(x))
@@ -463,7 +473,7 @@ function _pairwise!(::Val{skipmissing}, f::typeof(corkendall), dest::AbstractMat
     # Swap x and y for more efficient threaded loop.
     if nr < nc
         dest′ = reshape(dest, size(dest, 2), size(dest, 1))
-        _pairwise!(Val(skipmissing), f, dest′, y, x, symmetric)
+        corkendall_loop(skipmissing, f, dest′, y, x, symmetric)
         dest .= transpose(dest′)
         return dest
     end
@@ -498,8 +508,8 @@ function _pairwise!(::Val{skipmissing}, f::typeof(corkendall), dest::AbstractMat
 
             for i = 1:(symmetric ? j : nc)
                 # For performance, diagonal is special-cased
-                if x[j] === y[i] && eltype(dest) !== Union{}
-                    if missing isa eltype(dest) && eltype(x[j]) == Missing
+                if x[j] === y[i] && i == j && V !== Union{}
+                    if missing isa V && eltype(x[j]) == Missing
                         dest[j, i] = missing
                     else
                         dest[j, i] = 1.0
@@ -513,9 +523,7 @@ function _pairwise!(::Val{skipmissing}, f::typeof(corkendall), dest::AbstractMat
             end
         end
     end
-
     return dest
-
 end
 
 # Auxiliary functions for Kendall's rank correlation

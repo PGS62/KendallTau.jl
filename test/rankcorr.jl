@@ -228,7 +228,7 @@ julia> corkendall(Matrix{Union{Missing,Float64}}(missing,5,3)) #DIFFERENT behavi
         [1.0 missing missing; missing 1.0 missing; missing missing 1.0])
     # Exercise "correction" of on-diagonal terms in method
     # _pairwise!(::Val{:none}, f::typeof(corspearman),...
-    @test isequal(f([missing missing; 1 1; 1 1]), [1 missing; missing 1])
+    @test isequal(f([missing missing; 1 1; 1 1]), [1.0 missing; missing 1.0])
 
     # Works for not-numbers
     @test isequal(f(["a", "b", "c"], ["a", "b", "c"]), 1.0)

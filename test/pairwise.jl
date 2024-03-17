@@ -12,7 +12,8 @@ arbitrary_fun(x, y) = cor(x, y)
 
 @testset "pairwise and pairwise! with $f" for f in (arbitrary_fun, cor, cov, corkendall, corspearman)
 
-    isrankcorr = f in (corkendall, corspearman)
+    isrankcor = f in (corkendall, corspearman)
+    iscor = isrankcor || f == cor
     throwsforzerolengthinput = f in (arbitrary_fun, cor, cov)
 
     @testset "basic interface" begin
@@ -29,7 +30,7 @@ arbitrary_fun(x, y) = cor(x, y)
         @test res == res2 == [f(xi, yi) for xi in x, yi in y]
 
         res = pairwise(f, y, z)
-        if isrankcorr
+        if isrankcor
             @test res isa Matrix{Float64}
             @test res == [f(yi, zi) for yi in y, zi in z]
         else
@@ -94,9 +95,9 @@ arbitrary_fun(x, y) = cor(x, y)
             xm = [missing, 1, 3, 2]
             xn = [NaN, 1, 3, 2]
             xmn = [missing, NaN, 1, 3, 2]
-            @test isequal(pairwise(f, [xm, xm], [xm, copy(xm)]), [1.0 missing; 1.0 missing])
-            @test isequal(pairwise(f, [xn, xn], [xn, copy(xn)]), [1.0 NaN; 1.0 NaN])
-            @test isequal(pairwise(f, [xmn, xmn], [xmn, copy(xmn)]), [1.0 missing; 1.0 missing])
+            @test isequal(pairwise(f, [xm, xm], [xm, copy(xm)]), [1.0 missing; missing missing])
+            @test isequal(pairwise(f, [xn, xn], [xn, copy(xn)]), [1.0 NaN; NaN NaN])
+            @test isequal(pairwise(f, [xmn, xmn], [xmn, copy(xmn)]), [1.0 missing; missing missing])
         end
     end
 
@@ -128,7 +129,7 @@ arbitrary_fun(x, y) = cor(x, y)
             rtol=1e-6)
 
         res = pairwise(f, ym, zm, skipmissing=:pairwise)
-        if isrankcorr
+        if isrankcor
             @test res isa Matrix{Float64}
             #    @test isequal(res, [f(collect.(skipmissings(yi, zi))...) for yi in ym, zi in zm])
             @test isequal(res, [f(myskipmissings(yi, zi)...) for yi in ym, zi in zm])
@@ -263,50 +264,64 @@ arbitrary_fun(x, y) = cor(x, y)
         @test_throws ArgumentError pairwise!(f, res, x, y, symmetric=true)
     end
 
-    @testset "cor corner cases" begin
-        # Integer inputs must give a Float64 output
-        res = pairwise(cor, [[1, 2, 3], [1, 5, 2]])
-        @test res isa Matrix{Float64}
-        @test res == [cor(xi, yi) for xi in ([1, 2, 3], [1, 5, 2]),
-                      yi in ([1, 2, 3], [1, 5, 2])]
+    if iscor
+        @testset "$f corner cases" begin
+            # Integer inputs must give a Float64 output
+            res = pairwise(f, [[1, 2, 3], [1, 5, 2]])
+            @test res isa Matrix{Float64}
+            if f == corspearman
+                @test isapprox(res, [f(xi, yi) for xi in ([1, 2, 3], [1, 5, 2]),
+                                     yi in ([1, 2, 3], [1, 5, 2])])
+            else
+                @test res == [f(xi, yi) for xi in ([1, 2, 3], [1, 5, 2]),
+                              yi in ([1, 2, 3], [1, 5, 2])]
+            end
 
-        # NaNs are ignored for the diagonal
-        res = pairwise(cor, [[1, 2, NaN], [1, 5, 2]])
-        @test res isa Matrix{Float64}
-        @test res ≅ [1.0 NaN
-            NaN 1.0]
-
-        # missings are ignored for the diagonal
-        res = pairwise(cor, [[1, 2, 7], [1, 5, missing]])
-        @test res isa Matrix{Union{Float64,Missing}}
-        @test res ≅ [1.0 missing
-            missing 1.0]
-        res = pairwise(cor, Vector{Union{Int,Missing}}[[missing, missing, missing],
-            [missing, missing, missing]])
-        @test res isa Matrix{Union{Float64,Missing}}
-        @test res ≅ [1.0 missing
-            missing 1.0]
-        if VERSION >= v"1.5"
-            # except when eltype is Missing
-            res = pairwise(cor, [[missing, missing, missing],
-                [missing, missing, missing]])
-            @test res isa Matrix{Missing}
-            @test res ≅ [missing missing
-                missing missing]
-        end
-
-        for sm in (:pairwise, :listwise)
-            res = pairwise(cor, [[1, 2, NaN, 4], [1, 5, 5, missing]], skipmissing=sm)
+            # NaNs are ignored for the diagonal
+            res = pairwise(f, [[1, 2, NaN], [1, 5, 2]])
             @test res isa Matrix{Float64}
             @test res ≅ [1.0 NaN
                 NaN 1.0]
+
+            # missings are ignored for the diagonal
+            res = pairwise(f, [[1, 2, 7], [1, 5, missing]])
+            @test res isa Matrix{Union{Float64,Missing}}
+            @test res ≅ [1.0 missing
+                missing 1.0]
+            res = pairwise(f, Vector{Union{Int,Missing}}[[missing, missing, missing],
+                [missing, missing, missing]])
+            @test res isa Matrix{Union{Float64,Missing}}
+            @test res ≅ [1.0 missing
+                missing 1.0]
+
+            #NaNs and missings are ignored for the "diagonal" of a not-square result.
+            v = [missing, 1, 2, 3]
+            @test isequal(pairwise(f, [v, v], [v, v, v]),
+                [1.0 missing missing; missing 1.0 missing])
+            w = [NaN, 1, 2, 3]
+            @test isequal(pairwise(f, [w, w], [w, w, w]), [1.0 NaN NaN; NaN 1.0 NaN])
+
             if VERSION >= v"1.5"
-                #  @test_throws ArgumentError pairwise(cor, [[missing, missing, missing],
-                #          [missing, missing, missing]],
-                #      skipmissing=sm)
-                @test_throws CompositeException pairwise(cor, [[missing, missing, missing],
-                        [missing, missing, missing]],
-                    skipmissing=sm)
+                # except when eltype is Missing
+                res = pairwise(f, [[missing, missing, missing],
+                    [missing, missing, missing]])
+                @test res isa Matrix{Missing}
+                @test res ≅ [missing missing
+                    missing missing]
+            end
+
+            for sm in (:pairwise, :listwise)
+                res = pairwise(f, [[1, 2, NaN, 4], [1, 5, 5, missing]], skipmissing=sm)
+                @test res isa Matrix{Float64}
+                @test res ≅ [1.0 NaN
+                    NaN 1.0]
+                if VERSION >= v"1.5"
+                    if f == cor
+                        @test_throws CompositeException pairwise(f, [[missing, missing, missing],
+                                [missing, missing, missing]],
+                            skipmissing=sm)
+                    end
+                end
             end
         end
     end

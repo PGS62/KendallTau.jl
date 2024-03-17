@@ -1,5 +1,5 @@
-function _pairwise!(::Val{skipmissing}, f, dest::AbstractMatrix{V}, x, y,
-    symmetric::Bool) where {skipmissing,V}
+function _pairwise!(::Val{:none}, f, dest::AbstractMatrix{V}, x, y,
+    symmetric::Bool) where {V}
 
     nr, nc = size(dest)
     m = length(x) == 0 ? 0 : length(first(x))
@@ -7,14 +7,9 @@ function _pairwise!(::Val{skipmissing}, f, dest::AbstractMatrix{V}, x, y,
     # Swap x and y for more efficient threaded loop.
     if nr < nc
         dest′ = reshape(dest, size(dest, 2), size(dest, 1))
-        _pairwise!(Val(skipmissing), f, dest′, y, x, symmetric)
+        _pairwise!(Val(:none), f, dest′, y, x, symmetric)
         dest .= transpose(dest′)
         return dest
-    end
-
-    if skipmissing == :pairwise
-        nmtx = promoted_nmtype(x)[]
-        nmty = promoted_nmtype(y)[]
     end
 
     #cor and friends are special-cased.
@@ -25,23 +20,93 @@ function _pairwise!(::Val{skipmissing}, f, dest::AbstractMatrix{V}, x, y,
 
     #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
     Threads.@threads for subset in equal_sum_subsets(nr, Threads.nthreads())
-
         for j in subset
-
-            if skipmissing == :pairwise
-                scratch_fx = task_local_vector(:scratch_fx, nmtx, m)
-                scratch_fy = task_local_vector(:scratch_fy, nmty, m)
-            end
             for i = 1:(symmetric ? j : nc)
-                if iscor && (y[i] === x[j]) && V !== Missing
+                # For performance, diagonal is special-cased
+                if iscor && i==j && y[i] === x[j] && V !== Union{}
+                    dest[j, i] = V === Missing ? missing : 1.0
+                else
+                    dest[j, i] = f(x[j], y[i])
+                end
+                symmetric && (dest[i, j] = dest[j, i])
+            end
+        end
+    end
+    return dest
+end
+
+function check_vectors(x, y, skipmissing::Symbol, symmetric::Bool)
+
+    if symmetric && x !== y
+        throw(ArgumentError("symmetric=true only makes sense passing " *
+                            "a single set of variables (x === y)"))
+    end
+
+    if !(skipmissing in (:none, :pairwise, :listwise))
+        throw(ArgumentError("skipmissing must be one of :none, :pairwise or :listwise"))
+    end
+
+    #When skipmissing is :none, elements of x/y can have unequal length.
+    skipmissing == :none && return
+
+    m = length(x)
+    n = length(y)
+    if !(all(xi -> xi isa AbstractVector, x) && all(yi -> yi isa AbstractVector, y))
+        throw(ArgumentError("All entries in x and y must be vectors " *
+                            "when skipmissing=:$skipmissing"))
+    end
+    if m > 1
+        indsx = keys(first(x))
+        for i in 2:m
+            keys(x[i]) == indsx ||
+                throw(ArgumentError("All input vectors must have the same indices"))
+        end
+    end
+    if n > 1
+        indsy = keys(first(y))
+        for j in 2:n
+            keys(y[j]) == indsy ||
+                throw(ArgumentError("All input vectors must have the same indices"))
+        end
+    end
+    if m > 1 && n > 1
+        indsx == indsy ||
+            throw(ArgumentError("All input vectors must have the same indices"))
+    end
+end
+
+function _pairwise!(::Val{:pairwise}, f, dest::AbstractMatrix{V}, x, y, symmetric::Bool) where {V}
+
+    nr, nc = size(dest)
+    m = length(x) == 0 ? 0 : length(first(x))
+
+    # Swap x and y for more efficient threaded loop.
+    if nr < nc
+        dest′ = reshape(dest, size(dest, 2), size(dest, 1))
+        _pairwise!(Val(:pairwise), f, dest′, y, x, symmetric)
+        dest .= transpose(dest′)
+        return dest
+    end
+
+    #cor and friends are special-cased.
+    iscor = (f in (corkendall, corspearman, cor))
+    (iscor || f == cov) && (symmetric = x === y)
+    #cov(x) is faster than cov(x, x)
+    (f == cov) && (f = ((x, y) -> x === y ? cov(x) : cov(x, y)))
+
+    nmtx = promoted_nmtype(x)[]
+    nmty = promoted_nmtype(y)[]
+
+    #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
+    Threads.@threads for subset in equal_sum_subsets(nr, Threads.nthreads())
+        for j in subset
+            scratch_fx = task_local_vector(:scratch_fx, nmtx, m)
+            scratch_fy = task_local_vector(:scratch_fy, nmty, m)
+            for i = 1:(symmetric ? j : nc)
+                if iscor && i == j && y[i] === x[j] && V !== Union{} && V!== Missing
                     dest[j, i] = 1.0
                 else
-                    if skipmissing == :pairwise
-                        _x, _y = handle_pairwise(x[j], y[i]; scratch_fx, scratch_fy)
-                        dest[j, i] = f(_x, _y)
-                    else
-                        dest[j, i] = f(x[j], y[i])
-                    end
+                    dest[j, i] = f(handle_pairwise(x[j], y[i]; scratch_fx, scratch_fy)...)
                 end
                 symmetric && (dest[i, j] = dest[j, i])
             end
@@ -260,45 +325,6 @@ end
 promoted_type(x) = mapreduce(eltype, promote_type, x, init=Union{})
 promoted_nmtype(x) = mapreduce(nonmissingtype ∘ eltype, promote_type, x, init=Union{})
 
-function check_vectors(x, y, skipmissing::Symbol, symmetric::Bool)
-
-    if symmetric && x !== y
-        throw(ArgumentError("symmetric=true only makes sense passing " *
-                            "a single set of variables (x === y)"))
-    end
-
-    if !(skipmissing in (:none, :pairwise, :listwise))
-        throw(ArgumentError("skipmissing must be one of :none, :pairwise or :listwise"))
-    end
-
-    #When skipmissing is :none, elements of x/y can have unequal length.
-    skipmissing == :none && return
-
-    m = length(x)
-    n = length(y)
-    if !(all(xi -> xi isa AbstractVector, x) && all(yi -> yi isa AbstractVector, y))
-        throw(ArgumentError("All entries in x and y must be vectors " *
-                            "when skipmissing=:$skipmissing"))
-    end
-    if m > 1
-        indsx = keys(first(x))
-        for i in 2:m
-            keys(x[i]) == indsx ||
-                throw(ArgumentError("All input vectors must have the same indices"))
-        end
-    end
-    if n > 1
-        indsy = keys(first(y))
-        for j in 2:n
-            keys(y[j]) == indsy ||
-                throw(ArgumentError("All input vectors must have the same indices"))
-        end
-    end
-    if m > 1 && n > 1
-        indsx == indsy ||
-            throw(ArgumentError("All input vectors must have the same indices"))
-    end
-end
 
 """
     handle_listwise(x, y)
@@ -331,6 +357,9 @@ function handle_listwise(x, y)
 
     # Computing integer indices once for all vectors is faster
     nminds′ = findall(nminds)
+    # TODO: check whether wrapping views in a custom array type which asserts
+    # that entries cannot be `missing` (similar to `skipmissing`)
+    # could offer better performance
 
     x′ = [disallowmissing(view(xi, nminds′)) for xi in x]
     if x === y
