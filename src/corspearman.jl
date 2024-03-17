@@ -338,15 +338,6 @@ function _cor(ranksx::AbstractMatrix{T}, ranksy::AbstractMatrix{U}) where {T,U}
     end
 end
 
-function insert_ones(C::AbstractMatrix{T}) where {T}
-    if T !== Missing
-        for i in axes(C, 1)
-            C[i, i] = 1.0
-        end
-    end
-    return C
-end
-
 """
     sortperm_matrix(x)
 
@@ -380,7 +371,7 @@ function ranks_matrix(x)
     int64 = Int64[]
 
     if promoted_type(x) === Missing
-        return (fill(missing, m, nc))
+        return fill(missing, m, nc)
     end
 
     temp = Array{Union{Missing,Int,Float64}}(undef, m, nc)

@@ -229,7 +229,7 @@ function corspearman_naive_kernel!(x, y, skipmissing::Symbol)
     end
 
     if any(KendallTau._isnan, x) || any(KendallTau._isnan, y)
-        return (NaN)
+        return NaN
     end
 
     return cor(tiedrank(x), tiedrank(y))

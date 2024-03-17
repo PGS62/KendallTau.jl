@@ -1,4 +1,4 @@
-function check_pairwise_args(x, y, skipmissing::Symbol, symmetric::Bool)
+function check_vectors(x, y, skipmissing::Symbol, symmetric::Bool)
 
     if symmetric && x !== y
         throw(ArgumentError("symmetric=true only makes sense passing " *
@@ -41,7 +41,7 @@ end
 
 function handle_listwise(x, y)
     if !(missing isa promoted_type(x) || missing isa promoted_type(y))
-        return (x, y)
+        return x, y
     end
 
     nminds = .!ismissing.(first(x))
@@ -59,10 +59,10 @@ function handle_listwise(x, y)
 
     x′ = [disallowmissing(view(xi, nminds′)) for xi in x]
     if x === y
-        return (x′, x′)
+        return x′, x′
     else
         y′ = [disallowmissing(view(yi, nminds′)) for yi in y]
-        return (x′, y′)
+        return x′, y′
     end
 end
 
@@ -209,7 +209,7 @@ julia> dest
 """
 function pairwise!(f, dest::AbstractMatrix, x, y=x; symmetric::Bool=false,
     skipmissing::Symbol=:none)
-    check_pairwise_args(x, y, skipmissing, symmetric)
+    check_vectors(x, y, skipmissing, symmetric)
     return _pairwise!(f, dest, x, y, symmetric=symmetric, skipmissing=skipmissing)
 end
 
@@ -267,7 +267,7 @@ julia> pairwise(cor, eachcol(y), skipmissing=:pairwise)
 ```
 """
 function pairwise(f, x, y=x; symmetric::Bool=false, skipmissing::Symbol=:none)
-    check_pairwise_args(x, y, skipmissing, symmetric)
+    check_vectors(x, y, skipmissing, symmetric)
     return _pairwise(Val(skipmissing), f, x, y, symmetric)
 end
 
@@ -294,7 +294,7 @@ function _pairwise!(::Val{skipmissing}, f, dest::AbstractMatrix{V}, x, y,
     iscor = (f in (corkendall, corspearman, cor))
     (iscor || f == cov) && (symmetric = x === y)
     #cov(x) is faster than cov(x, x)
-    (f == cov) && (f = ((x,y) -> x === y ? cov(x) : cov(x, y)))
+    (f == cov) && (f = ((x, y) -> x === y ? cov(x) : cov(x, y)))
 
     #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
     Threads.@threads for subset in equal_sum_subsets(nr, Threads.nthreads())

@@ -24,7 +24,7 @@ Uses multiple threads when either `x` or `y` is a matrix.
 function corkendall(x::AbstractMatrix, y::AbstractMatrix=x;
     skipmissing::Symbol=:none)
     check_rankcor_args(x, y, skipmissing, true)
-    return (pairwise(corkendall, eachcol(x), eachcol(y); skipmissing))
+    return pairwise(corkendall, eachcol(x), eachcol(y); skipmissing)
 end
 
 function corkendall(x::AbstractVector, y::AbstractVector;

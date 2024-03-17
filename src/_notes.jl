@@ -12,7 +12,7 @@ Callstack when skipmissing = :listwise
 pairwise    1 method
 _pairwise   1 method
 _pairwise!  method with f as first argument
-_pairwise!  method with ::Val{:listwise} as first argument, which calls check_pairwise_args,
+_pairwise!  method with ::Val{:listwise} as first argument, which calls check_vectors,
             excludes missing elements as appropriate before calling
 _pairwise! method with ::Val{:none} as first argument, which is a do-nothing wrapper to
 _pairwise!
@@ -21,7 +21,7 @@ Callstack when skipmissing = :pairwise
 pairwise    1 method
 _pairwise   1 method
 _pairwise!  method with f as first argument
-_pairwise!  method with ::Val{:pairwise} as first argument which calles check_pairwise_args and then
+_pairwise!  method with ::Val{:pairwise} as first argument which calles check_vectors and then
 _pairwise!
 =#
 
@@ -45,7 +45,7 @@ Add tests for size of allocations. [DONE]
 Update naive implementations for new handling of missing. [DONE]
 We should have the same behaviour as cor for inputs with element type Missing (though cor's
     handling of edge cases is perhaps buggy). [DONE]
-Consider changing check_pairwise_args to flip :pairwise and :listwise to :none when missing
+Consider changing check_vectors to flip :pairwise and :listwise to :none when missing
     is not an element type of either x or y. [DECIDED AGAINST]
 Consider kernel functions taking x and y as arguments so they can do the x===y test, that
     way could simplify the loop's handling of on-diagonal elements.[DECIDED AGAINST]
