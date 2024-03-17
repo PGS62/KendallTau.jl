@@ -10,8 +10,6 @@
 #
 #######################################
 
-import StatsBase: _tiedrank!, cor#TODO Remove this line on porting to StatsBase
-
 """
     corspearman(x, y=x; skipmissing::Symbol=:none)
 
@@ -29,88 +27,13 @@ Uses multiple threads when either `x` or `y` is a matrix and `skipmissing` is `:
     either; note that this might skip a high proportion of entries. Only allowed when `x` or
     `y` is a matrix.
 """
-function corspearman(x::AbstractMatrix, y::AbstractMatrix=x;
-    skipmissing::Symbol=:none)
-
-    check_rankcor_args(x, y, skipmissing, true)
-
-    missing_allowed = missing isa eltype(x) || missing isa eltype(y)
-    nr, nc = size(x, 2), size(y, 2)
-
-    if missing_allowed && skipmissing == :listwise
-        x, y = handle_listwise(x, y)
-    end
-
-    # Use threads for :pairwise case because tiedrank must be called twice per element of the
-    # correlation matrix. For :none and :listwise cases tiedrank is called twice per column
-    # of the matrix.
-    if skipmissing == :pairwise && missing_allowed
-        if skipmissing == :none && missing_allowed
-            C = ones(Union{Missing,Float64}, nr, nc)
-        else
-            C = ones(Float64, nr, nc)
-        end
-        # Use a function barrier because the type of C varies according to the value of
-        # skipmissing.
-        return (_corspearman(x, y, C, skipmissing))
-    else
-        if y === x
-            x = tiedrank_nan(x)
-            y = x
-        else
-            x, y = tiedrank_nan(x), tiedrank_nan(y)
-        end
-        C = cor_wrap(x, y)
-        return C
-    end
-end
-
-function _corspearman(x::AbstractMatrix{T}, y::AbstractMatrix{U},
-    C::AbstractMatrix, skipmissing::Symbol) where {T,U}
-
-    symmetric = x === y
-
-    # Swap x and y for more efficient threaded loop.
-    if size(x, 2) < size(y, 2)
-        return collect(transpose(_corspearman(y, x, collect(transpose(C)), skipmissing)))
-    end
-
-    (m, nr), nc = size(x), size(y, 2)
-
-    nmtx = nonmissingtype(eltype(x))[]
-    nmty = nonmissingtype(eltype(y))[]
-    alljs = (symmetric ? 2 : 1):nr
-
-    #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
-    Threads.@threads for thischunk in equal_sum_subsets(length(alljs), Threads.nthreads())
-
-        for k in thischunk
-            j = alljs[k]
-
-            scratch_fx = task_local_vector(:scratch_fx, nmtx, m)
-            scratch_fy = task_local_vector(:scratch_fy, nmty, m)
-            ycoli = task_local_vector(:ycoli, y, m)
-            xcolj = task_local_vector(:xcolj, x, m)
-            scratch_rksx = task_local_vector(:scratch_rksx, Float64[], m)
-            scratch_rksy = task_local_vector(:scratch_rksy, Float64[], m)
-            scratch_p = task_local_vector(:scratch_p, Int[], m)
-
-            for i = 1:(symmetric ? j - 1 : nc)
-                ycoli .= view(y, :, i)
-                xcolj .= view(x, :, j)
-                C[j, i] = corspearman_kernel!(xcolj, ycoli, skipmissing, scratch_fx,
-                    scratch_fy, scratch_rksx, scratch_rksy, scratch_p)
-                symmetric && (C[i, j] = C[j, i])
-            end
-        end
-    end
-    return C
-end
-
 function corspearman(x::AbstractVector, y::AbstractVector; skipmissing::Symbol=:none)
     check_rankcor_args(x, y, skipmissing, false)
-    x, y = copy(x), copy(y)
-    return corspearman_kernel!(x, y, skipmissing)
+    if x === y
+        return corspearman(x)
+    else
+        return corspearman_kernel!(x, y, skipmissing)
+    end
 end
 
 function corspearman(x::AbstractMatrix, y::AbstractVector; skipmissing::Symbol=:none)
@@ -121,66 +44,245 @@ function corspearman(x::AbstractVector, y::AbstractMatrix; skipmissing::Symbol=:
     return corspearman(reshape(x, (length(x), 1)), y; skipmissing)
 end
 
-"""
-    corspearman_kernel!(x::AbstractVector, y::AbstractVector, skipmissing::Symbol,
-    scratch_fx=similar(x), scratch_fy=similar(y), scratch_rksx=similar(x, Float64),
-    scratch_rksy=similar(y, Float64), scratch_p=similar(x, Int))
+function corspearman(x::AbstractMatrix, y::AbstractMatrix=x;
+    skipmissing::Symbol=:none)
+    check_rankcor_args(x, y, skipmissing, true)
+    return pairwise(corspearman, eachcol(x), eachcol(y); skipmissing)
+end
 
-Compute Spearman's rank correlation coefficient between vectors 'x' and 'y'
-Subsequent arguments:
-- `scratch_fx, scratch_fy`: Vectors used to filter `missing`s from `x` and `y` without
-   allocation.
--  `scratch_rksx=similar, scratch_rksy, scratch_p=similar` vectors used to calculate the
-    tied ranks of `x` and `y` without allocation.
-"""
-function corspearman_kernel!(x::AbstractVector, y::AbstractVector, skipmissing::Symbol,
-    scratch_fx=similar(x), scratch_fy=similar(y), scratch_rksx=similar(x, Float64),
-    scratch_rksy=similar(y, Float64), scratch_p=similar(x, Int))
+function corspearman(x::AbstractVector{T}) where {T}
+    return T === Missing ? missing : 1.0
+end
 
-    length(x) >= 2 || return NaN
-    x === y && return (1.0)
+function _pairwise!(::Val{:listwise}, f::typeof(corspearman), dest::AbstractMatrix, x, y,
+    symmetric::Bool)
+    return _pairwise!(Val(:none), f, dest, handle_listwise(x, y)..., symmetric)
+end
 
-    if skipmissing == :none
-        if missing isa eltype(x) && any(ismissing, x)
-            return (missing)
-        elseif missing isa eltype(y) && any(ismissing, y)
-            return (missing)
+function _pairwise!(::Val{:none}, f::typeof(corspearman),
+    dest::AbstractMatrix, x, y, symmetric::Bool)
+
+    symmetric = x === y
+    if symmetric && promoted_type(x) === Missing
+        ondiag = missing
+        offdiag = (length(x[1]) < 2) ? NaN : missing
+        @inbounds for i in axes(dest, 1), j in axes(dest, 2)
+            dest[i, j] = i == j ? ondiag : offdiag
+        end
+        return dest
+    end
+
+    ranksx = ranks_matrix(x)
+
+    if symmetric
+        dest .= _cor(ranksx, ranksx)
+    else
+        ranksy = ranks_matrix(y)
+        dest .= _cor(ranksx, ranksy)
+    end
+
+    #=When elements x[i] and y[j] are identical (according to `===`) then dest[i,j] should
+    be 1.0 even in the presence of missing and NaN values. But the return from `_cor` does
+    not respect that requirement. So amend.=#
+    autocor = (eltype(dest) === Missing && skipmissing == :none) ? missing : 1.0
+    @inbounds for i in axes(dest, 1), j in axes(dest, 2)
+        x[i] === y[j] && (dest[i, j] = autocor)
+    end
+    return dest
+end
+
+function _pairwise!(::Val{:pairwise}, f::typeof(corspearman),
+    dest::AbstractMatrix{V}, x, y, symmetric::Bool) where {V}
+
+    nr, nc = size(dest)
+    m = length(x) == 0 ? 0 : length(first(x))
+    symmetric = x === y
+
+    # Swap x and y for more efficient threaded loop.
+    if nr < nc
+        dest′ = reshape(dest, size(dest, 2), size(dest, 1))
+        _pairwise!(Val(:pairwise), f, dest′, y, x, symmetric)
+        dest .= transpose(dest′)
+        return dest
+    end
+
+    tempx = sortperm_matrix(x)
+    tempy = symmetric ? tempx : sortperm_matrix(y)
+
+    int64 = Int64[]
+    fl64 = Float64[]
+    nmtx = promoted_nmtype(x)[]
+    nmty = promoted_nmtype(y)[]
+    #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
+    Threads.@threads for subset in equal_sum_subsets(nr, Threads.nthreads())
+
+        for j in subset
+
+            inds = task_local_vector(:inds, int64, m)
+            spnmx = task_local_vector(:spnmx, int64, m)
+            spnmy = task_local_vector(:spnmy, int64, m)
+            nmx = task_local_vector(:nmx, nmtx, m)
+            nmy = task_local_vector(:nmy, nmty, m)
+            ranksx = task_local_vector(:ranksx, fl64, m)
+            ranksy = task_local_vector(:ranksy, fl64, m)
+
+            for i = 1:(symmetric ? j : nc)
+                # For performance, diagonal is special-cased
+                if x[j] === y[i] && eltype(dest) !== Union{}
+                    if missing isa eltype(dest) && eltype(x[j]) == Missing
+                        dest[j, i] = missing
+                    else
+                        dest[j, i] = 1.0
+                    end
+                else
+                    dest[j, i] = corspearman_kernel!(x[j], y[i], :pairwise,
+                        view(tempx, :, j), view(tempy, :, i), inds, spnmx, spnmy, nmx,
+                        nmy, ranksx, ranksy)
+                end
+                symmetric && (dest[i, j] = dest[j, i])
+            end
         end
     end
+    return dest
+end
 
-    if missing isa eltype(x) || missing isa eltype(y)
-        x, y = handle_pairwise(x, y; scratch_fx, scratch_fy)
-        length(x) >= 2 || return NaN
+"""
+    corspearman_kernel!(x::AbstractVector{T}, y::AbstractVector{U},
+    skipmissing::Symbol, sortpermx=sortperm(x), sortpermy=sortperm(y),
+    inds=zeros(Int64, length(x)), spnmx=zeros(Int64, length(x)),
+    spnmy=zeros(Int64, length(x)), nmx=similar(x, nonmissingtype(T)),
+    nmy=similar(y, nonmissingtype(U)), ranksx=similar(x, Float64),
+    ranksy=similar(y, Float64)) where {T,U}
+
+Compute Spearman's rank correlation coefficient between `x` and `y` with no allocations if
+all arguments are provided.
+
+All arguments (other than `skipmissing`) must have the same axes.
+- `sortpermx`: The sort permutation of `x`.
+- `sortpermy`: The sort permutation of `y`.
+- `inds` ... `ranksy` are all pre-allocated "scratch" arguments.
+
+## Example
+```julia-repl
+julia> using KendallTau, BenchmarkTools, Random
+
+julia> Random.seed!(1);
+
+julia> x = ifelse.(rand(1000) .< 0.05,missing,randn(1000));y = ifelse.(rand(1000) .< 0.05,\
+missing,randn(1000));
+
+julia> sortpermx=sortperm(x);sortpermy=sortperm(y);inds=zeros(Int64,1000);\
+spnmx=zeros(Int64,1000);spnmy=zeros(Int64,1000);
+
+julia> nmx=zeros(1000);nmy=zeros(1000);ranksx=similar(x,Float64);ranksy=similar(y,Float64);
+
+julia> @btime KendallTau.corspearman_kernel!(\$x,\$y,:pairwise,\$sortpermx,\$sortpermy,\
+\$inds,\$spnmx,\$spnmy,\$nmx,\$nmy,\$ranksx,\$ranksy)
+4.671 μs (0 allocations: 0 bytes)
+-0.016058512110609713
+```
+"""
+function corspearman_kernel!(x::AbstractVector{T}, y::AbstractVector{U},
+    skipmissing::Symbol, sortpermx=sortperm(x), sortpermy=sortperm(y),
+    inds=zeros(Int64, length(x)), spnmx=zeros(Int64, length(x)),
+    spnmy=zeros(Int64, length(x)), nmx=similar(x, nonmissingtype(T)),
+    nmy=similar(y, nonmissingtype(U)), ranksx=similar(x, Float64),
+    ranksy=similar(y, Float64)) where {T,U}
+
+    (axes(x) == axes(sortpermx) == axes(y) == axes(sortpermy) == axes(inds) ==
+     axes(spnmx) == axes(spnmy) == axes(nmx) == axes(nmy) == axes(ranksx) ==
+     axes(ranksy)) || throw(ArgumentError("Axes of inputs must match"))
+
+    if skipmissing == :pairwise
+
+        lb = first(axes(x, 1))
+        k = lb
+        #= Process (x,y) to obtain (nmx,nmy) by filtering out elements at position k if
+        either x[k] or y[k] is missing. inds provides the mapping of elements of x (or y) to
+        elements of nmx (or nmy) i.e. x[k] maps to nmx[inds[k]]. inds is then used to obtain
+        spnmx and spnmy more efficiently than calling sortperm(nmx) and sortperm(nmy).
+         =#
+        @inbounds for i in axes(x, 1)
+            if !(ismissing(x[i]) || ismissing(y[i]))
+                inds[i] = k
+                nmx[k] = x[i]
+                nmy[k] = y[i]
+                k += 1
+            else
+                inds[i] = lb - 1
+            end
+        end
+
+        nnm = k - 1
+        if nnm <= 1
+            return NaN
+        end
+        nmx = view(nmx, lb:nnm)
+        nmy = view(nmy, lb:nnm)
+
+        if any(_isnan, nmx) || any(_isnan, nmy)
+            return NaN
+        end
+
+        k = lb
+        @inbounds for i in axes(x, 1)
+            if (inds[sortpermx[i]]) != lb - 1
+                spnmx[k] = inds[sortpermx[i]]
+                k += 1
+            end
+        end
+        spnmx = view(spnmx, lb:nnm)
+
+        k = lb
+        @inbounds for i in axes(y, 1)
+            if (inds[sortpermy[i]]) != lb - 1
+                spnmy[k] = inds[sortpermy[i]]
+                k += 1
+            end
+        end
+        spnmy = view(spnmy, lb:nnm)
+
+        if nnm <= 1
+            return NaN
+        end
+
+        _tiedrank!(view(ranksx, 1:nnm), nmx, spnmx)
+        _tiedrank!(view(ranksy, 1:nnm), nmy, spnmy)
+
+        return cor(view(ranksx, 1:nnm), view(ranksy, 1:nnm))
+
+    else
+        if length(x) <= 1
+            return NaN
+        elseif skipmissing == :none && (missing isa T || missing isa U) &&
+               (any(ismissing, x) || any(ismissing, y))
+            return missing
+        elseif any(_isnan, x) || any(_isnan, y)
+            return NaN
+        end
+
+        _tiedrank!(ranksx, x, sortpermx)
+        _tiedrank!(ranksy, y, sortpermy)
+        return cor(ranksx, ranksy)
     end
-
-    if any(isnan_safe, x) || any(isnan_safe, y)
-        return NaN
-    end
-    n = length(x)
-
-    sortperm!(view(scratch_p, 1:n), x)
-    _tiedrank!(view(scratch_rksx, 1:n), x, view(scratch_p, 1:n))
-    sortperm!(view(scratch_p, 1:n), y)
-    _tiedrank!(view(scratch_rksy, 1:n), y, view(scratch_p, 1:n))
-
-    return cor(view(scratch_rksx, 1:n), view(scratch_rksy, 1:n))
 end
 
 # Auxiliary functions for Spearman's rank correlation
 
 """
-    cor_wrap(x, y)
+    _cor(x, y)
 Work-around various "unhelpful" features of cor:
-a) Ensures that on-diagonal elements of the return are always 1.0 in the symmetric case
-irrespective of missing, NaN, Inf etc.
-b) Ensure that cor_wrap(a,b) is NaN when a and b are vectors of equal length less than 2
-c) Works around some edge-case bugs in cor's handling of `missing` where the function throws if
-`x` and `y` are matrices but nevertheless looping around the columns of `x` and `y` works.
-https://github.com/JuliaStats/Statistics.jl/issues/63
+a) Ensures that on-diagonal elements of the return are as they should be in the symmetric
+case i.e. 1.0 unless eltype(x) is Missing in which case on-diagonal elements should be
+missing.
+b) Ensure that _cor(a,b) is NaN when a and b are vectors of equal length less than 2
+c) Works around some edge-case bugs in cor's handling of `missing` where the function throws
+if `x` and `y` are matrices but nevertheless looping around the columns of `x` and `y`
+works. https://github.com/JuliaStats/Statistics.jl/issues/63
 
 # Example
 ```julia-repl
-julia> x = y = [missing missing; missing missing]
+julia> x = y = fill(missing,2,2)
 2×2 Matrix{Missing}:
  missing  missing
  missing  missing
@@ -188,7 +290,7 @@ julia> x = y = [missing missing; missing missing]
 julia> Statistics.cor(x,y)
 ERROR: MethodError: no method matching copy(::Missing)
 
-julia> KendallTau.cor_wrap(x,y)
+julia> KendallTau._cor(x,y)
 2×2 Matrix{Union{Missing, Float64}}:
  1.0        missing
   missing  1.0
@@ -197,28 +299,32 @@ julia>
 
 ```
 """
-function cor_wrap(x, y)
-    symmetric = y === x
+function _cor(ranksx::AbstractMatrix{T}, ranksy::AbstractMatrix{U}) where {T,U}
+    symmetric = ranksx === ranksy
 
-    if size(x, 1) < 2
-        nr, nc = size(x, 2), size(y, 2)
-        if symmetric
-            return (ifelse.(1:nr .== (1:nc)', 1.0, NaN))
+    if size(ranksx, 1) < 2
+        if symmetric && T === Missing
+            return ifelse.(axes(ranksx, 2) .== axes(ranksx, 2)', missing, NaN)
+        elseif symmetric
+            return ifelse.(axes(ranksx, 2) .== axes(ranksx, 2)', 1.0, NaN)
         else
-            return (fill(NaN, nr, nc))
+            return fill(NaN, size(ranksx, 2), size(ranksy, 2))
         end
     end
     try
-        C = cor(x, y)
         if symmetric
-            for i in axes(C, 1)
-                C[i, i] = 1.0
-            end
+            return cor(ranksx)
+        else
+            return cor(ranksx, ranksy)
         end
-        return (C)
     catch
-        nr, nc = size(x, 2), size(y, 2)
-        if missing isa eltype(x) || missing isa eltype(y)
+        #=Example of when this catch block is hit:
+        ranksx === ranksy = [missing missing;missing missing]
+        =#
+        nr, nc = size(ranksx, 2), size(ranksy, 2)
+        if ranksx === ranksy && T === Missing
+            return fill(missing, nr, nc)
+        elseif missing isa T || missing isa U
             C = ones(Union{Missing,Float64}, nr, nc)
         else
             C = ones(Float64, nr, nc)
@@ -226,44 +332,65 @@ function cor_wrap(x, y)
 
         for j = (symmetric ? 2 : 1):nr
             for i = 1:(symmetric ? j - 1 : nc)
-                C[j, i] = cor(view(x, :, j), view(y, :, i))
+                C[j, i] = cor(view(ranksx, :, j), view(ranksy, :, i))
                 symmetric && (C[i, j] = C[j, i])
             end
         end
-        return (C)
+        return C
     end
 end
 
 """
-    tiedrank_nan(X::AbstractMatrix)
+    sortperm_matrix(x)
 
-Return a matrix with of same dimensions as `X` whose entries indicate the tied rank
-of the corresponding entry in `X` relative to its column.
-If the column contains `NaN`, set all elements of the column to `NaN`, otherwise if the
-column contains `missing`, set all alements of the column to `missing`.
+Given `x`, a vector of vectors, return a matrix who's ith column is the sort permutation of
+the ith element of x.
 """
-function tiedrank_nan(X::AbstractMatrix)
+function sortperm_matrix(x)
+    m = length(x) == 0 ? 0 : length(first(x))
+    nc = length(x)
+    int64 = Int64[]
+    out = Array{Int}(undef, m, nc)
 
-    if missing isa eltype(X)
-        Z = similar(X, Union{Missing,Float64})
-    else
-        Z = similar(X, Float64)
+    Threads.@threads for i in 1:nc
+        ints = task_local_vector(:ints, int64, m)
+        sortperm!(ints, x[i])
+        out[:, i] .= ints
+    end
+    return out
+end
+
+"""
+    ranks_matrix(x)
+
+Given `x`, a vector of vectors, return a matrix such that the (Pearson) correlaton between
+columns of the return is the Spearman rank correlation between the elements of x.
+"""
+function ranks_matrix(x)
+
+    m = length(x) == 0 ? 0 : length(first(x))
+    nc = length(x)
+    int64 = Int64[]
+
+    if promoted_type(x) === Missing
+        return fill(missing, m, nc)
     end
 
-    idxs = Vector{Int}(undef, size(X, 1))
-    for j in axes(X, 2)
-        Xj = view(X, :, j)
-        Zj = view(Z, :, j)
-        if any(isnan_safe, Xj)
-            fill!(Zj, NaN)
-        elseif missing isa eltype(X) && any(ismissing, Xj)
-            fill!(Zj, missing)
+    out = Array{Union{Missing,Int,Float64}}(undef, m, nc)
+
+    Threads.@threads for i in 1:nc
+        ints = task_local_vector(:ints, int64, m)
+
+        if any(ismissing, x[i])
+            out[:, i] .= missing
+        elseif any(_isnan, x[i])
+            out[:, i] .= NaN
         else
-            sortperm!(idxs, Xj)
-            _tiedrank!(Zj, Xj, idxs)
+            sortperm!(ints, x[i])
+            _tiedrank!(view(out, :, i), x[i], ints)
         end
     end
-    return Z
+    return out
 end
 
 #######################################
@@ -291,94 +418,21 @@ Uses multiple threads when either `x` or `y` is a matrix.
 """
 function corkendall(x::AbstractMatrix, y::AbstractMatrix=x;
     skipmissing::Symbol=:none)
-
     check_rankcor_args(x, y, skipmissing, true)
-
-    missing_allowed = missing isa eltype(x) || missing isa eltype(y)
-    nr, nc = size(x, 2), size(y, 2)
-
-    if missing_allowed && skipmissing == :listwise
-        x, y = handle_listwise(x, y)
-    end
-
-    if skipmissing == :none && missing_allowed
-        C = ones(Union{Missing,Float64}, nr, nc)
-    else
-        C = ones(Float64, nr, nc)
-    end
-    # Use a function barrier because the type of C varies according to the value of
-    # skipmissing.
-    return (_corkendall(x, y, C, skipmissing))
-
+    return pairwise(corkendall, eachcol(x), eachcol(y); skipmissing)
 end
 
-function _corkendall(x::AbstractMatrix{T}, y::AbstractMatrix{U},
-    C::AbstractMatrix, skipmissing::Symbol) where {T,U}
-
-    symmetric = x === y
-
-    # Swap x and y for more efficient threaded loop.
-    if size(x, 2) < size(y, 2)
-        return collect(transpose(_corkendall(y, x, collect(transpose(C)), skipmissing)))
-    end
-
-    (m, nr), nc = size(x), size(y, 2)
-
-    intarray = Int[]
-    nmtx = nonmissingtype(eltype(x))[]
-    nmty = nonmissingtype(eltype(y))[]
-    alljs = (symmetric ? 2 : 1):nr
-
-    #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
-    Threads.@threads for thischunk in equal_sum_subsets(length(alljs), Threads.nthreads())
-
-        for k in thischunk
-            j = alljs[k]
-
-            sortedxcolj = task_local_vector(:sortedxcolj, x, m)
-            scratch_py = task_local_vector(:scratch_py, y, m)
-            ycoli = task_local_vector(:ycoli, y, m)
-            permx = task_local_vector(:permx, intarray, m)
-            # Ensuring missing is not an element type of scratch_sy, scratch_fx, scratch_fy
-            # gives improved performance.
-            scratch_sy = task_local_vector(:scratch_sy, nmty, m)
-            scratch_fx = task_local_vector(:scratch_fx, nmtx, m)
-            scratch_fy = task_local_vector(:scratch_fy, nmty, m)
-
-            sortperm!(permx, view(x, :, j))
-            @inbounds for k in eachindex(sortedxcolj)
-                sortedxcolj[k] = x[permx[k], j]
-            end
-
-            for i = 1:(symmetric ? j - 1 : nc)
-                ycoli .= view(y, :, i)
-                C[j, i] = corkendall_kernel!(sortedxcolj, ycoli, permx, skipmissing;
-                    scratch_py, scratch_sy, scratch_fx, scratch_fy)
-                symmetric && (C[i, j] = C[j, i])
-            end
-        end
-    end
-    return C
-end
-
-function corkendall(x::AbstractVector, y::AbstractVector; skipmissing::Symbol=:none)
-
+function corkendall(x::AbstractVector, y::AbstractVector;
+    skipmissing::Symbol=:none)
     check_rankcor_args(x, y, skipmissing, false)
-
-    length(x) >= 2 || return NaN
-    x === y && return (1.0)
-
-    x = copy(x)
-
-    if skipmissing == :pairwise && (missing isa eltype(x) || missing isa eltype(y))
-        x, y = handle_pairwise(x, y)
-        length(x) >= 2 || return NaN
+    if x === y
+        return corkendall(x)
+    else
+        x = copy(x)
+        permx = sortperm(x)
+        permute!(x, permx)
+        return corkendall_kernel!(x, y, permx, skipmissing)
     end
-
-    permx = sortperm(x)
-    permute!(x, permx)
-
-    return corkendall_kernel!(x, y, permx, skipmissing)
 end
 
 #= corkendall returns a vector in this case, inconsistent with with Statistics.cor and
@@ -392,19 +446,77 @@ function corkendall(x::AbstractVector, y::AbstractMatrix; skipmissing::Symbol=:n
     return corkendall(reshape(x, (length(x), 1)), y; skipmissing)
 end
 
-function check_rankcor_args(x, y, skipmissing, allowlistwise::Bool)
-    Base.require_one_based_indexing(x, y)
-    size(x, 1) == size(y, 1) ||
-        throw(DimensionMismatch("x and y have inconsistent dimensions"))
-    if allowlistwise
-        skipmissing == :none || skipmissing == :pairwise || skipmissing == :listwise ||
-            throw(ArgumentError("skipmissing must be one of :none, :pairwise or :listwise, \
-            but got :$skipmissing"))
-    else
-        skipmissing == :none || skipmissing == :pairwise ||
-            throw(ArgumentError("skipmissing must be either :none or :pairwise, but \
-            got :$skipmissing"))
+function corkendall(x::AbstractVector{T}) where {T}
+    return T === Missing ? missing : 1.0
+end
+
+function _pairwise!(::Val{:listwise}, f::typeof(corkendall), dest::AbstractMatrix, x, y,
+    symmetric::Bool)
+    return _pairwise!(Val(:none), f, dest, handle_listwise(x, y)..., symmetric)
+end
+
+function _pairwise!(::Val{skipmissing}, f::typeof(corkendall), dest::AbstractMatrix{V},
+    x, y, symmetric::Bool) where {skipmissing,V}
+
+    nr, nc = size(dest)
+    m = length(x) == 0 ? 0 : length(first(x))
+
+    # Swap x and y for more efficient threaded loop.
+    if nr < nc
+        dest′ = reshape(dest, size(dest, 2), size(dest, 1))
+        _pairwise!(Val(skipmissing), f, dest′, y, x, symmetric)
+        dest .= transpose(dest′)
+        return dest
     end
+
+    intvec = Int[]
+    t = promoted_type(x)[]
+    u = promoted_type(y)[]
+    t′ = promoted_nmtype(x)[]
+    u′ = promoted_nmtype(y)[]
+
+    symmetric = x === y
+
+    #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
+    Threads.@threads for subset in equal_sum_subsets(nr, Threads.nthreads())
+
+        for j in subset
+
+            sortedxj = task_local_vector(:sortedxj, t, m)
+            scratch_py = task_local_vector(:scratch_py, u, m)
+            yi = task_local_vector(:yi, u, m)
+            permx = task_local_vector(:permx, intvec, m)
+            # Ensuring missing is not an element type of scratch_sy, scratch_fx, scratch_fy
+            # gives improved performance.
+            scratch_sy = task_local_vector(:scratch_sy, u′, m)
+            scratch_fx = task_local_vector(:scratch_fx, t′, m)
+            scratch_fy = task_local_vector(:scratch_fy, t′, m)
+
+            sortperm!(permx, x[j])
+            @inbounds for k in eachindex(sortedxj)
+                sortedxj[k] = x[j][permx[k]]
+            end
+
+            for i = 1:(symmetric ? j : nc)
+                # For performance, diagonal is special-cased
+                if x[j] === y[i] && eltype(dest) !== Union{}
+                    if missing isa eltype(dest) && eltype(x[j]) == Missing
+                        dest[j, i] = missing
+                    else
+                        dest[j, i] = 1.0
+                    end
+                else
+                    yi .= y[i]
+                    dest[j, i] = corkendall_kernel!(sortedxj, yi, permx, skipmissing;
+                        scratch_py, scratch_sy, scratch_fx, scratch_fy)
+                end
+                symmetric && (dest[i, j] = dest[j, i])
+            end
+        end
+    end
+
+    return dest
+
 end
 
 # Auxiliary functions for Kendall's rank correlation
@@ -412,12 +524,28 @@ end
 # Knight, William R. “A Computer Method for Calculating Kendall's Tau with Ungrouped Data.”
 # Journal of the American Statistical Association, vol. 61, no. 314, 1966, pp. 436–439.
 # JSTOR, www.jstor.org/stable/2282833.
+
+function check_rankcor_args(x, y, skipmissing, allowlistwise::Bool)
+    Base.require_one_based_indexing(x, y)
+    size(x, 1) == size(y, 1) ||
+        throw(DimensionMismatch("x and y have inconsistent dimensions"))
+    if allowlistwise
+        skipmissing in (:none, :pairwise, :listwise) ||
+            throw(ArgumentError("skipmissing must be one of :none, :pairwise or :listwise, \
+            but got :$skipmissing"))
+    else
+        skipmissing in (:none, :pairwise) ||
+            throw(ArgumentError("skipmissing must be either :none or :pairwise, but \
+            got :$skipmissing"))
+    end
+end
+
 """
-    corkendall_kernel!(sortedx::AbstractVector, y::AbstractVector, skipmissing::Symbol;
-    permx::AbstractVector{<:Integer},
+    corkendall_kernel!(sortedx::AbstractVector, y::AbstractVector,
+    permx::AbstractVector{<:Integer}, skipmissing::Symbol;
     scratch_py::AbstractVector=similar(y),
     scratch_sy::AbstractVector=similar(y),
-    scratch_fx::AbstractVector=similar(x),
+    scratch_fx::AbstractVector=similar(sortedx),
     scratch_fy::AbstractVector=similar(y))
 
 Kendall correlation between two vectors but omitting the initial sorting of the first
@@ -430,20 +558,20 @@ subsequent arguments:
 - `scratch_fx, scratch_fy`: Vectors used to filter `missing`s from `x` and `y` without
    allocation.
 """
-function corkendall_kernel!(sortedx::AbstractVector, y::AbstractVector,
+function corkendall_kernel!(sortedx::AbstractVector{T}, y::AbstractVector{U},
     permx::AbstractVector{<:Integer}, skipmissing::Symbol;
-    scratch_py::AbstractVector=similar(y),
+    scratch_py::AbstractVector{V}=similar(y),
     scratch_sy::AbstractVector=similar(y),
     scratch_fx::AbstractVector=similar(sortedx),
-    scratch_fy::AbstractVector=similar(y))
+    scratch_fy::AbstractVector=similar(y)) where {T,U,V}
 
     length(sortedx) >= 2 || return NaN
 
     if skipmissing == :none
-        if missing isa eltype(sortedx) && any(ismissing, sortedx)
-            return (missing)
-        elseif missing isa eltype(y) && any(ismissing, y)
-            return (missing)
+        if missing isa T && any(ismissing, sortedx)
+            return missing
+        elseif missing isa U && any(ismissing, y)
+            return missing
         end
     end
 
@@ -451,15 +579,14 @@ function corkendall_kernel!(sortedx::AbstractVector, y::AbstractVector,
         scratch_py[i] = y[permx[i]]
     end
 
-    if missing isa eltype(sortedx) || missing isa eltype(scratch_py)
+    if missing isa T || missing isa V
         sortedx, permutedy = handle_pairwise(sortedx, scratch_py; scratch_fx, scratch_fy)
     else
         permutedy = scratch_py
     end
 
-    if any(isnan_safe, sortedx) || any(isnan_safe, permutedy)
-        return NaN
-    end
+    (any(_isnan, sortedx) || any(_isnan, permutedy)) && return NaN
+
     n = length(sortedx)
 
     # Use widen to avoid overflows on both 32bit and 64bit
@@ -493,8 +620,8 @@ function corkendall_kernel!(sortedx::AbstractVector, y::AbstractVector,
 
     # Calls to float below prevent possible overflow errors when
     # length(sortedx) exceeds 77_936 (32 bit) or 5_107_605_667 (64 bit)
-    (npairs + ndoubleties - ntiesx - ntiesy - 2 * nswaps) /
-    sqrt(float(npairs - ntiesx) * float(npairs - ntiesy))
+    return (npairs + ndoubleties - ntiesx - ntiesy - 2 * nswaps) /
+           sqrt(float(npairs - ntiesx) * float(npairs - ntiesy))
 end
 
 """
@@ -614,117 +741,9 @@ end
 
 # Auxiliary functions for both Kendall's and Spearman's rank correlations
 
-"""
-    handle_pairwise(x::AbstractVector, y::AbstractVector;
-    scratch_fx::AbstractVector=similar(x),
-    scratch_fy::AbstractVector=similar(y))
+# _isnan required so that corkendall and corspearman have correct handling of NaNs and
+# can also accept arguments with element type for which isnan is not defined but isless is
+# is defined, so that rank correlation makes sense.
+_isnan(x::T) where {T<:Number} = isnan(x)
+_isnan(x) = false
 
-Return a pair `(a,b)`, filtered copies of `(x,y)`, in which elements `x[i]` and
-`y[i]` are excluded if  `ismissing(x[i])||ismissing(y[i])`.
-"""
-function handle_pairwise(x::AbstractVector, y::AbstractVector;
-    scratch_fx::AbstractVector=similar(x,nonmissingtype(eltype(x))),
-    scratch_fy::AbstractVector=similar(y,nonmissingtype(eltype(y))))
-
-    axes(x, 1) == axes(y, 1) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
-    lb = first(axes(x, 1))
-    j = lb - 1
-    @inbounds for i in eachindex(x)
-        if !(ismissing(x[i]) || ismissing(y[i]))
-            j += 1
-            scratch_fx[j] = x[i]
-            scratch_fy[j] = y[i]
-        end
-    end
-
-    return view(scratch_fx, lb:j), view(scratch_fy, lb:j)
-end
-
-"""
-    handle_listwise(x::AbstractMatrix, y::AbstractMatrix)
-
-Return a pair `(a,b)`, filtered copies of `(x,y)`, in which the rows `x[i,:]` and
-`y[i,:]` are both excluded if `any(ismissing,x[i,:])||any(ismissing,y[i,:])`.
-"""
-function handle_listwise(x::AbstractMatrix, y::AbstractMatrix)
-
-    axes(x, 1) == axes(y, 1) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
-    lb = first(axes(x, 1))
-
-    symmetric = x === y
-
-    a = similar(x)
-
-    k = lb - 1
-    if symmetric
-        @inbounds for i in axes(x, 1)
-            if all(j -> !ismissing(x[i, j]), axes(x, 2))
-                k += 1
-                a[k, :] .= view(x, i, :)
-            end
-        end
-        return view(a, lb:k, :), view(a, lb:k, :)
-    else
-        b = similar(y)
-        @inbounds for i in axes(x, 1)
-            if all(j -> !ismissing(x[i, j]), axes(x, 2)) && all(j -> !ismissing(y[i, j]), axes(y, 2))
-                k += 1
-                a[k, :] .= view(x, i, :)
-                b[k, :] .= view(y, i, :)
-            end
-        end
-        return view(a, lb:k, :), view(b, lb:k, :)
-    end
-end
-
-"""
-    equal_sum_subsets(n::Int, num_subsets::Int)::Vector{Vector{Int}}
-
-Divide the integers 1:n into a number of subsets such that a) each subset has (approximately)
-the same number of elements; and b) the sum of the elements in each subset is nearly equal.
-If `n` is a multiple of `2 * num_subsets` both conditions hold exactly.
-
-## Example
-```julia-repl
-julia> KendallTau.equal_sum_subsets(30,5)
-5-element Vector{Vector{Int64}}:
- [30, 21, 20, 11, 10, 1]
- [29, 22, 19, 12, 9, 2]
- [28, 23, 18, 13, 8, 3]
- [27, 24, 17, 14, 7, 4]
- [26, 25, 16, 15, 6, 5]
-```
-"""
-function equal_sum_subsets(n::Int, num_subsets::Int)::Vector{Vector{Int}}
-    subsets = [Int[] for _ in 1:min(n, num_subsets)]
-    writeto, scanup = 1, true
-    for i = n:-1:1
-        push!(subsets[writeto], i)
-        if scanup && writeto == num_subsets
-            scanup = false
-        elseif (!scanup) && writeto == 1
-            scanup = true
-        else
-            writeto += scanup ? 1 : -1
-        end
-    end
-    return (subsets)
-end
-
-#isnan_safe required for corkendall and corspearman to accept vectors whose element type
-#are not numbers but for which isless is defined and hence can be ranked.
-isnan_safe(x::T) where {T<:Number} = isnan(x)
-function isnan_safe(x)
-    false
-end
-
-"""
-    task_local_vector(key::Symbol, similarto::AbstractArray{V}, m::Int)::Vector{V} where {V}
-
-    Retrieve from task local storage a vector of length `m` and matching the element type of
-`similarto` from task local storage, with initialisation on first call during a task.
-"""
-function task_local_vector(key::Symbol, similarto::AbstractArray{V}, m::Int)::Vector{V} where {V}
-    haskey(task_local_storage(), key) || task_local_storage(key, similar(similarto, m))
-    return (task_local_storage(key))
-end

@@ -159,6 +159,6 @@ function comparecorrelationfiles(file1::String, file2::String)
 
     absdiffs = abs.(data1 .- data2)
 
-    return (maximum(absdiffs), median(absdiffs))
+    return maximum(absdiffs), median(absdiffs)
 
 end

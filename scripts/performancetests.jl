@@ -300,7 +300,7 @@ end
 
 """
     how_scaleable(fns, nr::Integer, ncs::Vector{<:Integer},
-    with_missings::Bool, use_benchmark_tools::Bool, test_returns_equal::Bool=true)
+    with_missings::Bool, use_benchmark_tools::Bool, test_returns_equal::Bool=true
 
 Investigate the performance of corkendall(x) as a function of the number of columns in `x``.
 The function prints output to the REPL and generates a plot using Plots.jl.
@@ -309,7 +309,7 @@ See file performancetestresults.txt for example output.
 
 """
 function how_scaleable(fns, nr::Integer, ncs::Vector{<:Integer},
-    with_missings::Bool, use_benchmark_tools::Bool, test_returns_equal::Bool=true)
+    with_missings::Bool, use_benchmark_tools::Bool, test_returns_equal::Bool=true,abstol=1e-14)
 
     just_tweaking_plot = false
     num_threads_in_title = false
@@ -334,6 +334,11 @@ function how_scaleable(fns, nr::Integer, ncs::Vector{<:Integer},
     @show with_missings
     @show use_benchmark_tools
     @show Threads.nthreads()
+    @show test_returns_equal
+    if test_returns_equal
+        @assert abstol >= 0
+        @show abstol
+    end
 
     n = length(ncs)
 
@@ -364,7 +369,10 @@ function how_scaleable(fns, nr::Integer, ncs::Vector{<:Integer},
 
                 if j > 1
                     if test_returns_equal
-                        all(myapprox.(res, res1, 1e-14)) || throw("Different return values from $(fullnameof(f)) and $(fullnameof(fns[1])), nr = $nr, nc = $nc, with_missings = $with_missings")
+                        if !all(myapprox.(res, res1, abstol))
+                            @show maximum(abs.(res.-res1))
+                            throw("Different return values from $(fullnameof(f)) and $(fullnameof(fns[1])), nr = $nr, nc = $nc, with_missings = $with_missings")
+                        end
                     end
                 end
                 printthis = "nc = $nc, nr = $nr, f = $(fullnameof(f)),  time = $(time)"
