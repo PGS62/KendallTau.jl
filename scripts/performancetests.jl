@@ -369,7 +369,7 @@ function how_scaleable(fns, nr::Integer, ncs::Vector{<:Integer},
 
                 if j > 1
                     if test_returns_equal
-                        if !all(myapprox.(res, res1, abstol)) 
+                        if !all(myapprox.(res, res1, abstol))
                             @show maximum(abs.(res.-res1))
                             throw("Different return values from $(fullnameof(f)) and $(fullnameof(fns[1])), nr = $nr, nc = $nc, with_missings = $with_missings")
                         end

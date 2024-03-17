@@ -257,7 +257,6 @@ StatsBase.pairwise(KendallTau.corspearman,eachcol(xm); skipmissing=:listwise)   
 StatsBase.pairwise(KendallTau.corspearman,eachcol(xm),skipmissing=:none)       55.576783 seconds (13.00 M allocations: 99.632 GiB, 5.75% gc time)
 ====================================================================================================
 
-
 #Mmmm allocations back up for some cases.
 KendallTau.corspearman(xm; skipmissing=:none) is slow
 ====================================================================================================
@@ -292,7 +291,6 @@ StatsBase.pairwise(KendallTau.corspearman,eachcol(xm); skipmissing=:pairwise)  6
 StatsBase.pairwise(KendallTau.corspearman,eachcol(xm); skipmissing=:listwise)   0.430488 seconds (11.00 M allocations: 683.182 MiB, 14.16% gc time)
 StatsBase.pairwise(KendallTau.corspearman,eachcol(xm),skipmissing=:none)       53.680572 seconds (13.00 M allocations: 99.632 GiB, 5.70% gc time)
 ====================================================================================================
-
 
 #Mmmm allocations back up for some cases.
 KendallTau.corspearman(xm; skipmissing=:none) slowness corrected
@@ -399,6 +397,4 @@ KendallTau.corspearman(xm; skipmissing=:listwise)                               
 KendallTau.pairwise(KendallTau.corspearman,eachcol(xm); skipmissing=:listwise)  0.007319 seconds (2.11 k allocations: 19.428 MiB, 0.02% compilation time)
 KendallTau.corspearman(xm; skipmissing=:none)                                   0.042035 seconds (1.62 k allocations: 17.271 MiB, 0.00% compilation time)
 KendallTau.pairwise(KendallTau.corspearman,eachcol(xm),skipmissing=:none)       0.140749 seconds (1.62 k allocations: 17.271 MiB, 76.24% gc time, 0.00% compilation time)
-
-
 =#

@@ -50,48 +50,6 @@ function _pairwise!(::Val{skipmissing}, f, dest::AbstractMatrix{V}, x, y,
     return dest
 end
 
-
-function check_vectors(x, y, skipmissing::Symbol, symmetric::Bool)
-
-    if symmetric && x !== y
-        throw(ArgumentError("symmetric=true only makes sense passing " *
-                            "a single set of variables (x === y)"))
-    end
-
-    if !(skipmissing in (:none, :pairwise, :listwise))
-        throw(ArgumentError("skipmissing must be one of :none, :pairwise or :listwise"))
-    end
-
-    #When skipmissing is :none, elements of x/y can have unequal length.
-    skipmissing == :none && return
-
-    m = length(x)
-    n = length(y)
-    if !(all(xi -> xi isa AbstractVector, x) && all(yi -> yi isa AbstractVector, y))
-        throw(ArgumentError("All entries in x and y must be vectors " *
-                            "when skipmissing=:$skipmissing"))
-    end
-    if m > 1
-        indsx = keys(first(x))
-        for i in 2:m
-            keys(x[i]) == indsx ||
-                throw(ArgumentError("All input vectors must have the same indices"))
-        end
-    end
-    if n > 1
-        indsy = keys(first(y))
-        for j in 2:n
-            keys(y[j]) == indsy ||
-                throw(ArgumentError("All input vectors must have the same indices"))
-        end
-    end
-    if m > 1 && n > 1
-        indsx == indsy ||
-            throw(ArgumentError("All input vectors must have the same indices"))
-    end
-end
-
-
 function _pairwise!(::Val{:listwise}, f, dest::AbstractMatrix, x, y, symmetric::Bool)
     return _pairwise!(Val(:none), f, dest, handle_listwise(x, y)..., symmetric)
 end
@@ -297,6 +255,51 @@ function pairwise(f, x, y=x; symmetric::Bool=false, skipmissing::Symbol=:none)
     return _pairwise(Val(skipmissing), f, x, y, symmetric)
 end
 
+# Auxiliary functions for pairwise
+
+promoted_type(x) = mapreduce(eltype, promote_type, x, init=Union{})
+promoted_nmtype(x) = mapreduce(nonmissingtype ∘ eltype, promote_type, x, init=Union{})
+
+function check_vectors(x, y, skipmissing::Symbol, symmetric::Bool)
+
+    if symmetric && x !== y
+        throw(ArgumentError("symmetric=true only makes sense passing " *
+                            "a single set of variables (x === y)"))
+    end
+
+    if !(skipmissing in (:none, :pairwise, :listwise))
+        throw(ArgumentError("skipmissing must be one of :none, :pairwise or :listwise"))
+    end
+
+    #When skipmissing is :none, elements of x/y can have unequal length.
+    skipmissing == :none && return
+
+    m = length(x)
+    n = length(y)
+    if !(all(xi -> xi isa AbstractVector, x) && all(yi -> yi isa AbstractVector, y))
+        throw(ArgumentError("All entries in x and y must be vectors " *
+                            "when skipmissing=:$skipmissing"))
+    end
+    if m > 1
+        indsx = keys(first(x))
+        for i in 2:m
+            keys(x[i]) == indsx ||
+                throw(ArgumentError("All input vectors must have the same indices"))
+        end
+    end
+    if n > 1
+        indsy = keys(first(y))
+        for j in 2:n
+            keys(y[j]) == indsy ||
+                throw(ArgumentError("All input vectors must have the same indices"))
+        end
+    end
+    if m > 1 && n > 1
+        indsx == indsy ||
+            throw(ArgumentError("All input vectors must have the same indices"))
+    end
+end
+
 function handle_listwise(x, y)
     if !(missing isa promoted_type(x) || missing isa promoted_type(y))
         return x, y
@@ -324,3 +327,75 @@ function handle_listwise(x, y)
     end
 end
 
+"""
+    handle_pairwise(x::AbstractVector, y::AbstractVector;
+    scratch_fx::AbstractVector=similar(x, nonmissingtype(eltype(x))),
+    scratch_fy::AbstractVector=similar(y, nonmissingtype(eltype(y))))
+
+Return a pair `(a,b)`, filtered copies of `(x,y)`, in which elements `x[i]` and
+`y[i]` are excluded if  `ismissing(x[i])||ismissing(y[i])`.
+"""
+function handle_pairwise(x::AbstractVector, y::AbstractVector;
+    scratch_fx::AbstractVector=similar(x, nonmissingtype(eltype(x))),
+    scratch_fy::AbstractVector=similar(y, nonmissingtype(eltype(y))))
+
+    axes(x) == axes(y) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
+    lb = first(axes(x, 1))
+    j = lb - 1
+    @inbounds for i in eachindex(x)
+        if !(ismissing(x[i]) || ismissing(y[i]))
+            j += 1
+            scratch_fx[j] = x[i]
+            scratch_fy[j] = y[i]
+        end
+    end
+
+    return view(scratch_fx, lb:j), view(scratch_fy, lb:j)
+end
+
+"""
+    equal_sum_subsets(n::Int, num_subsets::Int)::Vector{Vector{Int}}
+
+Divide the integers 1:n into a number of subsets such that a) each subset has
+(approximately) the same number of elements; and b) the sum of the elements in each subset
+is nearly equal. If `n` is a multiple of `2 * num_subsets` both conditions hold exactly.
+
+## Example
+```julia-repl
+julia> KendallTau.equal_sum_subsets(30,5)
+5-element Vector{Vector{Int64}}:
+ [30, 21, 20, 11, 10, 1]
+ [29, 22, 19, 12, 9, 2]
+ [28, 23, 18, 13, 8, 3]
+ [27, 24, 17, 14, 7, 4]
+ [26, 25, 16, 15, 6, 5]
+```
+"""
+function equal_sum_subsets(n::Int, num_subsets::Int)::Vector{Vector{Int}}
+    subsets = [Int[] for _ in 1:min(n, num_subsets)]
+    writeto, scanup = 1, true
+    for i = n:-1:1
+        push!(subsets[writeto], i)
+        if scanup && writeto == num_subsets
+            scanup = false
+        elseif (!scanup) && writeto == 1
+            scanup = true
+        else
+            writeto += scanup ? 1 : -1
+        end
+    end
+    return subsets
+end
+
+"""
+    task_local_vector(key::Symbol, similarto::AbstractArray{V},
+    length::Int)::Vector{V} where {V}
+
+Retrieve from task local storage a vector of length `length` and matching the element
+type of `similarto`, with initialisation on first call during a task.
+"""
+function task_local_vector(key::Symbol, similarto::AbstractArray{V},
+    length::Int)::Vector{V} where {V}
+    haskey(task_local_storage(), key) || task_local_storage(key, similar(similarto, length))
+    return task_local_storage(key)
+end

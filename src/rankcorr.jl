@@ -1,3 +1,9 @@
+# Rank-based correlations
+#
+# - Spearman's correlation
+# - Kendall's correlation
+#
+
 #######################################
 #
 #   Spearman correlation
@@ -21,12 +27,6 @@ Uses multiple threads when either `x` or `y` is a matrix and `skipmissing` is `:
     either; note that this might skip a high proportion of entries. Only allowed when `x` or
     `y` is a matrix.
 """
-function corspearman(x::AbstractMatrix, y::AbstractMatrix=x;
-    skipmissing::Symbol=:none)
-    check_rankcor_args(x, y, skipmissing, true)
-    return pairwise(corspearman, eachcol(x), eachcol(y); skipmissing)
-end
-
 function corspearman(x::AbstractVector, y::AbstractVector; skipmissing::Symbol=:none)
     check_rankcor_args(x, y, skipmissing, false)
     if x === y
@@ -42,6 +42,12 @@ end
 
 function corspearman(x::AbstractVector, y::AbstractMatrix; skipmissing::Symbol=:none)
     return corspearman(reshape(x, (length(x), 1)), y; skipmissing)
+end
+
+function corspearman(x::AbstractMatrix, y::AbstractMatrix=x;
+    skipmissing::Symbol=:none)
+    check_rankcor_args(x, y, skipmissing, true)
+    return pairwise(corspearman, eachcol(x), eachcol(y); skipmissing)
 end
 
 function corspearman(x::AbstractVector{T}) where {T}
@@ -60,7 +66,7 @@ function _pairwise!(::Val{:none}, f::typeof(corspearman),
     if symmetric && promoted_type(x) === Missing
         ondiag = missing
         offdiag = (length(x[1]) < 2) ? NaN : missing
-        for i in axes(dest, 1), j in axes(dest, 2)
+        @inbounds for i in axes(dest, 1), j in axes(dest, 2)
             dest[i, j] = i == j ? ondiag : offdiag
         end
         return dest
@@ -79,12 +85,10 @@ function _pairwise!(::Val{:none}, f::typeof(corspearman),
     be 1.0 even in the presence of missing and NaN values. But the return from `_cor` does
     not respect that requirement. So amend.=#
     autocor = (eltype(dest) === Missing && skipmissing == :none) ? missing : 1.0
-    for i in axes(dest, 1), j in axes(dest, 2)
+    @inbounds for i in axes(dest, 1), j in axes(dest, 2)
         x[i] === y[j] && (dest[i, j] = autocor)
     end
-
     return dest
-
 end
 
 function _pairwise!(::Val{:pairwise}, f::typeof(corspearman),
@@ -139,9 +143,7 @@ function _pairwise!(::Val{:pairwise}, f::typeof(corspearman),
             end
         end
     end
-
     return dest
-
 end
 
 """
@@ -538,9 +540,6 @@ function check_rankcor_args(x, y, skipmissing, allowlistwise::Bool)
     end
 end
 
-promoted_type(x) = mapreduce(eltype, promote_type, x, init=Union{})
-promoted_nmtype(x) = mapreduce(nonmissingtype ∘ eltype, promote_type, x, init=Union{})
-
 """
     corkendall_kernel!(sortedx::AbstractVector, y::AbstractVector,
     permx::AbstractVector{<:Integer}, skipmissing::Symbol;
@@ -742,81 +741,9 @@ end
 
 # Auxiliary functions for both Kendall's and Spearman's rank correlations
 
-"""
-    handle_pairwise(x::AbstractVector, y::AbstractVector;
-    scratch_fx::AbstractVector=similar(x, nonmissingtype(eltype(x))),
-    scratch_fy::AbstractVector=similar(y, nonmissingtype(eltype(y))))
-
-Return a pair `(a,b)`, filtered copies of `(x,y)`, in which elements `x[i]` and
-`y[i]` are excluded if  `ismissing(x[i])||ismissing(y[i])`.
-"""
-function handle_pairwise(x::AbstractVector, y::AbstractVector;
-    scratch_fx::AbstractVector=similar(x, nonmissingtype(eltype(x))),
-    scratch_fy::AbstractVector=similar(y, nonmissingtype(eltype(y))))
-
-    axes(x) == axes(y) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
-    lb = first(axes(x, 1))
-    j = lb - 1
-    @inbounds for i in eachindex(x)
-        if !(ismissing(x[i]) || ismissing(y[i]))
-            j += 1
-            scratch_fx[j] = x[i]
-            scratch_fy[j] = y[i]
-        end
-    end
-
-    return view(scratch_fx, lb:j), view(scratch_fy, lb:j)
-end
-
-"""
-    equal_sum_subsets(n::Int, num_subsets::Int)::Vector{Vector{Int}}
-
-Divide the integers 1:n into a number of subsets such that a) each subset has
-(approximately) the same number of elements; and b) the sum of the elements in each subset
-is nearly equal. If `n` is a multiple of `2 * num_subsets` both conditions hold exactly.
-
-## Example
-```julia-repl
-julia> KendallTau.equal_sum_subsets(30,5)
-5-element Vector{Vector{Int64}}:
- [30, 21, 20, 11, 10, 1]
- [29, 22, 19, 12, 9, 2]
- [28, 23, 18, 13, 8, 3]
- [27, 24, 17, 14, 7, 4]
- [26, 25, 16, 15, 6, 5]
-```
-"""
-function equal_sum_subsets(n::Int, num_subsets::Int)::Vector{Vector{Int}}
-    subsets = [Int[] for _ in 1:min(n, num_subsets)]
-    writeto, scanup = 1, true
-    for i = n:-1:1
-        push!(subsets[writeto], i)
-        if scanup && writeto == num_subsets
-            scanup = false
-        elseif (!scanup) && writeto == 1
-            scanup = true
-        else
-            writeto += scanup ? 1 : -1
-        end
-    end
-    return subsets
-end
-
 # _isnan required so that corkendall and corspearman have correct handling of NaNs and
 # can also accept arguments with element type for which isnan is not defined but isless is
 # is defined, so that rank correlation makes sense.
 _isnan(x::T) where {T<:Number} = isnan(x)
 _isnan(x) = false
 
-"""
-    task_local_vector(key::Symbol, similarto::AbstractArray{V},
-    length::Int)::Vector{V} where {V}
-
-Retrieve from task local storage a vector of length `length` and matching the element
-type of `similarto`, with initialisation on first call during a task.
-"""
-function task_local_vector(key::Symbol, similarto::AbstractArray{V},
-    length::Int)::Vector{V} where {V}
-    haskey(task_local_storage(), key) || task_local_storage(key, similar(similarto, length))
-    return task_local_storage(key)
-end
