@@ -1,3 +1,56 @@
+function _pairwise!(::Val{skipmissing}, f, dest::AbstractMatrix{V}, x, y,
+    symmetric::Bool) where {skipmissing,V}
+
+    nr, nc = size(dest)
+    m = length(x) == 0 ? 0 : length(first(x))
+
+    # Swap x and y for more efficient threaded loop.
+    if nr < nc
+        dest′ = reshape(dest, size(dest, 2), size(dest, 1))
+        _pairwise!(Val(skipmissing), f, dest′, y, x, symmetric)
+        dest .= transpose(dest′)
+        return dest
+    end
+
+    if skipmissing == :pairwise
+        nmtx = promoted_nmtype(x)[]
+        nmty = promoted_nmtype(y)[]
+    end
+
+    #cor and friends are special-cased.
+    iscor = (f in (corkendall, corspearman, cor))
+    (iscor || f == cov) && (symmetric = x === y)
+    #cov(x) is faster than cov(x, x)
+    (f == cov) && (f = ((x, y) -> x === y ? cov(x) : cov(x, y)))
+
+    #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
+    Threads.@threads for subset in equal_sum_subsets(nr, Threads.nthreads())
+
+        for j in subset
+
+            if skipmissing == :pairwise
+                scratch_fx = task_local_vector(:scratch_fx, nmtx, m)
+                scratch_fy = task_local_vector(:scratch_fy, nmty, m)
+            end
+            for i = 1:(symmetric ? j : nc)
+                if iscor && (y[i] === x[j]) && V !== Missing
+                    dest[j, i] = 1.0
+                else
+                    if skipmissing == :pairwise
+                        _x, _y = handle_pairwise(x[j], y[i]; scratch_fx, scratch_fy)
+                        dest[j, i] = f(_x, _y)
+                    else
+                        dest[j, i] = f(x[j], y[i])
+                    end
+                end
+                symmetric && (dest[i, j] = dest[j, i])
+            end
+        end
+    end
+    return dest
+end
+
+
 function check_vectors(x, y, skipmissing::Symbol, symmetric::Bool)
 
     if symmetric && x !== y
@@ -36,35 +89,8 @@ function check_vectors(x, y, skipmissing::Symbol, symmetric::Bool)
         indsx == indsy ||
             throw(ArgumentError("All input vectors must have the same indices"))
     end
-
 end
 
-function handle_listwise(x, y)
-    if !(missing isa promoted_type(x) || missing isa promoted_type(y))
-        return x, y
-    end
-
-    nminds = .!ismissing.(first(x))
-    @inbounds for xi in Iterators.drop(x, 1)
-        nminds .&= .!ismissing.(xi)
-    end
-    if x !== y
-        @inbounds for yj in y
-            nminds .&= .!ismissing.(yj)
-        end
-    end
-
-    # Computing integer indices once for all vectors is faster
-    nminds′ = findall(nminds)
-
-    x′ = [disallowmissing(view(xi, nminds′)) for xi in x]
-    if x === y
-        return x′, x′
-    else
-        y′ = [disallowmissing(view(yi, nminds′)) for yi in y]
-        return x′, y′
-    end
-end
 
 function _pairwise!(::Val{:listwise}, f, dest::AbstractMatrix, x, y, symmetric::Bool)
     return _pairwise!(Val(:none), f, dest, handle_listwise(x, y)..., symmetric)
@@ -207,8 +233,8 @@ julia> dest
  -0.866025  -1.0        1.0
 ```
 """
-function pairwise!(f, dest::AbstractMatrix, x, y=x; symmetric::Bool=false,
-    skipmissing::Symbol=:none)
+function pairwise!(f, dest::AbstractMatrix, x, y=x;
+    symmetric::Bool=false, skipmissing::Symbol=:none)
     check_vectors(x, y, skipmissing, symmetric)
     return _pairwise!(f, dest, x, y, symmetric=symmetric, skipmissing=skipmissing)
 end
@@ -271,85 +297,30 @@ function pairwise(f, x, y=x; symmetric::Bool=false, skipmissing::Symbol=:none)
     return _pairwise(Val(skipmissing), f, x, y, symmetric)
 end
 
-function _pairwise!(::Val{skipmissing}, f, dest::AbstractMatrix{V}, x, y,
-    symmetric::Bool) where {skipmissing,V}
-
-    nr, nc = size(dest)
-    m = length(x) == 0 ? 0 : length(first(x))
-
-    # Swap x and y for more efficient threaded loop.
-    if nr < nc
-        dest′ = reshape(dest, size(dest, 2), size(dest, 1))
-        _pairwise!(Val(skipmissing), f, dest′, y, x, symmetric)
-        dest .= transpose(dest′)
-        return dest
+function handle_listwise(x, y)
+    if !(missing isa promoted_type(x) || missing isa promoted_type(y))
+        return x, y
     end
 
-    if skipmissing == :pairwise
-        nmtx = promoted_nmtype(x)[]
-        nmty = promoted_nmtype(y)[]
+    nminds = .!ismissing.(first(x))
+    @inbounds for xi in Iterators.drop(x, 1)
+        nminds .&= .!ismissing.(xi)
     end
-
-    #cor and friends are special-cased.
-    iscor = (f in (corkendall, corspearman, cor))
-    (iscor || f == cov) && (symmetric = x === y)
-    #cov(x) is faster than cov(x, x)
-    (f == cov) && (f = ((x, y) -> x === y ? cov(x) : cov(x, y)))
-
-    #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
-    Threads.@threads for subset in equal_sum_subsets(nr, Threads.nthreads())
-
-        for j in subset
-
-            if skipmissing == :pairwise
-                scratch_fx = task_local_vector(:scratch_fx, nmtx, m)
-                scratch_fy = task_local_vector(:scratch_fy, nmty, m)
-            end
-            for i = 1:(symmetric ? j : nc)
-                if iscor && (y[i] === x[j]) && V !== Missing
-                    dest[j, i] = 1.0
-                else
-                    if skipmissing == :pairwise
-                        _x, _y = handle_pairwise(x[j], y[i]; scratch_fx, scratch_fy)
-                        dest[j, i] = f(_x, _y)
-                    else
-                        dest[j, i] = f(x[j], y[i])
-                    end
-                end
-                symmetric && (dest[i, j] = dest[j, i])
-            end
+    if x !== y
+        @inbounds for yj in y
+            nminds .&= .!ismissing.(yj)
         end
     end
 
-    return dest
+    # Computing integer indices once for all vectors is faster
+    nminds′ = findall(nminds)
 
+    x′ = [disallowmissing(view(xi, nminds′)) for xi in x]
+    if x === y
+        return x′, x′
+    else
+        y′ = [disallowmissing(view(yi, nminds′)) for yi in y]
+        return x′, y′
+    end
 end
 
-#=
-
-#These six methods now handled by code "cor and friends are special-cased"
-
-#cov(x) is faster than cov(x, x)
-_cov(x, y) = x === y ? cov(x) : cov(x, y)
-
-pairwise!(::typeof(cov), dest::AbstractMatrix, x, y;
-    symmetric::Bool=false, skipmissing::Symbol=:none) =
-    pairwise!(_cov, dest, x, y, symmetric=symmetric, skipmissing=skipmissing)
-
-pairwise(::typeof(cov), x, y; symmetric::Bool=false, skipmissing::Symbol=:none) =
-    pairwise(_cov, x, y, symmetric=symmetric, skipmissing=skipmissing)
-
-pairwise!(::typeof(cov), dest::AbstractMatrix, x;
-    symmetric::Bool=true, skipmissing::Symbol=:none) =
-    pairwise!(_cov, dest, x, x, symmetric=symmetric, skipmissing=skipmissing)
-
-pairwise(::typeof(cov), x; symmetric::Bool=true, skipmissing::Symbol=:none) =
-    pairwise(_cov, x, x, symmetric=symmetric, skipmissing=skipmissing)
-
-pairwise!(::typeof(cor), dest::AbstractMatrix, x;
-    symmetric::Bool=true, skipmissing::Symbol=:none) =
-    pairwise!(cor, dest, x, x, symmetric=symmetric, skipmissing=skipmissing)
-
-pairwise(::typeof(cor), x; symmetric::Bool=true, skipmissing::Symbol=:none) =
-    pairwise(cor, x, x, symmetric=symmetric, skipmissing=skipmissing)
-=#
