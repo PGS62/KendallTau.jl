@@ -325,7 +325,6 @@ end
 promoted_type(x) = mapreduce(eltype, promote_type, x, init=Union{})
 promoted_nmtype(x) = mapreduce(nonmissingtype ∘ eltype, promote_type, x, init=Union{})
 
-
 """
     handle_listwise(x, y)
 
