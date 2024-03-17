@@ -1,59 +1,3 @@
-#=
-#TODO descriptions of callstacks below now slightly outdated (11 March)
-Callstacks in three cases. Could this be simplified?
-Callstack when skipmissing = :none
-pairwise    1 method
-_pairwise   1 method
-_pairwise!  method with f as first argument
-_pairwise! method with ::Val{:none} as first argument
-_pairwise!
-
-Callstack when skipmissing = :listwise
-pairwise    1 method
-_pairwise   1 method
-_pairwise!  method with f as first argument
-_pairwise!  method with ::Val{:listwise} as first argument, which calls check_pairwise_args,
-            excludes missing elements as appropriate before calling
-_pairwise! method with ::Val{:none} as first argument, which is a do-nothing wrapper to
-_pairwise!
-
-Callstack when skipmissing = :pairwise
-pairwise    1 method
-_pairwise   1 method
-_pairwise!  method with f as first argument
-_pairwise!  method with ::Val{:pairwise} as first argument which calles check_pairwise_args and then
-_pairwise!
-=#
-
-#=
-TODO
-Prepare comparison of code here with code in StatsBase to ease acceptance by StatsBase maintainers.
-Consider using enumerate in function _pairwise!.
-
-#DONE
-Check test code coverage. [DONE]
-Reduce use of eltype [DONE]
-Write note of call stack for pairwise. [DONE]
-Better variable names in specialised method _pairwise!. [DONE]
-Review docstrings.
-Write specialised method of _pairwise! for corspearman. [DONE]
-If we keep corkendall's ability to accept skipmissing argument, can I reduce code duplication? [DONE]
-test for pairwise handling of non-numeric element types for rank correlations [DONE]
-Performance of corspearman seems bad. Worse than corkendall!    [FIXED]
-Reorder methods in pairwise.jl to match order in StatsBase pairwise.jl [DONE]
-Add tests for size of allocations. [DONE]
-Update naive implementations for new handling of missing. [DONE]
-We should have the same behaviour as cor for inputs with element type Missing (though cor's
-    handling of edge cases is perhaps buggy). [DONE]
-Consider changing check_pairwise_args to flip :pairwise and :listwise to :none when missing
-    is not an element type of either x or y. [DECIDED AGAINST]
-Consider kernel functions taking x and y as arguments so they can do the x===y test, that
-    way could simplify the loop's handling of on-diagonal elements.[DECIDED AGAINST]
-Check that the tests here are correctly a superset of the tests currently in StatsBase. [DONE]
-I think the call stack described above is one layer too deep, thanks to new fn _pairwise!.
-    Would be better to reduce that. [DONE]
-=#
-
 function check_pairwise_args(x, y, skipmissing::Symbol, symmetric::Bool)
 
     if symmetric && x !== y
@@ -335,7 +279,7 @@ function _pairwise!(::Val{skipmissing}, f, dest::AbstractMatrix{V}, x, y,
 
     # Swap x and y for more efficient threaded loop.
     if nr < nc
-        dest′ = reshape(dest,size(dest,2),size(dest,1))
+        dest′ = reshape(dest, size(dest, 2), size(dest, 1))
         _pairwise!(Val(skipmissing), f, dest′, y, x, symmetric)
         dest .= transpose(dest′)
         return dest
@@ -346,9 +290,11 @@ function _pairwise!(::Val{skipmissing}, f, dest::AbstractMatrix{V}, x, y,
         nmty = promoted_nmtype(y)[]
     end
 
+    #cor and friends are special-cased.
     iscor = (f in (corkendall, corspearman, cor))
-    #Overwrite input value of symmetric for cor and friends.
-    iscor && (symmetric = x === y)
+    (iscor || f == cov) && (symmetric = x === y)
+    #cov(x) is faster than cov(x, x)
+    (f == cov) && (f = ((x,y) -> x === y ? cov(x) : cov(x, y)))
 
     #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
     Threads.@threads for subset in equal_sum_subsets(nr, Threads.nthreads())
@@ -379,6 +325,10 @@ function _pairwise!(::Val{skipmissing}, f, dest::AbstractMatrix{V}, x, y,
 
 end
 
+#=
+
+#These six methods now handled by code "cor and friends are special-cased"
+
 #cov(x) is faster than cov(x, x)
 _cov(x, y) = x === y ? cov(x) : cov(x, y)
 
@@ -395,10 +345,7 @@ pairwise!(::typeof(cov), dest::AbstractMatrix, x;
 
 pairwise(::typeof(cov), x; symmetric::Bool=true, skipmissing::Symbol=:none) =
     pairwise(_cov, x, x, symmetric=symmetric, skipmissing=skipmissing)
-#=
-#The purpose of this method was to make symmetric default to true when f === cor and y is
-omitted. But we now ignore (treat as true) the passed-in symetric argument in that case,
-so this pair of methods is redundant.
+
 pairwise!(::typeof(cor), dest::AbstractMatrix, x;
     symmetric::Bool=true, skipmissing::Symbol=:none) =
     pairwise!(cor, dest, x, x, symmetric=symmetric, skipmissing=skipmissing)
