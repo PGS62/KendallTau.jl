@@ -348,14 +348,14 @@ function sortperm_matrix(x)
     m = length(x) == 0 ? 0 : length(first(x))
     nc = length(x)
     int64 = Int64[]
-    temp = Array{Int}(undef, m, nc)
+    out = Array{Int}(undef, m, nc)
 
     Threads.@threads for i in 1:nc
         ints = task_local_vector(:ints, int64, m)
         sortperm!(ints, x[i])
-        temp[:, i] .= ints
+        out[:, i] .= ints
     end
-    return temp
+    return out
 end
 
 """
@@ -374,19 +374,19 @@ function ranks_matrix(x)
         return fill(missing, m, nc)
     end
 
-    temp = Array{Union{Missing,Int,Float64}}(undef, m, nc)
+    out = Array{Union{Missing,Int,Float64}}(undef, m, nc)
 
     Threads.@threads for i in 1:nc
         ints = task_local_vector(:ints, int64, m)
 
         if any(ismissing, x[i])
-            temp[:, i] .= missing
+            out[:, i] .= missing
         elseif any(_isnan, x[i])
-            temp[:, i] .= NaN
+            out[:, i] .= NaN
         else
             sortperm!(ints, x[i])
-            _tiedrank!(view(temp, :, i), x[i], ints)
+            _tiedrank!(view(out, :, i), x[i], ints)
         end
     end
-    return temp
+    return out
 end
