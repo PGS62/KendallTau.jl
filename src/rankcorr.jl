@@ -13,8 +13,9 @@
 """
     corspearman(x, y=x; skipmissing::Symbol=:none)
 
-Compute Spearman's rank correlation coefficient. `x` and `y` must be either vectors or
-matrices, and entries may be `missing`.
+Compute Spearman's rank correlation coefficient. If `x` and `y` are vectors, the
+output is a float, otherwise it's a matrix corresponding to the pairwise correlations
+of the columns of `x` and `y`.
 
 Uses multiple threads when either `x` or `y` is a matrix and `skipmissing` is `:pairwise`.
 
@@ -64,10 +65,9 @@ function _pairwise!(::Val{:none}, f::typeof(corspearman),
 
     symmetric = x === y
     if symmetric && promoted_type(x) === Missing
-        ondiag = missing
         offdiag = (length(x[1]) < 2) ? NaN : missing
         @inbounds for i in axes(dest, 1), j in axes(dest, 2)
-            dest[i, j] = i == j ? ondiag : offdiag
+            dest[i, j] = i == j ? missing : offdiag
         end
         return dest
     end
@@ -156,10 +156,10 @@ end
 Compute Spearman's rank correlation coefficient between `x` and `y` with no allocations if
 all arguments are provided.
 
-All arguments (other than `skipmissing`) must have the same axes.
+All vector arguments must have the same axes.
 - `sortpermx`: The sort permutation of `x`.
 - `sortpermy`: The sort permutation of `y`.
-- `inds` ... `ranksy` are all pre-allocated "scratch" arguments.
+- `inds` ... `ranksy`: Pre-allocated "scratch" arguments.
 
 ## Example
 ```julia-repl
