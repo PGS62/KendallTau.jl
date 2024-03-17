@@ -300,6 +300,20 @@ function check_vectors(x, y, skipmissing::Symbol, symmetric::Bool)
     end
 end
 
+"""
+    handle_listwise(x, y)
+
+Remove missings in a listwise manner. Assumes `x` and `y` are vectors of vectors which have
+been validated via `check_vectors`.
+
+## Example
+```julia-repl
+julia> a = [6,7,8,9,10,missing];b = [4,5,6,7,missing,8];c = [2,3,4,missing,5,6];d = [1,2,3,4,5,6];
+
+julia> KendallTau.handle_listwise([a,b],[c,d])
+([[6, 7, 8], [4, 5, 6]], [[2, 3, 4], [1, 2, 3]])
+```
+"""
 function handle_listwise(x, y)
     if !(missing isa promoted_type(x) || missing isa promoted_type(y))
         return x, y
