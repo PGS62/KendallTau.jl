@@ -224,7 +224,8 @@ julia> corkendall(Matrix{Union{Missing,Float64}}(missing,5,3)) #DIFFERENT behavi
     @test isequal(f([missing missing], [missing missing]), [NaN NaN; NaN NaN])
 
     # Exercise catch block in method _cor (when f === corspearman)
-    @test isequal(fill(missing, 2, 2), fill(missing, 2, 2))
+    @test isequal(f(vcat([1 2 3], fill(missing, 2, 3))),
+        [1.0 missing missing; missing 1.0 missing; missing missing 1.0])
     # Exercise "correction" of on-diagonal terms in method
     # _pairwise!(::Val{:none}, f::typeof(corspearman),...
     @test isequal(f([missing missing; 1 1; 1 1]), [1 missing; missing 1])

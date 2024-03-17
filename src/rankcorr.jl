@@ -73,7 +73,6 @@ function _pairwise!(::Val{:none}, f::typeof(corspearman),
     end
 
     ranksx = ranks_matrix(x)
-
     if symmetric
         dest .= _cor(ranksx, ranksx)
     else
@@ -318,7 +317,7 @@ function _cor(ranksx::AbstractMatrix{T}, ranksy::AbstractMatrix{U}) where {T,U}
             return cor(ranksx, ranksy)
         end
     catch
-        #=Example of when this catch block is hit:
+        #=This catch block is hit when e.g.
         ranksx === ranksy = [missing missing;missing missing]
         =#
         nr, nc = size(ranksx, 2), size(ranksy, 2)
