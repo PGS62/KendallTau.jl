@@ -2,7 +2,6 @@ function _pairwise!(::Val{:none}, f, dest::AbstractMatrix{V}, x, y,
     symmetric::Bool) where {V}
 
     nr, nc = size(dest)
-    m = length(x) == 0 ? 0 : length(first(x))
 
     # Swap x and y for more efficient threaded loop.
     if nr < nc
@@ -257,7 +256,7 @@ julia> dest
 ```
 """
 function pairwise!(f, dest::AbstractMatrix, x, y=x;
-    symmetric::Bool=false, skipmissing::Symbol=:none)
+                   symmetric::Bool=false, skipmissing::Symbol=:none)
     check_vectors(x, y, skipmissing, symmetric)
     return _pairwise!(f, dest, x, y, symmetric=symmetric, skipmissing=skipmissing)
 end
@@ -395,6 +394,8 @@ function handle_pairwise(x::AbstractVector, y::AbstractVector;
     return view(scratch_fx, lb:j), view(scratch_fy, lb:j)
 end
 
+#=Condition a) makes equal_sum_subsets useful for load-balancing the multi-threaded section
+of _pairwise! in the non-symmetric case, and condition b) for the symmetric case.=#
 """
     equal_sum_subsets(n::Int, num_subsets::Int)::Vector{Vector{Int}}
 
