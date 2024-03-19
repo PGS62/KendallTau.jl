@@ -222,7 +222,7 @@ presence `missing`, `NaN` or `Inf` entries.
 
 # Examples
 ```jldoctest
-julia> using StatsBase, Statistics
+julia> using KendallTau, Statistics
 
 julia> dest = zeros(3, 3);
 
@@ -287,7 +287,7 @@ presence `missing`, `NaN` or `Inf` entries.
 
 # Examples
 ```jldoctest
-julia> using StatsBase, Statistics
+julia> using KendallTau, Statistics
 
 julia> x = [1 3 7
             2 5 6
