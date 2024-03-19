@@ -112,7 +112,6 @@ function _pairwise!(::Val{:pairwise}, f::typeof(corspearman),
     fl64 = Float64[]
     nmtx = promoted_nmtype(x)[]
     nmty = promoted_nmtype(y)[]
-    #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
     Threads.@threads for subset in equal_sum_subsets(nr, Threads.nthreads())
 
         for j in subset
@@ -451,20 +450,20 @@ end
 
 function _pairwise!(::Val{:none}, f::typeof(corkendall), dest::AbstractMatrix, x, y,
     symmetric::Bool)
-    return corkendall_loop(:none, f, dest, x, y, symmetric)
+    return corkendall_loop!(:none, f, dest, x, y, symmetric)
 end
 
 function _pairwise!(::Val{:pairwise}, f::typeof(corkendall), dest::AbstractMatrix, x, y,
     symmetric::Bool)
-    return corkendall_loop(:pairwise, f, dest, x, y, symmetric)
+    return corkendall_loop!(:pairwise, f, dest, x, y, symmetric)
 end
 
 function _pairwise!(::Val{:listwise}, f::typeof(corkendall), dest::AbstractMatrix, x, y,
     symmetric::Bool)
-    return corkendall_loop(:none, f, dest, handle_listwise(x, y)..., symmetric)
+    return corkendall_loop!(:none, f, dest, handle_listwise(x, y)..., symmetric)
 end
 
-function corkendall_loop(skipmissing::Symbol, f::typeof(corkendall), dest::AbstractMatrix{V},
+function corkendall_loop!(skipmissing::Symbol, f::typeof(corkendall), dest::AbstractMatrix{V},
     x, y, symmetric::Bool) where {V}
 
     nr, nc = size(dest)
@@ -473,7 +472,7 @@ function corkendall_loop(skipmissing::Symbol, f::typeof(corkendall), dest::Abstr
     # Swap x and y for more efficient threaded loop.
     if nr < nc
         dest′ = reshape(dest, size(dest, 2), size(dest, 1))
-        corkendall_loop(skipmissing, f, dest′, y, x, symmetric)
+        corkendall_loop!(skipmissing, f, dest′, y, x, symmetric)
         dest .= transpose(dest′)
         return dest
     end
@@ -486,7 +485,6 @@ function corkendall_loop(skipmissing::Symbol, f::typeof(corkendall), dest::Abstr
 
     symmetric = x === y
 
-    #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
     Threads.@threads for subset in equal_sum_subsets(nr, Threads.nthreads())
 
         for j in subset
