@@ -17,7 +17,6 @@ function _pairwise!(::Val{:none}, f, dest::AbstractMatrix{V}, x, y,
     #cov(x) is faster than cov(x, x)
     (f == cov) && (f = ((x, y) -> x === y ? cov(x) : cov(x, y)))
 
-    #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
     Threads.@threads for subset in equal_sum_subsets(nr, Threads.nthreads())
         for j in subset
             for i = 1:(symmetric ? j : nc)
@@ -96,7 +95,6 @@ function _pairwise!(::Val{:pairwise}, f, dest::AbstractMatrix{V}, x, y, symmetri
     nmtx = promoted_nmtype(x)[]
     nmty = promoted_nmtype(y)[]
 
-    #equal_sum_subsets for good load balancing in both symmetric and non-symmetric cases.
     Threads.@threads for subset in equal_sum_subsets(nr, Threads.nthreads())
         for j in subset
             scratch_fx = task_local_vector(:scratch_fx, nmtx, m)
