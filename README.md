@@ -10,6 +10,9 @@ This unregistered package exports four function, which will be proposed as candi
 * `corspearman`, for the calculation of Spearman correlation.
 * `pairwise` and `pairwise!` which apply a function `f` to all possible pairs of entries in iterators `x` and `y`.
 
+<details><summary><u>Click for function documentation</u></summary>
+ <p>
+ 
 ```
   corkendall(x, y=x; skipmissing::Symbol=:none)
 
@@ -91,6 +94,9 @@ This unregistered package exports four function, which will be proposed as candi
     0.928571   1.0       -1.0
    -0.866025  -1.0        1.0
 ```
+</p>
+</details>
+
 <!--
 
 
@@ -212,3 +218,5 @@ Platform Info:
 
 Philip Swannell
 19 March 2024
+
+ 
