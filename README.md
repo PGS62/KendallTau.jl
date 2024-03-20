@@ -14,6 +14,10 @@ StatsBase versions with the versions from this package, as a follow-on from issu
 * `corspearman`, for the calculation of Spearman correlation.
 * `pairwise` and `pairwise!` which apply a function `f` to all possible pairs of entries in iterators `x` and `y`.
 
+The improved performance of `pairwise` was achieved by using multiple threads and reduced allocations (especially for `skipmissing = :pairwise`).
+`corkendall` and `corspearman` wrap `pairwise`, but with specialised methods of the private function `_pairwise!` for efficiency.
+
+
 <details><summary><u>Click for function documentation</u></summary>
  <p>
  
@@ -103,7 +107,7 @@ StatsBase versions with the versions from this package, as a follow-on from issu
 
 # Performance
 
-The examples below were run on a PC with [this processor](https://ark.intel.com/content/www/us/en/ark/products/134591/intel-core-i7-12700-processor-25m-cache-up-to-4-90-ghz.html).
+The examples below were run on a PC with [Intel® Core™ i7-12700](https://ark.intel.com/content/www/us/en/ark/products/134591/intel-core-i7-12700-processor-25m-cache-up-to-4-90-ghz.html) processor.
 ```
 julia> versioninfo()
 Julia Version 1.10.2
@@ -117,16 +121,18 @@ Platform Info:
   LIBM: libopenlibm
   LLVM: libLLVM-15.0.7 (ORCJIT, alderlake)
 Threads: 20 default, 0 interactive, 10 GC (on 20 virtual cores)
+
+julia> Threads.nthreads()#12 cores, 20 logical processors
+20
 ```
 
 ## `corkendall` performance
+In this example `KendallTau.corkendall` out-performs by a factor of **14.5**.
 ```julia
 julia> using StatsBase, KendallTau, Random, BenchmarkTools #StatsBase v0.34.2
 
-julia> x = rand(1000,10);StatsBase.corkendall(x)==KendallTau.corkendall(x)#compile
+julia> x = rand(1000,1000);StatsBase.corkendall(x)==KendallTau.corkendall(x)#compile
 true
-
-julia> x = rand(1000,1000);
 
 julia> @btime res_sb = StatsBase.corkendall(x);
   17.383 s (2999999 allocations: 17.09 GiB)
@@ -139,27 +145,19 @@ julia> 17.383/1.196
 
 julia> res_sb == res_kt
 true
-
-julia> Threads.nthreads()#12 cores, 20 logical processors
-20
-
 ```
-<!--
-TODO Update using work 12-core PC
--->
 ## `corspearman` performance
+In this example, in which `skipmissing = :none`, `KendallTau.corspearman` out-performs by a factor of **800**.
 ```
 julia> using StatsBase, KendallTau, Random, BenchmarkTools #StatsBase v0.34.2
 
-julia> x = rand(1000,10);StatsBase.corspearman(x)==KendallTau.corspearman(x)#compile
+julia> x = rand(1000,1000);StatsBase.corspearman(x)==KendallTau.corspearman(x)#compile
 true
 
-julia> x = rand(1000,1000);
-
-julia> res_sb = @btime StatsBase.corspearman(x);
+julia> res_sb = @btime StatsBase.corspearman(x,skipmissing=:none);
   12.935 s (3503503 allocations: 11.44 GiB)
 
-julia> res_kt = @btime KendallTau.corspearman(x);
+julia> res_kt = @btime KendallTau.corspearman(x,skipmissing=:none);
   16.172 ms (1223 allocations: 39.42 MiB)
 
 julia> res_kt == res_sb
@@ -167,21 +165,43 @@ true
 
 julia> 12.935/0.016172
 799.83922829582
+```
+In this example, in which `skipmissing = :pairwise`, `KendallTau.corspearman` out-performs by a factor of **300**.
+```
+julia> using StatsBase, KendallTau, Random, BenchmarkTools #StatsBase v0.34.2
 
+julia> x = rand(1000,10); xm = ifelse.(x .< .05, missing, x);
+
+julia> KendallTau.pairwise(KendallTau.corspearman,eachcol(xm),skipmissing=:pairwise)≈
+              StatsBase.pairwise(KendallTau.corspearman,eachcol(xm),skipmissing=:pairwise)#compile
+true
+
+julia> x = rand(1000,1000); xm = ifelse.(x .< .05, missing, x);
+
+# Unfortunately StatsBase.corspearman is not compatible with StatsBase.pairwise when skipmissing = :pairwise
+julia> res_sb = @btime StatsBase.pairwise(StatsBase.corspearman,eachcol(xm),skipmissing=:pairwise);
+ERROR: MethodError: no method matching corspearman(::SubArray{Union{…}, 1, Matrix{…}, Tuple{…}, false}, ::SubArray{Union{…}, 1, Matrix{…}, Tuple{…}, false})
+
+julia> res_sb = @btime StatsBase.pairwise(KendallTau.corspearman,eachcol(xm),skipmissing=:pairwise);
+  90.107 s (15988007 allocations: 93.45 GiB)
+
+julia> res_kt = @btime KendallTau.pairwise(KendallTau.corspearman,eachcol(xm),skipmissing=:pairwise)
+  297.873 ms (1573 allocations: 23.98 MiB)
+
+julia> 90.107/.297873
+302.5014016040393
 ```
 
-
 ## `pairwise` performance
+In this example, in which `f = LinearAlgebra.dot` and `skipmissing = :pairwise`, `KendallTau.pairwise` out-performs by a factor of **30**.
 ```
 julia> using StatsBase, KendallTau, Random, BenchmarkTools, LinearAlgebra #StatsBase v0.34.2
 
-julia> x = rand(1000,10); xm = ifelse.(x .< .05, missing, x);
+julia> x = rand(1000,1000); xm = ifelse.(x .< .05, missing, x);
 
 julia> KendallTau.pairwise(LinearAlgebra.dot,eachcol(xm),skipmissing=:pairwise)≈
        StatsBase.pairwise(LinearAlgebra.dot,eachcol(xm),skipmissing=:pairwise)#compile
 true
-
-julia> x = rand(1000,1000); xm = ifelse.(x .< .05, missing, x);
 
 julia> res_sb = @btime StatsBase.pairwise(LinearAlgebra.dot,eachcol(xm),skipmissing=:pairwise);
   3.848 s (4999007 allocations: 17.94 GiB)
