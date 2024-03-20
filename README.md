@@ -12,7 +12,7 @@ functions of the same name in StatsBase.
 * `pairwise` and `pairwise!` which apply a function `f` to all possible pairs of entries in iterators `x` and `y`.
 
 The improved performance of `pairwise` results from using multiple threads and reduced allocations (especially for `skipmissing = :pairwise`).
-`corkendall` and `corspearman` wrap `pairwise`, but with specialised methods of the private function `_pairwise!` for efficiency.
+`corkendall` and `corspearman` wrap `pairwise`, and benefit from specialised methods of the private function `_pairwise!` for efficiency.
 
 I plan to raise a PR to replace the
 StatsBase versions with the versions from this package, as a follow-on from issue
