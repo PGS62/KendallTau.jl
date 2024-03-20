@@ -5,18 +5,19 @@
 # KendallTau.jl
 
 This unregistered package exports four functions, each with better performance than the
-functions of the same name in StatsBase. I plan to raise a PR to replace the
-StatsBase versions with the versions from this package, as a follow-on from issue
-[634](https://github.com/JuliaStats/StatsBase.jl/issues/634), commit [647](https://github.com/JuliaStats/StatsBase.jl/commit/11ac5b596405367b3217d3d962e22523fef9bb0d)
-(which improved `corkendall`'s performance by a factor of about seven).
+functions of the same name in StatsBase.
 
 * `corkendall`, for the calculation of Kendall's τ coefficient.
 * `corspearman`, for the calculation of Spearman correlation.
 * `pairwise` and `pairwise!` which apply a function `f` to all possible pairs of entries in iterators `x` and `y`.
 
-The improved performance of `pairwise` was achieved by using multiple threads and reduced allocations (especially for `skipmissing = :pairwise`).
+The improved performance of `pairwise` results from using multiple threads and reduced allocations (especially for `skipmissing = :pairwise`).
 `corkendall` and `corspearman` wrap `pairwise`, but with specialised methods of the private function `_pairwise!` for efficiency.
 
+I plan to raise a PR to replace the
+StatsBase versions with the versions from this package, as a follow-on from issue
+[634](https://github.com/JuliaStats/StatsBase.jl/issues/634), commit [647](https://github.com/JuliaStats/StatsBase.jl/commit/11ac5b596405367b3217d3d962e22523fef9bb0d)
+(which improved `corkendall`'s performance by a factor of about seven).
 
 <details><summary><u>Click for function documentation</u></summary>
  <p>
