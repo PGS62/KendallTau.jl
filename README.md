@@ -4,7 +4,11 @@
 
 # KendallTau.jl
 
-This unregistered package exports four function, which will be proposed as candidates to replace functions of the same name in StatsBase:
+This unregistered package exports four functions, each with better performance than the
+functions of the same name in StatsBase. I plan to raise a PR to replace the
+StatsBase versions with the versions from this package, as a follow-on from issue
+[634](https://github.com/JuliaStats/StatsBase.jl/issues/634), commit [647](https://github.com/JuliaStats/StatsBase.jl/commit/11ac5b596405367b3217d3d962e22523fef9bb0d)
+(which improved `corkendall`'s performance by a factor of about seven).
 
 * `corkendall`, for the calculation of Kendall's τ coefficient.
 * `corspearman`, for the calculation of Spearman correlation.
@@ -97,19 +101,23 @@ This unregistered package exports four function, which will be proposed as candi
 </p>
 </details>
 
-<!--
+# Performance
 
-
-This unregistered package exports functions `corkendall` and `corkendall_fromfile` for the calculation of Kendall's τ coefficient. See [Tau-b](https://en.wikipedia.org/wiki/Kendall_rank_correlation_coefficient) on Wikipedia. The [StatsBase](https://github.com/JuliaStats/StatsBase.jl) package has a function of the same name that was contributed from this package on 8 February 2021 (issue [634](https://github.com/JuliaStats/StatsBase.jl/issues/634), commit [647](https://github.com/JuliaStats/StatsBase.jl/commit/11ac5b596405367b3217d3d962e22523fef9bb0d)).
-
-Since then, `KendallTau.corkendall` has improved in two ways:
-
-- The function is now multi-threaded. On a PC with 12 cores, it's about 14 times faster than the current StatsBase version.
-- There is now a `skipmissing` keyword argument to control the treatment of missing values, along the lines of the `skipmissing` argument to `StatsBase.pairwise`.
-
-There is an open [issue](https://github.com/JuliaStats/StatsBase.jl/issues/849) in StatsBase to bring these two improvements to `StatsBase.corkendall`, after which time this package will be largely redundant.
-
--->
+The examples below were run on a PC with [this processor](https://ark.intel.com/content/www/us/en/ark/products/134591/intel-core-i7-12700-processor-25m-cache-up-to-4-90-ghz.html).
+```
+julia> versioninfo()
+Julia Version 1.10.2
+Commit bd47eca2c8 (2024-03-01 10:14 UTC)
+Build Info:
+  Official https://julialang.org/ release
+Platform Info:
+  OS: Windows (x86_64-w64-mingw32)
+  CPU: 20 × 12th Gen Intel(R) Core(TM) i7-12700
+  WORD_SIZE: 64
+  LIBM: libopenlibm
+  LLVM: libLLVM-15.0.7 (ORCJIT, alderlake)
+Threads: 20 default, 0 interactive, 10 GC (on 20 virtual cores)
+```
 
 ## `corkendall` performance
 ```julia
@@ -135,18 +143,6 @@ true
 julia> Threads.nthreads()#12 cores, 20 logical processors
 20
 
-julia> versioninfo()
-Julia Version 1.10.0
-Commit 3120989f39 (2023-12-25 18:01 UTC)
-Build Info:
-  Official https://julialang.org/ release
-Platform Info:
-  OS: Windows (x86_64-w64-mingw32)
-  CPU: 20 × 12th Gen Intel(R) Core(TM) i7-12700
-  WORD_SIZE: 64
-  LIBM: libopenlibm
-  LLVM: libLLVM-15.0.7 (ORCJIT, alderlake)
-  Threads: 29 on 20 virtual cores
 ```
 <!--
 TODO Update using work 12-core PC
@@ -161,16 +157,16 @@ true
 julia> x = rand(1000,1000);
 
 julia> res_sb = @btime StatsBase.corspearman(x);
-  29.494 s (3503503 allocations: 11.44 GiB)
+  12.935 s (3503503 allocations: 11.44 GiB)
 
 julia> res_kt = @btime KendallTau.corspearman(x);
-  46.774 ms (1127 allocations: 39.31 MiB)
+  16.172 ms (1223 allocations: 39.42 MiB)
 
 julia> res_kt == res_sb
 true
 
-julia> 29.494/.046774
-630.5639885406422
+julia> 12.935/0.016172
+799.83922829582
 
 ```
 
@@ -181,36 +177,23 @@ julia> using StatsBase, KendallTau, Random, BenchmarkTools, LinearAlgebra #Stats
 
 julia> x = rand(1000,10); xm = ifelse.(x .< .05, missing, x);
 
-julia> KendallTau.pairwise(LinearAlgebra.dot,eachcol(xm),skipmissing=:pairwise)≈StatsBase.pairwise(LinearAlgebra.dot,eachcol(xm),skipmissing=:pairwise)#compile
+julia> KendallTau.pairwise(LinearAlgebra.dot,eachcol(xm),skipmissing=:pairwise)≈
+       StatsBase.pairwise(LinearAlgebra.dot,eachcol(xm),skipmissing=:pairwise)#compile
 true
 
 julia> x = rand(1000,1000); xm = ifelse.(x .< .05, missing, x);
 
-julia> res_kt = @btime KendallTau.pairwise(LinearAlgebra.dot,eachcol(xm),skipmissing=:pairwise);
-  617.629 ms (3000153 allocations: 114.59 MiB)
-
 julia> res_sb = @btime StatsBase.pairwise(LinearAlgebra.dot,eachcol(xm),skipmissing=:pairwise);
-  8.378 s (4999007 allocations: 17.95 GiB)
+  3.848 s (4999007 allocations: 17.94 GiB)
+
+julia> res_kt = @btime KendallTau.pairwise(LinearAlgebra.dot,eachcol(xm),skipmissing=:pairwise);
+  121.942 ms (3000309 allocations: 114.81 MiB)
 
 julia> res_kt≈res_sb
 true
 
-julia> 8.378/0.617629
-13.564777560639154
-
-julia> versioninfo()
-Julia Version 1.10.0
-Commit 3120989f39 (2023-12-25 18:01 UTC)
-Build Info:
-  Official https://julialang.org/ release
-Platform Info:
-  OS: Windows (x86_64-w64-mingw32)
-  CPU: 8 × Intel(R) Core(TM) i7-2600 CPU @ 3.40GHz
-  WORD_SIZE: 64
-  LIBM: libopenlibm
-  LLVM: libLLVM-15.0.7 (ORCJIT, sandybridge)
-  Threads: 11 on 8 virtual cores
-
+julia> 3.848/0.121942
+31.555985632513817
 ```
 
 ### `corkendall` performance against size of `x`
