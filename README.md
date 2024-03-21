@@ -5,7 +5,7 @@
 # KendallTau.jl
 
 This unregistered package exports four functions, each with better performance than the
-functions of the same name in StatsBase.
+equivalent function in StatsBase.
 
 * `corkendall`, for the calculation of Kendall's τ coefficient.
 * `corspearman`, for the calculation of Spearman correlation.
@@ -220,7 +220,11 @@ julia> 3.848/0.121942
 ### `corkendall` performance against size of `x`
 <img width="800" alt="image" src="plots/KendallTau vs StatsBase corkendall speed on 12 core 20 thread 15 Feb 2024.svg">
 
+### `corspearman` performance against size of `x`
+<img width="800" alt="image" src="plots/KendallTau vs StatsBase corspearman speed on 12 core 20 thread 21 March 2024.svg">
+
+
 Philip Swannell
-19 March 2024
+21 March 2024
 
  
