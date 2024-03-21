@@ -417,4 +417,6 @@ function how_scaleable(fns, nr::Integer, ncs::Vector{<:Integer},
         minorgrid=true,
         grid=true)
 
+        println("Finished executing $(StackTraces.stacktrace()[1].func) $(now())")
+
 end
