@@ -357,7 +357,7 @@ end
     x = rand(1000, 100)
     xm = ifelse.(x .< 0.01, missing, x)
 
-    #=When executing code such as corkendall(x) allocations are approximatelty affine in the
+    #=When executing code such as corkendall(x) allocations are approximately affine in the
     number of threads, thanks to use of task-local storage. The tests below have a "safety
     factor" of 1.2 against the expected size of allocations.
     =#
