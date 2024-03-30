@@ -33,6 +33,7 @@ function _pairwise!(::Val{:none}, f, dest::AbstractMatrix{V}, x, y,
     return dest
 end
 
+#Input validation for both pairwise and pairwise!
 function check_vectors(x, y, skipmissing::Symbol, symmetric::Bool)
 
     if symmetric && x !== y
@@ -325,8 +326,9 @@ promoted_nmtype(x) = mapreduce(nonmissingtype ∘ eltype, promote_type, x, init=
 """
     handle_listwise(x, y)
 
-Remove missings in a listwise manner. Assumes `x` and `y` are vectors of vectors which have
-been validated via `check_vectors`.
+ Remove missings in a listwise manner. Assumes `x` and `y` are vectors of iterables which
+ have been validated via `check_vectors`.
+    
 
 ## Example
 ```julia-repl
