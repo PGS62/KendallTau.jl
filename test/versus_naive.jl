@@ -1,5 +1,6 @@
 using KendallTau
 using Test
+using LinearAlgebra
 using Random: randn, rand, MersenneTwister
 
 @testset "corkendall against corkendall_naive" begin

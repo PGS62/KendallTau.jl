@@ -5,15 +5,15 @@ function _pairwise!(::Val{:none}, f, dest::AbstractMatrix{V}, x, y,
 
     # Swap x and y for more efficient threaded loop.
     if nr < nc
-        dest′ = reshape(dest, size(dest, 2), size(dest, 1))
-        _pairwise!(Val(:none), f, dest′, y, x, symmetric)
-        dest .= transpose(dest′)
+        dest2 = similar(dest, size(dest, 2), size(dest, 1))
+        _pairwise!(Val(:none), f, dest2, y, x, symmetric)
+        dest .= transpose(dest2)
         return dest
     end
 
     #cor and friends are special-cased.
-    iscor = (f in (corkendall, corspearman, cor))
-    (iscor || f == cov) && (symmetric = x === y)
+    diag_is_1 = (f in (corkendall, corspearman, cor))
+    (diag_is_1 || f == cov) && (symmetric = x === y)
     #cov(x) is faster than cov(x, x)
     (f == cov) && (f = ((x, y) -> x === y ? cov(x) : cov(x, y)))
 
@@ -21,15 +21,15 @@ function _pairwise!(::Val{:none}, f, dest::AbstractMatrix{V}, x, y,
         for j in subset
             for i = 1:(symmetric ? j : nc)
                 # For performance, diagonal is special-cased
-                if iscor && i==j && y[i] === x[j] && V !== Union{}
+                if diag_is_1 && i == j && y[i] === x[j] && V !== Union{}
                     dest[j, i] = V === Missing ? missing : 1.0
                 else
                     dest[j, i] = f(x[j], y[i])
                 end
-                symmetric && (dest[i, j] = dest[j, i])
             end
         end
     end
+    symmetric && LinearAlgebra.copytri!(dest, 'L')
     return dest
 end
 
@@ -81,15 +81,15 @@ function _pairwise!(::Val{:pairwise}, f, dest::AbstractMatrix{V}, x, y, symmetri
 
     # Swap x and y for more efficient threaded loop.
     if nr < nc
-        dest′ = reshape(dest, size(dest, 2), size(dest, 1))
-        _pairwise!(Val(:pairwise), f, dest′, y, x, symmetric)
-        dest .= transpose(dest′)
+        dest2 = similar(dest, size(dest, 2), size(dest, 1))
+        _pairwise!(Val(:pairwise), f, dest2, y, x, symmetric)
+        dest .= transpose(dest2)
         return dest
     end
 
     #cor and friends are special-cased.
-    iscor = (f in (corkendall, corspearman, cor))
-    (iscor || f == cov) && (symmetric = x === y)
+    diag_is_1 = (f in (corkendall, corspearman, cor))
+    (diag_is_1 || f == cov) && (symmetric = x === y)
     #cov(x) is faster than cov(x, x)
     (f == cov) && (f = ((x, y) -> x === y ? cov(x) : cov(x, y)))
 
@@ -97,19 +97,19 @@ function _pairwise!(::Val{:pairwise}, f, dest::AbstractMatrix{V}, x, y, symmetri
     nmty = promoted_nmtype(y)[]
 
     Threads.@threads for subset in equal_sum_subsets(nr, Threads.nthreads())
+        scratch_fx = task_local_vector(:scratch_fx, nmtx, m)
+        scratch_fy = task_local_vector(:scratch_fy, nmty, m)
         for j in subset
-            scratch_fx = task_local_vector(:scratch_fx, nmtx, m)
-            scratch_fy = task_local_vector(:scratch_fy, nmty, m)
             for i = 1:(symmetric ? j : nc)
-                if iscor && i == j && y[i] === x[j] && V !== Union{} && V!== Missing
+                if diag_is_1 && i == j && y[i] === x[j] && V !== Union{} && V !== Missing
                     dest[j, i] = 1.0
                 else
-                    dest[j, i] = f(handle_pairwise(x[j], y[i]; scratch_fx, scratch_fy)...)
+                    dest[j, i] = f(handle_pairwise(x[j], y[i]; scratch_fx=scratch_fx, scratch_fy=scratch_fy)...)
                 end
-                symmetric && (dest[i, j] = dest[j, i])
             end
         end
     end
+    symmetric && LinearAlgebra.copytri!(dest, 'L')
     return dest
 end
 
@@ -223,7 +223,7 @@ presence `missing`, `NaN` or `Inf` entries.
 
 # Examples
 ```jldoctest
-julia> using KendallTau, Statistics
+julia> using StatsBase, Statistics
 
 julia> dest = zeros(3, 3);
 
@@ -255,7 +255,7 @@ julia> dest
 ```
 """
 function pairwise!(f, dest::AbstractMatrix, x, y=x;
-                   symmetric::Bool=false, skipmissing::Symbol=:none)
+    symmetric::Bool=false, skipmissing::Symbol=:none)
     check_vectors(x, y, skipmissing, symmetric)
     return _pairwise!(f, dest, x, y, symmetric=symmetric, skipmissing=skipmissing)
 end
@@ -288,7 +288,7 @@ presence `missing`, `NaN` or `Inf` entries.
 
 # Examples
 ```jldoctest
-julia> using KendallTau, Statistics
+julia> using StatsBase, Statistics
 
 julia> x = [1 3 7
             2 5 6
@@ -326,15 +326,14 @@ promoted_nmtype(x) = mapreduce(nonmissingtype ∘ eltype, promote_type, x, init=
 """
     handle_listwise(x, y)
 
- Remove missings in a listwise manner. Assumes `x` and `y` are vectors of iterables which
- have been validated via `check_vectors`.
-    
+Remove missings in a listwise manner. Assumes `x` and `y` are vectors of iterables which
+have been validated via `check_vectors`.
 
 ## Example
 ```julia-repl
 julia> a = [6,7,8,9,10,missing];b = [4,5,6,7,missing,8];c = [2,3,4,missing,5,6];d = [1,2,3,4,5,6];
 
-julia> KendallTau.handle_listwise([a,b],[c,d])
+julia> StatsBase.handle_listwise([a,b],[c,d])
 ([[6, 7, 8], [4, 5, 6]], [[2, 3, 4], [1, 2, 3]])
 ```
 """
@@ -382,16 +381,16 @@ function handle_pairwise(x::AbstractVector, y::AbstractVector;
 
     axes(x) == axes(y) || throw(DimensionMismatch("x and y have inconsistent dimensions"))
     lb = first(axes(x, 1))
-    j = lb - 1
+    j = lb
     @inbounds for i in eachindex(x)
         if !(ismissing(x[i]) || ismissing(y[i]))
-            j += 1
             scratch_fx[j] = x[i]
             scratch_fy[j] = y[i]
+            j += 1
         end
     end
 
-    return view(scratch_fx, lb:j), view(scratch_fy, lb:j)
+    return view(scratch_fx, lb:(j-1)), view(scratch_fy, lb:(j-1))
 end
 
 #=Condition a) makes equal_sum_subsets useful for load-balancing the multi-threaded section
@@ -405,7 +404,7 @@ is nearly equal. If `n` is a multiple of `2 * num_subsets` both conditions hold 
 
 ## Example
 ```julia-repl
-julia> KendallTau.equal_sum_subsets(30,5)
+julia> StatsBase.equal_sum_subsets(30,5)
 5-element Vector{Vector{Int64}}:
  [30, 21, 20, 11, 10, 1]
  [29, 22, 19, 12, 9, 2]

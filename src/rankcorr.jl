@@ -38,17 +38,17 @@ function corspearman(x::AbstractVector, y::AbstractVector; skipmissing::Symbol=:
 end
 
 function corspearman(x::AbstractMatrix, y::AbstractVector; skipmissing::Symbol=:none)
-    return corspearman(x, reshape(y, (length(y), 1)); skipmissing)
+    return corspearman(x, reshape(y, (length(y), 1)); skipmissing=skipmissing)
 end
 
 function corspearman(x::AbstractVector, y::AbstractMatrix; skipmissing::Symbol=:none)
-    return corspearman(reshape(x, (length(x), 1)), y; skipmissing)
+    return corspearman(reshape(x, (length(x), 1)), y; skipmissing=skipmissing)
 end
 
 function corspearman(x::AbstractMatrix, y::AbstractMatrix=x;
     skipmissing::Symbol=:none)
     check_rankcor_args(x, y, skipmissing, true)
-    return pairwise(corspearman, eachcol(x), eachcol(y); skipmissing)
+    return pairwise(corspearman, eachcol(x), eachcol(y); skipmissing=skipmissing)
 end
 
 function corspearman(x::AbstractVector{T}) where {T}
@@ -99,9 +99,9 @@ function _pairwise!(::Val{:pairwise}, f::typeof(corspearman),
 
     # Swap x and y for more efficient threaded loop.
     if nr < nc
-        dest′ = reshape(dest, size(dest, 2), size(dest, 1))
-        _pairwise!(Val(:pairwise), f, dest′, y, x, symmetric)
-        dest .= transpose(dest′)
+        dest2 = similar(dest, size(dest, 2), size(dest, 1))
+        _pairwise!(Val(:pairwise), f, dest2, y, x, symmetric)
+        dest .= transpose(dest2)
         return dest
     end
 
@@ -137,10 +137,10 @@ function _pairwise!(::Val{:pairwise}, f::typeof(corspearman),
                         view(tempx, :, j), view(tempy, :, i), inds, spnmx, spnmy, nmx,
                         nmy, ranksx, ranksy)
                 end
-                symmetric && (dest[i, j] = dest[j, i])
             end
         end
     end
+    symmetric && LinearAlgebra.copytri!(dest, 'L')
     return dest
 end
 
@@ -162,20 +162,17 @@ All vector arguments must have the same axes.
 
 ## Example
 ```julia-repl
-julia> using KendallTau, BenchmarkTools, Random
+julia> using StatsBase, BenchmarkTools, Random
 
 julia> Random.seed!(1);
 
-julia> x = ifelse.(rand(1000) .< 0.05,missing,randn(1000));y = ifelse.(rand(1000) .< 0.05,\
-missing,randn(1000));
+julia> x = ifelse.(rand(1000) .< 0.05,missing,randn(1000));y = ifelse.(rand(1000) .< 0.05, missing,randn(1000));
 
-julia> sortpermx=sortperm(x);sortpermy=sortperm(y);inds=zeros(Int64,1000);\
-spnmx=zeros(Int64,1000);spnmy=zeros(Int64,1000);
+julia> sortpermx=sortperm(x);sortpermy=sortperm(y);inds=zeros(Int64,1000);spnmx=zeros(Int64,1000);spnmy=zeros(Int64,1000);
 
 julia> nmx=zeros(1000);nmy=zeros(1000);ranksx=similar(x,Float64);ranksy=similar(y,Float64);
 
-julia> @btime KendallTau.corspearman_kernel!(\$x,\$y,:pairwise,\$sortpermx,\$sortpermy,\
-\$inds,\$spnmx,\$spnmy,\$nmx,\$nmy,\$ranksx,\$ranksy)
+julia> @btime corspearman_kernel!(\$x,\$y,:pairwise,\$sortpermx,\$sortpermy,\$inds,\$spnmx,\$spnmy,\$nmx,\$nmy,\$ranksx,\$ranksy)
 4.671 μs (0 allocations: 0 bytes)
 -0.016058512110609713
 ```
@@ -288,7 +285,7 @@ julia> x = y = fill(missing,2,2)
 julia> Statistics.cor(x,y)
 ERROR: MethodError: no method matching copy(::Missing)
 
-julia> KendallTau._cor(x,y)
+julia> StatsBase._cor(x,y)
 2×2 Matrix{Union{Missing, Float64}}:
  1.0        missing
   missing  1.0
@@ -417,7 +414,7 @@ Uses multiple threads when either `x` or `y` is a matrix.
 function corkendall(x::AbstractMatrix, y::AbstractMatrix=x;
     skipmissing::Symbol=:none)
     check_rankcor_args(x, y, skipmissing, true)
-    return pairwise(corkendall, eachcol(x), eachcol(y); skipmissing)
+    return pairwise(corkendall, eachcol(x), eachcol(y); skipmissing=skipmissing)
 end
 
 function corkendall(x::AbstractVector, y::AbstractVector;
@@ -437,11 +434,11 @@ end
 StatsBase.corspearman, but consistent with StatsBase.corkendall.
  =#
 function corkendall(x::AbstractMatrix, y::AbstractVector; skipmissing::Symbol=:none)
-    return vec(corkendall(x, reshape(y, (length(y), 1)); skipmissing))
+    return vec(corkendall(x, reshape(y, (length(y), 1)); skipmissing=skipmissing))
 end
 
 function corkendall(x::AbstractVector, y::AbstractMatrix; skipmissing::Symbol=:none)
-    return corkendall(reshape(x, (length(x), 1)), y; skipmissing)
+    return corkendall(reshape(x, (length(x), 1)), y; skipmissing=skipmissing)
 end
 
 function corkendall(x::AbstractVector{T}) where {T}
@@ -471,9 +468,9 @@ function corkendall_loop!(skipmissing::Symbol, f::typeof(corkendall), dest::Abst
 
     # Swap x and y for more efficient threaded loop.
     if nr < nc
-        dest′ = reshape(dest, size(dest, 2), size(dest, 1))
-        corkendall_loop!(skipmissing, f, dest′, y, x, symmetric)
-        dest .= transpose(dest′)
+        dest2 = similar(dest, size(dest, 2), size(dest, 1))
+        corkendall_loop!(skipmissing, f, dest2, y, x, symmetric)
+        dest .= transpose(dest2)
         return dest
     end
 
@@ -515,12 +512,13 @@ function corkendall_loop!(skipmissing::Symbol, f::typeof(corkendall), dest::Abst
                 else
                     yi .= y[i]
                     dest[j, i] = corkendall_kernel!(sortedxj, yi, permx, skipmissing;
-                        scratch_py, scratch_sy, scratch_fx, scratch_fy)
+                        scratch_py=scratch_py, scratch_sy=scratch_sy, scratch_fx=scratch_fx,
+                        scratch_fy=scratch_fy)
                 end
-                symmetric && (dest[i, j] = dest[j, i])
             end
         end
     end
+    symmetric && LinearAlgebra.copytri!(dest, 'L')
     return dest
 end
 
@@ -531,17 +529,15 @@ end
 # JSTOR, www.jstor.org/stable/2282833.
 
 function check_rankcor_args(x, y, skipmissing, allowlistwise::Bool)
-    Base.require_one_based_indexing(x, y)
+    #  Base.require_one_based_indexing(x, y) #TODO find how to reject non-1-based in a way that works in Julia 1.0.5
     size(x, 1) == size(y, 1) ||
         throw(DimensionMismatch("x and y have inconsistent dimensions"))
     if allowlistwise
         skipmissing in (:none, :pairwise, :listwise) ||
-            throw(ArgumentError("skipmissing must be one of :none, :pairwise or :listwise, \
-            but got :$skipmissing"))
+            throw(ArgumentError("skipmissing must be one of :none, :pairwise or :listwise, but got :$skipmissing"))
     else
         skipmissing in (:none, :pairwise) ||
-            throw(ArgumentError("skipmissing must be either :none or :pairwise, but \
-            got :$skipmissing"))
+            throw(ArgumentError("skipmissing must be either :none or :pairwise, but got :$skipmissing"))
     end
 end
 
@@ -585,7 +581,7 @@ function corkendall_kernel!(sortedx::AbstractVector{T}, y::AbstractVector{U},
     end
 
     if missing isa T || missing isa V
-        sortedx, permutedy = handle_pairwise(sortedx, scratch_py; scratch_fx, scratch_fy)
+        sortedx, permutedy = handle_pairwise(sortedx, scratch_py; scratch_fx=scratch_fx, scratch_fy=scratch_fy)
     else
         permutedy = scratch_py
     end
@@ -751,4 +747,3 @@ end
 # is defined, so that rank correlation makes sense.
 _isnan(x::T) where {T<:Number} = isnan(x)
 _isnan(x) = false
-

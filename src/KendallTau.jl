@@ -1,6 +1,7 @@
 module KendallTau
 using Missings: disallowmissing
 import StatsBase: cor, cov, _tiedrank!, tiedrank
+using LinearAlgebra
 
 include("rankcorr.jl")
 include("corkendall_fromfile.jl")
