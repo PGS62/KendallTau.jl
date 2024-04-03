@@ -21,10 +21,9 @@ StatsBase versions with the versions from this package, as a follow-on from issu
 
 <details><summary><u>Click for function documentation</u></summary>
  <p>
- 
+
 ```
   corkendall(x, y=x; skipmissing::Symbol=:none)
-
 
   Compute Kendall's rank correlation coefficient, τ. x and y must be either vectors or matrices, and entries may be missing.
 
@@ -41,8 +40,7 @@ StatsBase versions with the versions from this package, as a follow-on from issu
 ```
   corspearman(x, y=x; skipmissing::Symbol=:none)
 
-
-  Compute Spearman's rank correlation coefficient. If x and y are vectors, the output is a float, otherwise it's a matrix corresponding to the pairwise correlations of  
+  Compute Spearman's rank correlation coefficient. If x and y are vectors, the output is a float, otherwise it's a matrix corresponding to the pairwise correlations of
   the columns of x and y.
 
   Uses multiple threads when either x or y is a matrix and skipmissing is :pairwise.
@@ -59,11 +57,10 @@ StatsBase versions with the versions from this package, as a follow-on from issu
   pairwise(f, x[, y];
            symmetric::Bool=false, skipmissing::Symbol=:none)
 
-
-  Return a matrix holding the result of applying f to all possible pairs of entries in iterators x and y. Rows correspond to entries in x and columns to entries in y.   
+  Return a matrix holding the result of applying f to all possible pairs of entries in iterators x and y. Rows correspond to entries in x and columns to entries in y.
   If y is omitted then a square matrix crossing x with itself is returned.
 
-  As a special case, if f is cor, corspearman or corkendall, diagonal cells for which entries from x and y are identical (according to ===) are set to one even in the   
+  As a special case, if f is cor, corspearman or corkendall, diagonal cells for which entries from x and y are identical (according to ===) are set to one even in the
   presence missing, NaN or Inf entries.
 
   Keyword arguments
@@ -72,8 +69,8 @@ StatsBase versions with the versions from this package, as a follow-on from issu
     •  symmetric::Bool=false: If true, f is only called to compute for the lower triangle of the matrix, and these values are copied to fill the upper triangle.
        Only allowed when y is omitted and ignored (taken as true) if f is cov, cor, corkendall or corspearman.
 
-    •  skipmissing::Symbol=:none: If :none (the default), missing values in inputs are passed to f without any modification. Use :pairwise to skip entries with a        
-       missing value in either of the two vectors passed to f for a given pair of vectors in x and y. Use :listwise to skip entries with a missing value in any of       
+    •  skipmissing::Symbol=:none: If :none (the default), missing values in inputs are passed to f without any modification. Use :pairwise to skip entries with a
+       missing value in either of the two vectors passed to f for a given pair of vectors in x and y. Use :listwise to skip entries with a missing value in any of
        the vectors in x or y; note that this might drop a large part of entries. Only allowed when entries in x and y are vectors.
 
   Examples
@@ -223,8 +220,5 @@ julia> 3.848/0.121942
 ### `corspearman` performance against size of `x`
 <img width="800" alt="image" src="plots/KendallTau vs StatsBase corspearman speed on 12 core 20 thread 21 March 2024.svg">
 
-
 Philip Swannell
 21 March 2024
-
- 

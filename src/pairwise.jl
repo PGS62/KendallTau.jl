@@ -17,7 +17,7 @@ function _pairwise!(::Val{:none}, f, dest::AbstractMatrix{V}, x, y,
     #cov(x) is faster than cov(x, x)
     (f == cov) && (f = ((x, y) -> x === y ? cov(x) : cov(x, y)))
 
-    Threads.@threads for subset in Equal_sum_subsets(nc, Threads.nthreads())
+    Threads.@threads for subset in Equal_sum_vectors(nc, Threads.nthreads())
         for j in subset
             for i = (symmetric ? j : 1):nr
                 # For performance, diagonal is special-cased
@@ -96,7 +96,7 @@ function _pairwise!(::Val{:pairwise}, f, dest::AbstractMatrix{V}, x, y, symmetri
     nmtx = promoted_nmtype(x)[]
     nmty = promoted_nmtype(y)[]
 
-    Threads.@threads for subset in Equal_sum_subsets(nc, Threads.nthreads())
+    Threads.@threads for subset in Equal_sum_vectors(nc, Threads.nthreads())
         scratch_fx = task_local_vector(:scratch_fx, nmtx, m)
         scratch_fy = task_local_vector(:scratch_fy, nmty, m)
         for j in subset
@@ -393,44 +393,6 @@ function handle_pairwise(x::AbstractVector, y::AbstractVector;
     return view(scratch_fx, lb:(j-1)), view(scratch_fy, lb:(j-1))
 end
 
-#TODO remove tsts for equal_sum_subsets, add tests for Equal_sum_subsets, rename to Equal_sum_vectors?
-
-#=Condition a) makes equal_sum_subsets useful for load-balancing the multi-threaded section
-of _pairwise! in the non-symmetric case, and condition b) for the symmetric case.=#
-"""
-    equal_sum_subsets(n::Int, num_subsets::Int)::Vector{Vector{Int}}
-
-Divide the integers 1:n into a number of subsets such that a) each subset has
-(approximately) the same number of elements; and b) the sum of the elements in each subset
-is nearly equal. If `n` is a multiple of `2 * num_subsets` both conditions hold exactly.
-
-## Example
-```julia-repl
-julia> StatsBase.equal_sum_subsets(30,5)
-5-element Vector{Vector{Int64}}:
- [30, 21, 20, 11, 10, 1]
- [29, 22, 19, 12, 9, 2]
- [28, 23, 18, 13, 8, 3]
- [27, 24, 17, 14, 7, 4]
- [26, 25, 16, 15, 6, 5]
-```
-"""
-function equal_sum_subsets(n::Int, num_subsets::Int)::Vector{Vector{Int}}
-    subsets = [Int[] for _ in 1:min(n, num_subsets)]
-    writeto, scanup = 1, true
-    for i = n:-1:1
-        push!(subsets[writeto], i)
-        if scanup && writeto == num_subsets
-            scanup = false
-        elseif (!scanup) && writeto == 1
-            scanup = true
-        else
-            writeto += scanup ? 1 : -1
-        end
-    end
-    return subsets
-end
-
 """
     task_local_vector(key::Symbol, similarto::AbstractArray{V},
     length::Int)::Vector{V} where {V}
@@ -444,19 +406,16 @@ function task_local_vector(key::Symbol, similarto::AbstractArray{V},
     return task_local_storage(key)
 end
 
-#Alternative approach - use an iterator.
-
 """
-    Equal_sum_subsets
+    Equal_sum_vectors
 
-An iterator enabling the partition of the integers 1 to n into `num_subsets` vectors such
-that a) each subset has (approximately) the same number of elements; and b) the sum of the
-elements in each subset is nearly equal. If `n` is a multiple of `2 * num_subsets` both
-conditions hold exactly.
+An iterator that partitions the integers 1 to n into `num_vectors` vectors such that a) each
+vector is of nearly equal length; and b) the sum of the elements in each vector is nearly
+equal. If `n` is a multiple of `2 * num_vectors` both conditions hold exactly.
 
 ## Example
 ```julia-repl
-julia> for s in KendallTau.Equal_sum_subsets(30,5)
+julia> for s in KendallTau.Equal_sum_vectors(30,5)
 println((s, sum(s)))
 end
 ([30, 21, 20, 11, 10, 1], 93)
@@ -466,32 +425,44 @@ end
 ([26, 25, 16, 15, 6, 5], 93)
 ```
 """
-struct Equal_sum_subsets
+struct Equal_sum_vectors
     n::Int64
-    num_subsets::Int64
+    num_vectors::Int64
 end
 
-Base.length(x::Equal_sum_subsets) = min(x.n, x.num_subsets)
+Base.length(x::Equal_sum_vectors) = min(x.n, x.num_vectors)
 
-Base.firstindex(x::Equal_sum_subsets) = 1
+Base.firstindex(x::Equal_sum_vectors) = 1
 
-function Base.iterate(ess::Equal_sum_subsets, state::Int64=1)
+function Base.iterate(ess::Equal_sum_vectors, state::Int64=1)
     state > length(ess) && return (nothing)
     return (getindex(ess, state), state + 1)
 end
 
-function demo(n, num_subsets)
-    for s in Equal_sum_subsets(n, num_subsets)
+function demo(n, num_vectors)
+    for s in Equal_sum_vectors(n, num_vectors)
         println(s, sum(s))
     end
 end
 
-function Base.getindex(ess::Equal_sum_subsets, i::Int64=1)
+function Base.getindex(ess::Equal_sum_vectors, i::Int64=1)
     i > length(ess) && return (nothing)
-    n, nss = ess.n, ess.num_subsets
+    n, nss = ess.n, ess.num_vectors
     s = 2i - 1
     b = 2nss - s
-    result = zeros(Int64, div(n, nss) + ((i <= rem(n, nss)) ? 1 : 0))
+
+    lresult = div(n, nss)
+    if mod(lresult, 2) == 1
+        if i > nss - rem(n, nss)
+            lresult += 1
+        end
+    else
+        if i <= rem(n, nss)
+            lresult += 1
+        end
+    end
+
+    result = zeros(Int64, lresult)
     result[1] = n - i + 1
     k = 1
     while true

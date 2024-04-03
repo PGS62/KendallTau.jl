@@ -32,9 +32,16 @@ using Test
     @test KendallTau.midpoint(1, 10) == 5
     @test KendallTau.midpoint(1, widen(10)) == 5
 
-    @test KendallTau.equal_sum_subsets(0, 1) == Vector{Int64}[]
-    @test sum.(KendallTau.equal_sum_subsets(100, 5)) == repeat([1010], 5)
-    @test sort(vcat(KendallTau.equal_sum_subsets(500, 7)...)) == collect(1:500)
+    for n in 1:50, nss in 1:5
+        #check is a partition
+        @test sort(vcat([s for s in KendallTau.Equal_sum_vectors(n, nss)]...)) == 1:n
+        #check near-equal lengths
+        lengths = [length(s) for s in KendallTau.Equal_sum_vectors(n, nss)]
+        @test (maximum(lengths) - minimum(lengths)) <= 1
+        #check near-equal sums
+        sums = [sum(s) for s in KendallTau.Equal_sum_vectors(n, nss)]
+        @test (maximum(sums) - minimum(sums)) < nss
+    end
 
 end
 
@@ -362,11 +369,11 @@ end
     factor" of 1.2 against the expected size of allocations.
     =#
     @test (@allocated corkendall(x)) < (897_808 + Threads.nthreads() * 58_044) * 1.2
-    @test (@allocated corkendall(xm,skipmissing=:listwise)) < (1_119_392 + Threads.nthreads() * 22_172) * 1.2
-    @test (@allocated corkendall(xm,skipmissing=:pairwise)) < (892_112 + Threads.nthreads() * 61_116) * 1.2
+    @test (@allocated corkendall(xm, skipmissing=:listwise)) < (1_119_392 + Threads.nthreads() * 22_172) * 1.2
+    @test (@allocated corkendall(xm, skipmissing=:pairwise)) < (892_112 + Threads.nthreads() * 61_116) * 1.2
     @test (@allocated corspearman(x)) < (2_678_448 + Threads.nthreads() * 9_128) * 1.2
-    @test (@allocated corspearman(xm,skipmissing=:listwise)) < (1_803_712 + Threads.nthreads() * 3_992) * 1.2
-    @test (@allocated corspearman(xm,skipmissing=:pairwise)) < (1_692_208 + Threads.nthreads() * 67_172) * 1.2
+    @test (@allocated corspearman(xm, skipmissing=:listwise)) < (1_803_712 + Threads.nthreads() * 3_992) * 1.2
+    @test (@allocated corspearman(xm, skipmissing=:pairwise)) < (1_692_208 + Threads.nthreads() * 67_172) * 1.2
 
 end
 # COV_EXCL_STOP

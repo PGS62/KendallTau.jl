@@ -55,7 +55,6 @@ I think the call stack described above is one layer too deep, thanks to new fn _
 
 Speedup with fast kernel function (LinearAlgebra.dot)
 
-
 julia> using StatsBase,KendallTau
 
 julia> x = rand(1000,1000);
