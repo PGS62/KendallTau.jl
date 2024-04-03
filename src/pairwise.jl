@@ -21,7 +21,7 @@ function _pairwise!(::Val{:none}, f, dest::AbstractMatrix{V}, x, y,
         for j in subset
             for i = 1:(symmetric ? j : nc)
                 # For performance, diagonal is special-cased
-                if diag_is_1 && i == j && y[i] === x[j] && V !== Union{}
+                if diag_is_1 && i == j && y[i] === x[j]
                     dest[j, i] = V === Missing ? missing : 1.0
                 else
                     dest[j, i] = f(x[j], y[i])
@@ -101,7 +101,7 @@ function _pairwise!(::Val{:pairwise}, f, dest::AbstractMatrix{V}, x, y, symmetri
         scratch_fy = task_local_vector(:scratch_fy, nmty, m)
         for j in subset
             for i = 1:(symmetric ? j : nc)
-                if diag_is_1 && i == j && y[i] === x[j] && V !== Union{} && V !== Missing
+                if diag_is_1 && i == j && y[i] === x[j]  && V !== Missing
                     dest[j, i] = 1.0
                 else
                     dest[j, i] = f(handle_pairwise(x[j], y[i]; scratch_fx=scratch_fx, scratch_fy=scratch_fy)...)

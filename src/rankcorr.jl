@@ -126,7 +126,7 @@ function _pairwise!(::Val{:pairwise}, f::typeof(corspearman),
 
             for i = 1:(symmetric ? j : nc)
                 # For performance, diagonal is special-cased
-                if x[j] === y[i] && i == j && V !== Union{}
+                if x[j] === y[i] && i == j
                     if missing isa V && eltype(x[j]) == Missing
                         dest[j, i] = missing
                     else
@@ -503,7 +503,7 @@ function corkendall_loop!(skipmissing::Symbol, f::typeof(corkendall), dest::Abst
 
             for i = 1:(symmetric ? j : nc)
                 # For performance, diagonal is special-cased
-                if x[j] === y[i] && i == j && V !== Union{}
+                if x[j] === y[i] && i == j
                     if missing isa V && eltype(x[j]) == Missing
                         dest[j, i] = missing
                     else
