@@ -17,7 +17,7 @@ function _pairwise!(::Val{:none}, f, dest::AbstractMatrix{V}, x, y,
     #cov(x) is faster than cov(x, x)
     (f == cov) && (f = ((x, y) -> x === y ? cov(x) : cov(x, y)))
 
-    Threads.@threads for subset in Equal_sum_vectors(nc, Threads.nthreads())
+    Threads.@threads for subset in EqualSumSubsets(nc, Threads.nthreads())
         for j in subset
             for i = (symmetric ? j : 1):nr
                 # For performance, diagonal is special-cased
@@ -96,7 +96,7 @@ function _pairwise!(::Val{:pairwise}, f, dest::AbstractMatrix{V}, x, y, symmetri
     nmtx = promoted_nmtype(x)[]
     nmty = promoted_nmtype(y)[]
 
-    Threads.@threads for subset in Equal_sum_vectors(nc, Threads.nthreads())
+    Threads.@threads for subset in EqualSumSubsets(nc, Threads.nthreads())
         scratch_fx = task_local_vector(:scratch_fx, nmtx, m)
         scratch_fy = task_local_vector(:scratch_fy, nmty, m)
         for j in subset
@@ -407,72 +407,104 @@ function task_local_vector(key::Symbol, similarto::AbstractArray{V},
 end
 
 """
-    Equal_sum_vectors
+    EqualSumSubsets
 
-An iterator that partitions the integers 1 to n into `num_vectors` vectors such that a) each
-vector is of nearly equal length; and b) the sum of the elements in each vector is nearly
-equal. If `n` is a multiple of `2 * num_vectors` both conditions hold exactly.
+An iterator that partitions the integers 1 to n into `num_subsets` "subsets" (of type
+TwoStepRange) such that a) each subset is of nearly equal length; and b) the sum of the
+elements in each subset is nearly equal. If `n` is a multiple of `2 * num_subsets` both
+conditions hold exactly.
 
 ## Example
 ```julia-repl
-julia> for s in KendallTau.Equal_sum_vectors(30,5)
-println((s, sum(s)))
+julia> for s in KendallTau.EqualSumSubsets(30,5)
+println((collect(s), sum(s)))
 end
 ([30, 21, 20, 11, 10, 1], 93)
 ([29, 22, 19, 12, 9, 2], 93)
 ([28, 23, 18, 13, 8, 3], 93)
 ([27, 24, 17, 14, 7, 4], 93)
 ([26, 25, 16, 15, 6, 5], 93)
+
+#Check for correct partitioning, in this case of integers 1:1000 into 17 subsets.
+julia> sort(vcat([collect(s) for s in KendallTau.EqualSumSubsets(1000,17)]...))==1:1000
+true
+
 ```
 """
-struct Equal_sum_vectors
+struct EqualSumSubsets
     n::Int64
-    num_vectors::Int64
+    num_subsets::Int64
+
+    function EqualSumSubsets(n, num_subsets)
+        n > 0 || throw("n must be positive, but got $n")
+        num_subsets > 0 || throw("num_subsets must be positive, but got $num_subsets")
+        return new(n,num_subsets)
+    end
+
 end
 
-Base.length(x::Equal_sum_vectors) = min(x.n, x.num_vectors)
+Base.eltype(::EqualSumSubsets) = TwoStepRange
+Base.length(x::EqualSumSubsets) = min(x.n, x.num_subsets)
+Base.firstindex(::EqualSumSubsets) = 1
 
-Base.firstindex(x::Equal_sum_vectors) = 1
-
-function Base.iterate(ess::Equal_sum_vectors, state::Int64=1)
-    state > length(ess) && return (nothing)
-    return (getindex(ess, state), state + 1)
+function Base.iterate(ess::EqualSumSubsets, state::Int64=1)
+    state > length(ess) && return nothing
+    return getindex(ess, state), state + 1
 end
 
-function demo(n, num_vectors)
-    for s in Equal_sum_vectors(n, num_vectors)
-        println(s, sum(s))
+function Base.getindex(ess::EqualSumSubsets, i::Int64=1)
+    n, nss = ess.n, ess.num_subsets
+    step1 = 2i - 2nss - 1
+    step2 = 1 - 2i
+    return TwoStepRange(n - i + 1, step1, step2)
+end
+
+"""
+TwoStepRange
+
+Range with a starting value of `start`, stop value of `1` and a step that alternates
+between `step1` and `step2`. `start` must be positive and `step1` and `step2` must be
+negative.
+
+# Examples
+```jldoctest
+julia> collect(KendallTau.TwoStepRange(30,-7,-3))
+6-element Vector{Int64}:
+ 30
+ 23
+ 20
+ 13
+ 10
+  3
+
+```
+"""
+struct TwoStepRange
+    start::Int64
+    step1::Int64
+    step2::Int64
+
+    function TwoStepRange(start, step1, step2)
+        start > 0 || throw("start must be positive, but got $start")
+        step1 < 0 || throw("step1 must be negative, but got $step1")
+        step2 < 0 || throw("step2 must be negative, but got $step2")
+        return new(start, step1, step2)
     end
 end
 
-function Base.getindex(ess::Equal_sum_vectors, i::Int64=1)
-    i > length(ess) && return (nothing)
-    n, nss = ess.n, ess.num_vectors
-    s = 2i - 1
-    b = 2nss - s
+Base.eltype(::TwoStepRange) = Int64
 
-    lresult = div(n, nss)
-    if mod(lresult, 2) == 1
-        if i > nss - rem(n, nss)
-            lresult += 1
-        end
-    else
-        if i <= rem(n, nss)
-            lresult += 1
-        end
-    end
+function Base.length(tsr::TwoStepRange)
+    return length((tsr.start):(tsr.step1+tsr.step2):1) +
+           length((tsr.start+tsr.step1):(tsr.step1+tsr.step2):1)
+end
 
-    result = zeros(Int64, lresult)
-    result[1] = n - i + 1
-    k = 1
-    while true
-        x = result[k] - (mod(k, 2) == 0 ? s : b)
-        if x > 0
-            k += 1
-            result[k] = x
-        else
-            break
-        end
-    end
-    return result
+function Base.iterate(tsr::TwoStepRange, i::Int64=1)
+    (i > length(tsr)) && return nothing
+    return getindex(tsr, i), i + 1
+end
+
+function Base.getindex(tsr::TwoStepRange, i::Int64=1)::Int64
+    a, b = divrem(i - 1, 2)
+    return tsr.start + (tsr.step1 + tsr.step2) * a + b * tsr.step1
 end

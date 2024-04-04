@@ -504,4 +504,31 @@ KendallTau.corspearman($xm; skipmissing=:none)                                  
 KendallTau.pairwise(KendallTau.corspearman,eachcol($xm),skipmissing=:none)       13.110 ms (1719 allocations: 17.38 MiB)
 ========================================================================================================================
 
+'Slightly reduced allocations thanks to EqualSumSubsets and TwoStepRange
+========================================================================================================================
+Dates.now() = DateTime("2024-04-04T15:08:01.261")
+ENV["COMPUTERNAME"] = "DESKTOP-HSGAM5S"
+Julia Version 1.10.2
+Threads.nthreads() = 20
+size(x) = (1000, 1000)
+typeof(x) = Matrix{Float64}
+size(xm) = (1000, 1000)
+typeof(xm) = Matrix{Union{Missing, Float64}}
+do_StatsBase_times = false
+KendallTau.corkendall($x)                                                        1.169 s (1329 allocations: 16.49 MiB)
+KendallTau.corkendall($xm; skipmissing=:pairwise)                                1.221 s (1329 allocations: 16.19 MiB)
+KendallTau.pairwise(KendallTau.corkendall,eachcol($xm); skipmissing=:pairwise)   1.445 s (1297 allocations: 16.19 MiB)
+KendallTau.corkendall($xm; skipmissing=:listwise)                                5.546 ms (2330 allocations: 11.82 MiB)
+KendallTau.pairwise(KendallTau.corkendall,eachcol($xm); skipmissing=:listwise)   5.505 ms (2298 allocations: 11.82 MiB)
+KendallTau.corkendall($xm; skipmissing=:none)                                    51.045 ms (1340 allocations: 17.15 MiB)
+KendallTau.pairwise(KendallTau.corkendall,eachcol($xm),skipmissing=:none)        54.172 ms (1338 allocations: 17.15 MiB)
+KendallTau.corspearman($x)                                                       16.746 ms (1223 allocations: 39.42 MiB)
+KendallTau.corspearman($xm; skipmissing=:pairwise)                               421.965 ms (1492 allocations: 23.94 MiB)
+KendallTau.pairwise(KendallTau.corspearman,eachcol($xm); skipmissing=:pairwise)  408.834 ms (1460 allocations: 23.94 MiB)
+KendallTau.corspearman($xm; skipmissing=:listwise)                               3.235 ms (2209 allocations: 19.44 MiB)
+KendallTau.pairwise(KendallTau.corspearman,eachcol($xm); skipmissing=:listwise)  2.911 ms (2177 allocations: 19.44 MiB)
+KendallTau.corspearman($xm; skipmissing=:none)                                   13.804 ms (1721 allocations: 17.38 MiB)
+KendallTau.pairwise(KendallTau.corspearman,eachcol($xm),skipmissing=:none)       13.510 ms (1719 allocations: 17.38 MiB)
+========================================================================================================================
+
 =#

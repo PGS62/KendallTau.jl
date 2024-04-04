@@ -32,14 +32,14 @@ using Test
     @test KendallTau.midpoint(1, 10) == 5
     @test KendallTau.midpoint(1, widen(10)) == 5
 
-    for n in 1:50, nss in 1:5
+    for n in 1:200, nss in 1:7
         #check is a partition
-        @test sort(vcat([s for s in KendallTau.Equal_sum_vectors(n, nss)]...)) == 1:n
+        @test sort(vcat([collect(s) for s in KendallTau.EqualSumSubsets(n, nss)]...)) == 1:n
         #check near-equal lengths
-        lengths = [length(s) for s in KendallTau.Equal_sum_vectors(n, nss)]
+        lengths = [length(s) for s in KendallTau.EqualSumSubsets(n, nss)]
         @test (maximum(lengths) - minimum(lengths)) <= 1
         #check near-equal sums
-        sums = [sum(s) for s in KendallTau.Equal_sum_vectors(n, nss)]
+        sums = [sum(collect(s)) for s in KendallTau.EqualSumSubsets(n, nss)]
         @test (maximum(sums) - minimum(sums)) < nss
     end
 
