@@ -222,7 +222,7 @@ presence `missing`, `NaN` or `Inf` entries.
   Only allowed when entries in `x` and `y` are vectors.
 
 # Examples
-```jldoctest
+```julia-repl
 julia> using StatsBase, Statistics
 
 julia> dest = zeros(3, 3);
@@ -287,7 +287,7 @@ presence `missing`, `NaN` or `Inf` entries.
   Only allowed when entries in `x` and `y` are vectors.
 
 # Examples
-```jldoctest
+```julia-repl
 julia> using StatsBase, Statistics
 
 julia> x = [1 3 7
@@ -416,7 +416,7 @@ conditions hold exactly.
 
 ## Example
 ```julia-repl
-julia> for s in KendallTau.EqualSumSubsets(30,5)
+julia> for s in StatsBase.EqualSumSubsets(30,5)
 println((collect(s), sum(s)))
 end
 ([30, 21, 20, 11, 10, 1], 93)
@@ -426,19 +426,19 @@ end
 ([26, 25, 16, 15, 6, 5], 93)
 
 #Check for correct partitioning, in this case of integers 1:1000 into 17 subsets.
-julia> sort(vcat([collect(s) for s in KendallTau.EqualSumSubsets(1000,17)]...))==1:1000
+julia> sort(vcat([collect(s) for s in StatsBase.EqualSumSubsets(1000,17)]...))==1:1000
 true
 
 ```
 """
 struct EqualSumSubsets
-    n::Int64
-    num_subsets::Int64
+    n::Int
+    num_subsets::Int
 
     function EqualSumSubsets(n, num_subsets)
-        n > 0 || throw("n must be positive, but got $n")
+        n >= 0 || throw("n must not be negative, but got $n")
         num_subsets > 0 || throw("num_subsets must be positive, but got $num_subsets")
-        return new(n,num_subsets)
+        return new(n, num_subsets)
     end
 
 end
@@ -447,12 +447,12 @@ Base.eltype(::EqualSumSubsets) = TwoStepRange
 Base.length(x::EqualSumSubsets) = min(x.n, x.num_subsets)
 Base.firstindex(::EqualSumSubsets) = 1
 
-function Base.iterate(ess::EqualSumSubsets, state::Int64=1)
+function Base.iterate(ess::EqualSumSubsets, state::Int=1)
     state > length(ess) && return nothing
     return getindex(ess, state), state + 1
 end
 
-function Base.getindex(ess::EqualSumSubsets, i::Int64=1)
+function Base.getindex(ess::EqualSumSubsets, i::Int=1)
     n, nss = ess.n, ess.num_subsets
     step1 = 2i - 2nss - 1
     step2 = 1 - 2i
@@ -467,8 +467,8 @@ between `step1` and `step2`. `start` must be positive and `step1` and `step2` mu
 negative.
 
 # Examples
-```jldoctest
-julia> collect(KendallTau.TwoStepRange(30,-7,-3))
+```julia-repl
+julia> collect(StatsBase.TwoStepRange(30,-7,-3))
 6-element Vector{Int64}:
  30
  23
@@ -480,9 +480,9 @@ julia> collect(KendallTau.TwoStepRange(30,-7,-3))
 ```
 """
 struct TwoStepRange
-    start::Int64
-    step1::Int64
-    step2::Int64
+    start::Int
+    step1::Int
+    step2::Int
 
     function TwoStepRange(start, step1, step2)
         start > 0 || throw("start must be positive, but got $start")
@@ -492,19 +492,19 @@ struct TwoStepRange
     end
 end
 
-Base.eltype(::TwoStepRange) = Int64
+Base.eltype(::TwoStepRange) = Int
 
 function Base.length(tsr::TwoStepRange)
     return length((tsr.start):(tsr.step1+tsr.step2):1) +
            length((tsr.start+tsr.step1):(tsr.step1+tsr.step2):1)
 end
 
-function Base.iterate(tsr::TwoStepRange, i::Int64=1)
+function Base.iterate(tsr::TwoStepRange, i::Int=1)
     (i > length(tsr)) && return nothing
     return getindex(tsr, i), i + 1
 end
 
-function Base.getindex(tsr::TwoStepRange, i::Int64=1)::Int64
+function Base.getindex(tsr::TwoStepRange, i::Int=1)::Int
     a, b = divrem(i - 1, 2)
     return tsr.start + (tsr.step1 + tsr.step2) * a + b * tsr.step1
 end
