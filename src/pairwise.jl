@@ -333,7 +333,7 @@ have been validated via `check_vectors`.
 ```julia-repl
 julia> a = [6,7,8,9,10,missing];b = [4,5,6,7,missing,8];c = [2,3,4,missing,5,6];d = [1,2,3,4,5,6];
 
-julia> StatsBase.handle_listwise([a,b],[c,d])
+julia> KendallTau.handle_listwise([a,b],[c,d])
 ([[6, 7, 8], [4, 5, 6]], [[2, 3, 4], [1, 2, 3]])
 ```
 """
@@ -416,7 +416,7 @@ conditions hold exactly.
 
 ## Example
 ```julia-repl
-julia> for s in StatsBase.EqualSumSubsets(30,5)
+julia> for s in KendallTau.EqualSumSubsets(30,5)
 println((collect(s), sum(s)))
 end
 ([30, 21, 20, 11, 10, 1], 93)
@@ -426,7 +426,7 @@ end
 ([26, 25, 16, 15, 6, 5], 93)
 
 #Check for correct partitioning, in this case of integers 1:1000 into 17 subsets.
-julia> sort(vcat([collect(s) for s in StatsBase.EqualSumSubsets(1000,17)]...))==1:1000
+julia> sort(vcat([collect(s) for s in KendallTau.EqualSumSubsets(1000,17)]...))==1:1000
 true
 
 ```
@@ -468,7 +468,7 @@ negative.
 
 # Examples
 ```julia-repl
-julia> collect(StatsBase.TwoStepRange(30,-7,-3))
+julia> collect(KendallTau.TwoStepRange(30,-7,-3))
 6-element Vector{Int64}:
  30
  23
