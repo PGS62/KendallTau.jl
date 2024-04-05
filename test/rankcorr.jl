@@ -244,10 +244,12 @@ julia> corkendall(Matrix{Union{Missing,Float64}}(missing,5,3)) #DIFFERENT behavi
     @test (f(["a" 3; "b" 2; "c" 1]) ≈ [1.0 -1.0; -1.0 1.0])
 
     #Works for zero size input
-    @test isequal(f([;;]), [;;])
-    @test isequal(f([;;], [;;]), [;;])
-    @test isequal(f([;;], [;;], skipmissing=:pairwise), [;;])
-    @test isequal(f([;;], [;;], skipmissing=:listwise), [;;])
+    let nada = Matrix{Any}(undef, 0, 0)
+        @test isequal(f(nada), nada)
+        @test isequal(f(nada, nada), nada)
+        @test isequal(f(nada, nada, skipmissing=:pairwise), nada)
+        @test isequal(f(nada, nada, skipmissing=:listwise), nada)
+    end
 
     # Wrong dimensions
     @test_throws DimensionMismatch f([1], [1, 2])
@@ -369,10 +371,10 @@ end
     factor" of 1.2 against the expected size of allocations.
     =#
     @test (@allocated corkendall(x)) < (896_144 + Threads.nthreads() * 57_976) * 1.2
-    @test (@allocated corkendall(xm,skipmissing=:listwise)) < (1_117_728 + Threads.nthreads() * 22_104) * 1.2
-    @test (@allocated corkendall(xm,skipmissing=:pairwise)) < (890_448 + Threads.nthreads() * 61_048) * 1.2
+    @test (@allocated corkendall(xm, skipmissing=:listwise)) < (1_117_728 + Threads.nthreads() * 22_104) * 1.2
+    @test (@allocated corkendall(xm, skipmissing=:pairwise)) < (890_448 + Threads.nthreads() * 61_048) * 1.2
     @test (@allocated corspearman(x)) < (2_678_448 + Threads.nthreads() * 9_128) * 1.2
-    @test (@allocated corspearman(xm,skipmissing=:listwise)) < (1_803_712 + Threads.nthreads() * 3_992) * 1.2
-    @test (@allocated corspearman(xm,skipmissing=:pairwise)) < (1_690_544 + Threads.nthreads() * 67_104) * 1.2    
+    @test (@allocated corspearman(xm, skipmissing=:listwise)) < (1_803_712 + Threads.nthreads() * 3_992) * 1.2
+    @test (@allocated corspearman(xm, skipmissing=:pairwise)) < (1_690_544 + Threads.nthreads() * 67_104) * 1.2
 end
 # COV_EXCL_STOP
