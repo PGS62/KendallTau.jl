@@ -39,13 +39,13 @@ function compare_implementations(fn1::Function=corkendall, fn2::Function=corkend
     fn2name = string(Base.parentmodule(fn2)) * "." * string(fn2)
 
     if abstol == 0
-        errormessage = "Found difference! Non-identical returns from `$fn1name` and a \
-                       reference implementation `$fn2name`, see argument(s) and return \
-                       values displayed below."
+        errormessage = "Found difference! Non-identical returns from `$fn1name` and a " *
+                       "reference implementation `$fn2name`, see argument(s) and return " *
+                       "values displayed below."
     else
-        errormessage = "Found difference! Non nearly-identical returns from `$fn1name` and \
-                       a reference implementation `$fn2name`, see argument(s) and return \
-                       values displayed below."
+        errormessage = "Found difference! Non nearly-identical returns from `$fn1name` and " *
+                       "a reference implementation `$fn2name`, see argument(s) and return " *
+                       "values displayed below."
     end
 
     rng = MersenneTwister(1)# make this test code deterministic
