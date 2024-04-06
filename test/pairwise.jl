@@ -54,9 +54,7 @@ arbitrary_fun(x, y) = cor(x, y)
 
         @inferred pairwise(f, x, y)
         if throwsforzerolengthinput
-            # @test_throws Union{ArgumentError,MethodError} pairwise(f, [Int[]], [Int[]])
             @test_throws Union{CompositeException,TaskFailedException} pairwise(f, [Int[]], [Int[]])
-            #@test_throws Union{ArgumentError,MethodError} pairwise!(f, zeros(1, 1), [Int[]], [Int[]])
             @test_throws Union{CompositeException,TaskFailedException} pairwise!(f, zeros(1, 1), [Int[]], [Int[]])
         end
 
@@ -119,27 +117,26 @@ arbitrary_fun(x, y) = cor(x, y)
         @test res ≅ res2
         # Use myskipmissings rather than skipmissings to avoid deprecation warning
         function myskipmissings(x, y)
-            which = @. !(ismissing(x) || ismissing(y))
+            #which = @. !(ismissing(x) || ismissing(y)) # not compatible with Julia 1.6
+            which = similar(x,Bool)
+            for i in eachindex(x)
+                which[i] = !(ismissing(x[i])|| ismissing(y[i]))
+            end
             return x[which], y[which]
         end
 
-        #@test isapprox(res, [f(collect.(skipmissings(xi, yi))...) for xi in xm, yi in ym],
-        #    rtol=1e-6)
         @test isapprox(res, [f(myskipmissings(xi, yi)...) for xi in xm, yi in ym],
             rtol=1e-6)
 
         res = pairwise(f, ym, zm, skipmissing=:pairwise)
         if isrankcor
             @test res isa Matrix{Float64}
-            #    @test isequal(res, [f(collect.(skipmissings(yi, zi))...) for yi in ym, zi in zm])
             @test isequal(res, [f(myskipmissings(yi, zi)...) for yi in ym, zi in zm])
         else
             @test res isa Matrix{Float32}
             res2 = zeros(Union{Float32,Missing}, size(res))
             @test pairwise!(f, res2, ym, zm, skipmissing=:pairwise) === res2
             @test res ≅ res2
-            #@test isapprox(res, [f(collect.(skipmissings(yi, zi))...) for yi in ym, zi in zm],
-            #    rtol=1e-6)
             @test isapprox(res, [f(myskipmissings(yi, zi)...) for yi in ym, zi in zm],
                 rtol=1e-6)
 
@@ -190,15 +187,11 @@ arbitrary_fun(x, y) = cor(x, y)
 
         if VERSION >= v"1.5" # Fails with UndefVarError on Julia 1.0
             if throwsforzerolengthinput
-                #@test_throws Union{ArgumentError,MethodError} pairwise(f, xm, ym, skipmissing=:pairwise)
                 @test_throws Union{CompositeException,TaskFailedException} pairwise(f, xm, ym, skipmissing=:pairwise)
-                #@test_throws Union{ArgumentError,MethodError} pairwise(f, xm, ym, skipmissing=:listwise)
                 @test_throws Union{CompositeException,TaskFailedException} pairwise(f, xm, ym, skipmissing=:listwise)
 
                 res = zeros(Union{Float64,Missing}, length(xm), length(ym))
-                #@test_throws Union{ArgumentError,MethodError} pairwise!(f, res, xm, ym, skipmissing=:pairwise)
                 @test_throws Union{CompositeException,TaskFailedException} pairwise!(f, res, xm, ym, skipmissing=:pairwise)
-                #@test_throws Union{ArgumentError,MethodError} pairwise!(f, res, xm, ym, skipmissing=:listwise)
                 @test_throws Union{CompositeException,TaskFailedException} pairwise!(f, res, xm, ym, skipmissing=:listwise)
             end
         end

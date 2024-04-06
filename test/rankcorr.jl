@@ -32,7 +32,7 @@ using Test
     @test KendallTau.midpoint(1, 10) == 5
     @test KendallTau.midpoint(1, widen(10)) == 5
 
-    for n in 1:200, nss in 1:7
+    for n in vcat(1:5, 10:20:90,1000), nss in [1, 4, 8, 20, 32, 64]
         #check is a partition
         @test sort(vcat([collect(s) for s in KendallTau.EqualSumSubsets(n, nss)]...)) == 1:n
         #check near-equal lengths
@@ -215,8 +215,8 @@ julia> corkendall(Matrix{Union{Missing,Float64}}(missing,5,3)) #DIFFERENT behavi
     @test isequal(f([], []), NaN)
     @test isequal(f(fill(1, 0, 2), fill(1, 0, 2)), [NaN NaN; NaN NaN])
     @test isequal(f(fill(1, 0, 2)), [1.0 NaN; NaN 1.0])
-    @test isequal(f([1;;], [1;;]), [NaN;;])
-    @test isequal(f([1;;]), [1.0;;])
+    @test isequal(f(reshape([1],(1,1)), reshape([1],(1,1))), reshape([NaN],(1,1)))
+    @test isequal(f(reshape([1],(1,1))), reshape([1.0],(1,1)))
     @test isequal(f([missing], [missing]), NaN)
     @test isequal(f([1], [1]), NaN)
     @test isequal(f([NaN], [NaN]), NaN)
@@ -243,8 +243,8 @@ julia> corkendall(Matrix{Union{Missing,Float64}}(missing,5,3)) #DIFFERENT behavi
     @test (f(["a" "z"; "b" "y"; "c" "x"]) ≈ [1.0 -1.0; -1.0 1.0])
     @test (f(["a" 3; "b" 2; "c" 1]) ≈ [1.0 -1.0; -1.0 1.0])
 
-    #Works for zero size input
-    let nada = Matrix{Any}(undef, 0, 0)
+    #Works for zero size input ( [;;] not compatible with Julia 1.0.5)
+    let nada = Array{Any,2}(undef, 0, 0)
         @test isequal(f(nada), nada)
         @test isequal(f(nada, nada), nada)
         @test isequal(f(nada, nada, skipmissing=:pairwise), nada)
@@ -371,10 +371,11 @@ end
     factor" of 1.2 against the expected size of allocations.
     =#
     @test (@allocated corkendall(x)) < (896_144 + Threads.nthreads() * 57_976) * 1.2
-    @test (@allocated corkendall(xm, skipmissing=:listwise)) < (1_117_728 + Threads.nthreads() * 22_104) * 1.2
-    @test (@allocated corkendall(xm, skipmissing=:pairwise)) < (890_448 + Threads.nthreads() * 61_048) * 1.2
+    @test (@allocated corkendall(xm,skipmissing=:listwise)) < (1_117_728 + Threads.nthreads() * 22_104) * 1.2
+    @test (@allocated corkendall(xm,skipmissing=:pairwise)) < (890_448 + Threads.nthreads() * 61_048) * 1.2
     @test (@allocated corspearman(x)) < (2_678_448 + Threads.nthreads() * 9_128) * 1.2
-    @test (@allocated corspearman(xm, skipmissing=:listwise)) < (1_803_712 + Threads.nthreads() * 3_992) * 1.2
-    @test (@allocated corspearman(xm, skipmissing=:pairwise)) < (1_690_544 + Threads.nthreads() * 67_104) * 1.2
+    @test (@allocated corspearman(xm,skipmissing=:listwise)) < (1_803_712 + Threads.nthreads() * 3_992) * 1.2
+    @test (@allocated corspearman(xm,skipmissing=:pairwise)) < (1_690_544 + Threads.nthreads() * 67_104) * 1.2
+    
 end
 # COV_EXCL_STOP
