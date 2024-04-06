@@ -32,7 +32,7 @@ using Test
     @test KendallTau.midpoint(1, 10) == 5
     @test KendallTau.midpoint(1, widen(10)) == 5
 
-    for n in vcat(1:5, 10:20:90,1000), nss in [1, 4, 8, 20, 32, 64]
+    for n in vcat(1:5, 10:20:90, 1000), nss in [1, 4, 8, 20, 32, 64]
         #check is a partition
         @test sort(vcat([collect(s) for s in KendallTau.EqualSumSubsets(n, nss)]...)) == 1:n
         #check near-equal lengths
@@ -215,8 +215,8 @@ julia> corkendall(Matrix{Union{Missing,Float64}}(missing,5,3)) #DIFFERENT behavi
     @test isequal(f([], []), NaN)
     @test isequal(f(fill(1, 0, 2), fill(1, 0, 2)), [NaN NaN; NaN NaN])
     @test isequal(f(fill(1, 0, 2)), [1.0 NaN; NaN 1.0])
-    @test isequal(f(reshape([1],(1,1)), reshape([1],(1,1))), reshape([NaN],(1,1)))
-    @test isequal(f(reshape([1],(1,1))), reshape([1.0],(1,1)))
+    @test isequal(f(reshape([1], (1, 1)), reshape([1], (1, 1))), reshape([NaN], (1, 1)))
+    @test isequal(f(reshape([1], (1, 1))), reshape([1.0], (1, 1)))
     @test isequal(f([missing], [missing]), NaN)
     @test isequal(f([1], [1]), NaN)
     @test isequal(f([NaN], [NaN]), NaN)
@@ -351,31 +351,32 @@ end
     end
 end
 
-@testset "corkendall and corspearman allocations" begin
+if VERSION >= v"1.6"#Allocations higher for earlier version
+    @testset "corkendall and corspearman allocations" begin
 
-    Random.seed!(1)
-    x = rand(1000, 10)
-    xm = ifelse.(x .< 0.1, missing, x)
-    #compile
-    corkendall(x)
-    corkendall(xm, skipmissing=:listwise)
-    corkendall(xm, skipmissing=:pairwise)
-    corspearman(x)
-    corspearman(xm, skipmissing=:listwise)
-    corspearman(xm, skipmissing=:pairwise)
-    x = rand(1000, 100)
-    xm = ifelse.(x .< 0.01, missing, x)
+        Random.seed!(1)
+        x = rand(1000, 10)
+        xm = ifelse.(x .< 0.1, missing, x)
+        #compile
+        corkendall(x)
+        corkendall(xm, skipmissing=:listwise)
+        corkendall(xm, skipmissing=:pairwise)
+        corspearman(x)
+        corspearman(xm, skipmissing=:listwise)
+        corspearman(xm, skipmissing=:pairwise)
+        x = rand(1000, 100)
+        xm = ifelse.(x .< 0.01, missing, x)
 
-    #=When executing code such as corkendall(x) allocations are approximately affine in the
-    number of threads, thanks to use of task-local storage. The tests below have a "safety
-    factor" of 1.2 against the expected size of allocations.
-    =#
-    @test (@allocated corkendall(x)) < (896_144 + Threads.nthreads() * 57_976) * 1.2
-    @test (@allocated corkendall(xm,skipmissing=:listwise)) < (1_117_728 + Threads.nthreads() * 22_104) * 1.2
-    @test (@allocated corkendall(xm,skipmissing=:pairwise)) < (890_448 + Threads.nthreads() * 61_048) * 1.2
-    @test (@allocated corspearman(x)) < (2_678_448 + Threads.nthreads() * 9_128) * 1.2
-    @test (@allocated corspearman(xm,skipmissing=:listwise)) < (1_803_712 + Threads.nthreads() * 3_992) * 1.2
-    @test (@allocated corspearman(xm,skipmissing=:pairwise)) < (1_690_544 + Threads.nthreads() * 67_104) * 1.2
-    
+        #=When executing code such as corkendall(x) allocations are approximately affine in the
+        number of threads, thanks to use of task-local storage. The tests below have a "safety
+        factor" of 1.2 against the expected size of allocations.
+        =#
+        @test (@allocated corkendall(x)) < (896_144 + Threads.nthreads() * 57_976) * 1.2
+        @test (@allocated corkendall(xm, skipmissing=:listwise)) < (1_117_728 + Threads.nthreads() * 22_104) * 1.2
+        @test (@allocated corkendall(xm, skipmissing=:pairwise)) < (890_448 + Threads.nthreads() * 61_048) * 1.2
+        @test (@allocated corspearman(x)) < (2_678_448 + Threads.nthreads() * 9_128) * 1.2
+        @test (@allocated corspearman(xm, skipmissing=:listwise)) < (1_803_712 + Threads.nthreads() * 3_992) * 1.2
+        @test (@allocated corspearman(xm, skipmissing=:pairwise)) < (1_690_544 + Threads.nthreads() * 67_104) * 1.2
+    end
 end
 # COV_EXCL_STOP
