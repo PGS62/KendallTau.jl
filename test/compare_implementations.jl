@@ -153,7 +153,7 @@ function compare_implementations(fn1::Function=corkendall, fn2::Function=corkend
 
             if j <= 3
                 if fns_handle_missing
-                    res1 = fn1(arg1; skipmissing)
+                    res1 = fn1(arg1; skipmissing=skipmissing)
                 else
                     res1 = fn1(arg1)
                 end
@@ -162,7 +162,7 @@ function compare_implementations(fn1::Function=corkendall, fn2::Function=corkend
                     @error("Detected that function $fn1name mutated its argument, $casedesc")
 
                 if fns_handle_missing
-                    res2 = fn2(arg1; skipmissing)
+                    res2 = fn2(arg1; skipmissing=skipmissing)
                 else
                     res2 = fn2(arg1)
                 end
@@ -172,7 +172,7 @@ function compare_implementations(fn1::Function=corkendall, fn2::Function=corkend
             else
                 arg2_backup = copy(arg2)
                 if fns_handle_missing
-                    res1 = fn1(arg1, arg2; skipmissing)
+                    res1 = fn1(arg1, arg2; skipmissing=skipmissing)
                 else
                     res1 = fn1(arg1, arg2)
                 end
@@ -180,7 +180,7 @@ function compare_implementations(fn1::Function=corkendall, fn2::Function=corkend
                 (myisequal(arg1, arg1_backup) && myisequal(arg2, arg2_backup)) ||
                     @error("Detected that function $fn1name mutated one of its argument, $casedesc")
                 if fns_handle_missing
-                    res2 = fn2(arg1, arg2; skipmissing)
+                    res2 = fn2(arg1, arg2; skipmissing=skipmissing)
                 else
                     res2 = fn2(arg1, arg2)
                 end

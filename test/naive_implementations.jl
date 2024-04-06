@@ -29,7 +29,7 @@ function corkendall_naive(x::AbstractMatrix, y::AbstractMatrix=x;
     else
         dest = ones(Float64, nr, nc)
     end
-    return _corkendall_naive(x, y; dest, skipmissing)
+    return _corkendall_naive(x, y; dest=dest, skipmissing=skipmissing)
 
 end
 
@@ -70,11 +70,11 @@ function corkendall_naive(x::AbstractVector, y::AbstractVector; skipmissing::Sym
 end
 
 function corkendall_naive(x::AbstractMatrix, y::AbstractVector; skipmissing::Symbol=:none)
-    return vec(corkendall_naive(x, reshape(y, (length(y), 1)); skipmissing))
+    return vec(corkendall_naive(x, reshape(y, (length(y), 1)); skipmissing=skipmissing))
 end
 
 function corkendall_naive(x::AbstractVector, y::AbstractMatrix; skipmissing::Symbol=:none)
-    return corkendall_naive(reshape(x, (length(x), 1)), y; skipmissing)
+    return corkendall_naive(reshape(x, (length(x), 1)), y; skipmissing=skipmissing)
 end
 
 function corkendall_naive_kernel!(x, y, skipmissing::Symbol)
@@ -162,7 +162,7 @@ function corspearman_naive(x::AbstractMatrix, y::AbstractMatrix=x;
     else
         dest = ones(Float64, nr, nc)
     end
-    return _corspearman_naive(x, y; dest, skipmissing)
+    return _corspearman_naive(x, y; dest=dest, skipmissing=skipmissing)
 
 end
 
@@ -204,11 +204,11 @@ function corspearman_naive(x::AbstractVector, y::AbstractVector; skipmissing::Sy
 end
 
 function corspearman_naive(x::AbstractMatrix, y::AbstractVector; skipmissing::Symbol=:none)
-    return corspearman_naive(x, reshape(y, (length(y), 1)); skipmissing)
+    return corspearman_naive(x, reshape(y, (length(y), 1)); skipmissing=skipmissing)
 end
 
 function corspearman_naive(x::AbstractVector, y::AbstractMatrix; skipmissing::Symbol=:none)
-    return corspearman_naive(reshape(x, (length(x), 1)), y; skipmissing)
+    return corspearman_naive(reshape(x, (length(x), 1)), y; skipmissing=skipmissing)
 end
 
 function corspearman_naive_kernel!(x, y, skipmissing::Symbol)

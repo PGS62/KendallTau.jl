@@ -92,7 +92,7 @@ function csvread(filename::String, ignorefirstrow::Bool, ignorefirstcol::Bool;
     types = Union{Missing,Float64}
     strict = true
 
-    filedata = File(filename; header, drop, missingstring, types, strict)
+    filedata = File(filename; header=header, drop=drop, missingstring=missingstring, types=types, strict=strict)
     data = matrix(filedata)
 
     #Convert to Array{Float64} if there are in fact no missings
