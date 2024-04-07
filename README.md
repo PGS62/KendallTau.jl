@@ -14,7 +14,7 @@ equivalent function in StatsBase.
 The improved performance of `pairwise` results from using multiple threads and reduced allocations (especially for `skipmissing = :pairwise`).
 `corkendall` and `corspearman` wrap `pairwise`, and benefit from specialised methods of the private function `_pairwise!` for efficiency.
 
-I plan to raise a PR to replace the
+I have raised PR [923](https://github.com/JuliaStats/StatsBase.jl/pull/923) to replace the
 StatsBase versions with the versions from this package, as a follow-on from issue
 [634](https://github.com/JuliaStats/StatsBase.jl/issues/634), commit [647](https://github.com/JuliaStats/StatsBase.jl/commit/11ac5b596405367b3217d3d962e22523fef9bb0d)
 (which improved `corkendall`'s performance by a factor of about seven).
