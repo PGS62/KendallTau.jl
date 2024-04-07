@@ -459,6 +459,11 @@ function Base.getindex(ess::EqualSumSubsets, i::Int=1)
     return TwoStepRange(n - i + 1, step1, step2)
 end
 
+#This function is necessary on Julia 1.3, but not on 1.4
+function Base.unsafe_getindex(ess::EqualSumSubsets, i::Int=1)
+    return getindex(ess,i)
+end
+
 """
 TwoStepRange
 
