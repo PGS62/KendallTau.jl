@@ -22,7 +22,7 @@ StatsBase versions with the versions from this package, as a follow-on from issu
 <details><summary><u>Click for function documentation</u></summary>
  <p>
 
-```
+```julia
   corkendall(x, y=x; skipmissing::Symbol=:none)
 
   Compute Kendall's rank correlation coefficient, τ. x and y must be either vectors or matrices, and entries may be missing.
@@ -37,7 +37,7 @@ StatsBase versions with the versions from this package, as a follow-on from issu
        missing appears in either; note that this might skip a high proportion of entries. Only allowed when x or y is a matrix.
 ```
 
-```
+```julia
   corspearman(x, y=x; skipmissing::Symbol=:none)
 
   Compute Spearman's rank correlation coefficient. If x and y are vectors, the output is a float, otherwise it's a matrix corresponding to the pairwise correlations of
@@ -53,7 +53,7 @@ StatsBase versions with the versions from this package, as a follow-on from issu
        missing appears in either; note that this might skip a high proportion of entries. Only allowed when x or y is a matrix.
 ```
 
-```
+```julia
   pairwise(f, x[, y];
            symmetric::Bool=false, skipmissing::Symbol=:none)
 
@@ -106,7 +106,7 @@ StatsBase versions with the versions from this package, as a follow-on from issu
 # Performance
 
 The examples below were run on a PC with [Intel® Core™ i7-12700](https://ark.intel.com/content/www/us/en/ark/products/134591/intel-core-i7-12700-processor-25m-cache-up-to-4-90-ghz.html) processor.
-```
+```julia
 julia> versioninfo()
 Julia Version 1.10.2
 Commit bd47eca2c8 (2024-03-01 10:14 UTC)
@@ -146,7 +146,7 @@ true
 ```
 ## `corspearman` performance
 In this example, in which `skipmissing = :none`, `KendallTau.corspearman` out-performs by a factor of **800**.
-```
+```julia
 julia> using StatsBase, KendallTau, Random, BenchmarkTools #StatsBase v0.34.2
 
 julia> x = rand(1000,1000);StatsBase.corspearman(x)==KendallTau.corspearman(x)#compile
@@ -165,7 +165,7 @@ julia> 12.935/0.016172
 799.83922829582
 ```
 In this example, in which `skipmissing = :pairwise`, `KendallTau.corspearman` out-performs by a factor of **300**.
-```
+```julia
 julia> using StatsBase, KendallTau, Random, BenchmarkTools #StatsBase v0.34.2
 
 julia> x = rand(1000,10); xm = ifelse.(x .< .05, missing, x);
@@ -192,7 +192,7 @@ julia> 90.107/.297873
 
 ## `pairwise` performance
 In this example, in which `f = LinearAlgebra.dot` and `skipmissing = :pairwise`, `KendallTau.pairwise` out-performs by a factor of **30**.
-```
+```julia
 julia> using StatsBase, KendallTau, Random, BenchmarkTools, LinearAlgebra #StatsBase v0.34.2
 
 julia> x = rand(1000,1000); xm = ifelse.(x .< .05, missing, x);
